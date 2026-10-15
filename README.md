@@ -149,8 +149,9 @@ queries: [docs/data-model.md](docs/data-model.md).
 | API serving the fixtures, with versioning, 409s and idempotent events | Done |
 | Docker Compose (FalkorDB, API, web) | Done |
 | Named Cypher queries | Written, not yet checked against FalkorDB |
+| Web workspace: Medication River, investigation drawer, review history, interface states | Done (fixture and live modes) |
 | Graph loader and finding rules | Next |
-| Review agent, timeline and evidence drawer UI | Next |
+| Review agent | Next |
 | MCP server | Planned |
 
 ## Guardrails

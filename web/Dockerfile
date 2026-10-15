@@ -5,6 +5,7 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 COPY data/snapshots /repo/data/snapshots
+COPY engine/queries /repo/engine/queries
 ARG NEXT_PUBLIC_DATA_SOURCE=fixtures
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_DATA_SOURCE=$NEXT_PUBLIC_DATA_SOURCE NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NODE_ENV=production

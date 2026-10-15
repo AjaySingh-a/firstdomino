@@ -347,7 +347,14 @@ export type SnapshotFile = {
       packet: PacketResponse;
       evidence: Record<
         string,
-        { request: EvidenceRequest; result: EvidenceResult; findings_after: FindingsResponse }
+        {
+          request: EvidenceRequest;
+          result: EvidenceResult;
+          timeline_after: TimelineResponse;
+          findings_after: FindingsResponse;
+          investigations_after: Record<string, InvestigationResponse>;
+          packet_after: PacketResponse;
+        }
       >;
     }
   >;

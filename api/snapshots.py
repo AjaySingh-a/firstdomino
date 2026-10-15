@@ -30,10 +30,16 @@ def build() -> dict:
         evidence = {}
         for req in story.pending_evidence:
             fresh = FixtureStore(stories, patterns)
+            result = fresh.submit_evidence(pid, req)
             evidence[req.event_id] = {
                 "request": dump(req),
-                "result": dump(fresh.submit_evidence(pid, req)),
+                "result": dump(result),
+                "timeline_after": dump(fresh.timeline(pid)),
                 "findings_after": dump(fresh.findings(pid)),
+                "investigations_after": {
+                    f.id: dump(fresh.investigation(f.id)) for f in story.findings
+                },
+                "packet_after": dump(fresh.packet(pid)),
             }
         out["cases"][pid] = {
             "timeline": dump(store.timeline(pid)),
