@@ -1,35 +1,101 @@
 @import "tailwindcss";
 
-/* shadcn/ui tokens (neutral). Extend via `npx shadcn@latest add <component>`. */
+/*
+ * FirstDomino: a typeset medical journal that moves.
+ * Ivory paper, ink type, hairline rules. Amber marks candidate patterns, teal marks reviewed,
+ * coral is reserved for errors. No gradients, no glass.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --border: oklch(0.922 0 0);
-  --radius: 0.625rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --border: oklch(1 0 0 / 10%);
-  }
+  --ivory: #f7f3ea;
+  --paper: #fbf8f1;
+  --ink: #1c1b19;
+  --ink-2: #4a4740;
+  --ink-3: #7c776c;
+  --rule: #d9d2c3;
+  --rule-strong: #b9b09d;
+  --amber: #e8a33d;
+  --amber-ink: #8a5a12;
+  --amber-wash: #f6e6c8;
+  --teal: #2f7f79;
+  --teal-wash: #d9eae6;
+  --coral: #d9604a;
+  --coral-wash: #f6dcd5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --radius-lg: var(--radius);
+  --color-ivory: var(--ivory);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-amber: var(--amber);
+  --color-amber-ink: var(--amber-ink);
+  --color-amber-wash: var(--amber-wash);
+  --color-teal: var(--teal);
+  --color-teal-wash: var(--teal-wash);
+  --color-coral: var(--coral);
+  --color-coral-wash: var(--coral-wash);
+
+  /* shadcn/ui token names, mapped onto the journal palette */
+  --color-background: var(--ivory);
+  --color-foreground: var(--ink);
+  --color-muted: var(--paper);
+  --color-muted-foreground: var(--ink-3);
+  --color-border: var(--rule);
+  --color-ring: var(--ink);
+  --radius-lg: 0.375rem;
+
+  --font-serif: var(--font-instrument-serif), "Times New Roman", serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--amber-wash);
+}
+
+/* Small capitals used for section labels, like a journal's running heads. */
+.smallcaps {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Amber diagonal hatch: the mark for "conflicting". An SVG tile, not a gradient. */
+.hatch-amber {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M-1 1l2-2M0 4l4-4M3 5l2-2' stroke='%23E8A33D' stroke-width='1.2'/%3E%3C/svg%3E");
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

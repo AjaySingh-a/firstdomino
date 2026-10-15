@@ -4,18 +4,21 @@
   "private": true,
   "scripts": {
     "sync:fixtures": "node scripts/sync-fixtures.mjs",
+    "lint:copy": "node scripts/copy-lint.mjs",
     "predev": "npm run sync:fixtures",
     "dev": "next dev -p 3001",
-    "prebuild": "npm run sync:fixtures",
+    "prebuild": "npm run sync:fixtures && npm run lint:copy",
     "build": "next build",
     "start": "next start -p 3001",
     "pretypecheck": "npm run sync:fixtures",
     "typecheck": "tsc --noEmit",
-    "lint": "npm run typecheck"
+    "lint": "npm run lint:copy && npm run typecheck"
   },
   "dependencies": {
+    "@radix-ui/react-tabs": "^1.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "d3-scale": "^4.0.2",
     "framer-motion": "^14.2.0",
     "lucide-react": "^1.57.0",
     "next": "^15.5.28",
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@types/d3-scale": "^4.0.9",
     "@types/node": "^20.19.43",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

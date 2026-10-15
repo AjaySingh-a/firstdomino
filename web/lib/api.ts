@@ -15,6 +15,7 @@ import type {
   PacketResponse,
   Patient,
   ResetResponse,
+  ReviewDecision,
   ReviewRequest,
   ReviewResult,
   SnapshotFile,
@@ -89,47 +90,115 @@ const liveApi: FirstDominoApi = {
 };
 
 // ---------- fixtures ----------
-// Read-only snapshots, plus the precomputed result for each story's pending_evidence.
-// Anything else that writes needs the live API.
+// An in-memory session over the snapshot. It follows the API's write rules: a stale
+// case_version or revision throws StaleError, a repeated event_id replays its result.
+// Evidence events must be one of the precomputed pending_evidence events.
 
 const snapshot = snapshotJson as unknown as SnapshotFile;
+type CaseView = Pick<SnapshotFile["cases"][string], "timeline" | "findings" | "investigations" | "packet">;
 
-function caseOf(pid: string) {
-  const c = snapshot.cases[pid];
+const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+let session: Record<string, CaseView> = {};
+let applied: Record<string, EvidenceResult> = {};
+
+function resetSession() {
+  session = Object.fromEntries(
+    Object.entries(snapshot.cases).map(([pid, c]) => [
+      pid,
+      clone({ timeline: c.timeline, findings: c.findings, investigations: c.investigations, packet: c.packet }),
+    ]),
+  );
+  applied = {};
+}
+resetSession();
+
+function caseOf(pid: string): CaseView {
+  const c = session[pid];
   if (!c) throw new ApiError(404, { error: "not_found", detail: `patient ${pid}` });
   return c;
 }
 
 const patientOf = (scopedId: string) => scopedId.split(":", 1)[0];
 
+function setVersion(c: CaseView, v: number) {
+  c.timeline.patient.case_version = v;
+  c.findings.case_version = v;
+  c.packet.case_version = v;
+  c.packet.patient.case_version = v;
+  for (const inv of Object.values(c.investigations)) inv.case_version = v;
+}
+
 const fixtureApi: FirstDominoApi = {
   health: async () => snapshot.health,
-  patients: async () => snapshot.patients,
-  timeline: async (pid) => caseOf(pid).timeline,
-  findings: async (pid) => caseOf(pid).findings,
+  patients: async () => Object.values(session).map((c) => clone(c.timeline.patient)),
+  timeline: async (pid) => clone(caseOf(pid).timeline),
+  findings: async (pid) => clone(caseOf(pid).findings),
   investigation: async (fid) => {
     const inv = caseOf(patientOf(fid)).investigations[fid];
     if (!inv) throw new ApiError(404, { error: "not_found", detail: `finding ${fid}` });
-    return inv;
+    return clone(inv);
   },
   submitEvidence: async (pid, body) => {
     const c = caseOf(pid);
+    if (applied[body.event_id]) return { ...clone(applied[body.event_id]), replayed: true };
     const current = c.timeline.patient.case_version;
-    const known = c.evidence[body.event_id];
-    if (!known) {
-      if (body.case_version !== current)
-        throw new StaleError({ error: "stale_case_version", patient_id: pid, sent: body.case_version, current });
-      throw new ApiError(501, { error: "fixture_mode", detail: "Only pending_evidence events are precomputed. Use the live API." });
-    }
-    if (body.case_version !== known.request.case_version)
+    if (body.case_version !== current)
       throw new StaleError({ error: "stale_case_version", patient_id: pid, sent: body.case_version, current });
-    return known.result;
+    const known = snapshot.cases[pid]?.evidence[body.event_id];
+    if (!known)
+      throw new ApiError(501, {
+        error: "fixture_mode",
+        detail: "Only the story's pending evidence is available offline. Use the live API for other changes.",
+      });
+    session[pid] = clone({
+      timeline: known.timeline_after,
+      findings: known.findings_after,
+      investigations: known.investigations_after,
+      packet: known.packet_after,
+    });
+    applied[body.event_id] = clone(known.result);
+    return clone(known.result);
   },
-  review: async () => {
-    throw new ApiError(501, { error: "fixture_mode", detail: "Reviews need the live API." });
+  review: async (fid, body) => {
+    const pid = patientOf(fid);
+    const c = caseOf(pid);
+    const inv = c.investigations[fid];
+    if (!inv) throw new ApiError(404, { error: "not_found", detail: `finding ${fid}` });
+    const current = c.timeline.patient.case_version;
+    if (body.case_version !== current)
+      throw new StaleError({ error: "stale_case_version", patient_id: pid, sent: body.case_version, current });
+    const finding = inv.finding;
+    if (body.revision_n !== finding.revision_n)
+      throw new StaleError({ error: "stale_revision", patient_id: pid, sent: body.revision_n, current: finding.revision_n });
+    const k = 1 + inv.decisions.filter((d) => d.revision_n === finding.revision_n).length;
+    const decision: ReviewDecision = {
+      id: `${fid}:rev-${finding.revision_n}:dec-${k}`,
+      patient_id: pid,
+      finding_id: fid,
+      revision_n: finding.revision_n,
+      by_role: body.by_role,
+      decision: body.decision,
+      reason: body.reason,
+      decided_at: c.timeline.patient.as_of_day,
+    };
+    const reviewed = { ...finding, status: "reviewed" as const };
+    inv.finding = reviewed;
+    inv.decisions = [...inv.decisions, decision];
+    c.findings.findings = c.findings.findings.map((f) => (f.id === fid ? reviewed : f));
+    for (const item of c.packet.items) {
+      if (item.finding.id === fid) {
+        item.finding = reviewed;
+        item.decisions = [...item.decisions, decision];
+      }
+    }
+    setVersion(c, current + 1);
+    return { case_version: current + 1, decision: clone(decision), finding: clone(reviewed) };
   },
-  packet: async (pid) => caseOf(pid).packet,
-  reset: async () => ({ reset: true, patients: snapshot.patients }),
+  packet: async (pid) => clone(caseOf(pid).packet),
+  reset: async () => {
+    resetSession();
+    return { reset: true, patients: Object.values(session).map((c) => clone(c.timeline.patient)) };
+  },
 };
 
 export const api: FirstDominoApi = DATA_SOURCE === "live" ? liveApi : fixtureApi;
