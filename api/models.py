@@ -282,6 +282,14 @@ class InvestigationResponse(Model):
     query_trace: list[QueryTraceEntry]
 
 
+class FindingChange(Model):
+    """One affected finding before and after an evidence change."""
+
+    finding_id: str
+    before: Finding
+    after: Finding
+
+
 class EvidenceResult(Model):
     event_id: str
     patient_id: str
@@ -291,6 +299,7 @@ class EvidenceResult(Model):
     after: dict[str, Any]
     affected_finding_ids: list[str]
     new_revisions: list[FindingRevision]
+    finding_changes: list[FindingChange]
     pending_reevaluation_ids: list[str]
     replayed: bool
 

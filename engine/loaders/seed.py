@@ -3,7 +3,10 @@
 1. kb_template gets the curated patterns (data/patterns/) and only the ingredients, classes and
    effects the chosen stories need.
 2. family_<id> starts as a GRAPH.COPY of kb_template (or has the same knowledge MERGEd in if it
-   already exists), then each story is loaded as nodes and evaluated by engine/rules.py.
+   already exists), then each story is loaded as nodes and evaluated by engine/rules.py. A story's
+   earlier review decisions and its unconfirmed (pending) evidence are loaded as they are.
+3. A patient that is already in the family graph is never reloaded: the graph is the record, and
+   evidence confirmed since must not be overwritten by the fixture. Use --reset to start over.
 
 Every write is a named MERGE query (engine/queries/write/), so loading twice changes nothing.
 
@@ -18,9 +21,9 @@ import sys
 
 from falkordb import FalkorDB, Graph
 
-from api.models import Pattern, StoryFixture
+from api.models import MedicationEpisode, Observation, Pattern, StoryFixture
 from api.store import load_patterns, load_stories
-from engine.db import KB_GRAPH, connect, family_graph, run
+from engine.db import KB_GRAPH, connect, family_graph, props, run
 from engine.evaluate import evaluate_patient
 
 DEFAULT_FAMILY = "demo"
@@ -51,14 +54,20 @@ def load_knowledge(graph: Graph, patterns: list[Pattern], stories: list[StoryFix
         )
 
 
+def fact_props(fact: MedicationEpisode | Observation) -> dict:
+    """The properties a fact node stores (relationships hold the rest). None removes a property."""
+    if isinstance(fact, MedicationEpisode):
+        return fact.model_dump(exclude={"id", "ingredient", "source_ids", "prescriber_specialty"})
+    return fact.model_dump(exclude={"id", "effect", "source_ids"})
+
+
 def load_story(graph: Graph, story: StoryFixture) -> None:
     pid = story.patient.id
     run(graph, "write/patient", pid=pid, props=story.patient.model_dump(exclude={"id"}))
     for s in story.sources:
         run(graph, "write/source", pid=pid, id=s.id, props=s.model_dump(exclude={"id"}))
     for ep in story.episodes:
-        props = ep.model_dump(exclude={"id", "ingredient", "source_ids", "prescriber_specialty"})
-        run(graph, "write/episode", pid=pid, id=ep.id, props=props, ingredient=ep.ingredient.name)
+        run(graph, "write/episode", pid=pid, id=ep.id, props=fact_props(ep), ingredient=ep.ingredient.name)
         run(graph, "write/fact_sources", pid=pid, id=ep.id, source_ids=ep.source_ids)
         if ep.prescriber_specialty:
             run(
@@ -66,9 +75,23 @@ def load_story(graph: Graph, story: StoryFixture) -> None:
                 id=f"{pid}:prs-{ep.prescriber_specialty}", specialty=ep.prescriber_specialty,
             )
     for o in story.observations:
-        props = o.model_dump(exclude={"id", "effect", "source_ids"})
-        run(graph, "write/observation", pid=pid, id=o.id, props=props, effect=o.effect)
+        run(graph, "write/observation", pid=pid, id=o.id, props=fact_props(o), effect=o.effect)
         run(graph, "write/fact_sources", pid=pid, id=o.id, source_ids=o.source_ids)
+
+
+def load_history(graph: Graph, story: StoryFixture) -> None:
+    """What happened before the story's as_of_day: review decisions and unconfirmed evidence."""
+    pid = story.patient.id
+    for d in story.decisions:
+        run(
+            graph, "write/seed_decision", pid=pid, fid=d.finding_id, id=d.id, revision_n=d.revision_n,
+            by_role=d.by_role, decision=d.decision, reason=d.reason, decided_at=d.decided_at,
+        )
+    for e in story.pending_evidence:
+        run(
+            graph, "write/evidence_pending", pid=pid, event_id=e.event_id, case_version=e.case_version,
+            change=e.change.model_dump_json(),
+        )
 
 
 def seed(
@@ -90,9 +113,14 @@ def seed(
     else:
         db.select_graph(kb_name).copy(fam_name)
     fam = db.select_graph(fam_name)
+    present = {props(r["p"])["id"] for r in run(fam, "admin/patients_in_graph")}
     for story in stories:
+        if story.patient.id in present:
+            continue
         load_story(fam, story)
-        evaluate_patient(fam, story.patient.id, story.patient.as_of_day)
+        first = next((r.created_at for r in story.revisions if r.n == 1), story.patient.as_of_day)
+        evaluate_patient(fam, story.patient.id, first)
+        load_history(fam, story)
     return fam
 
 

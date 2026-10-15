@@ -345,7 +345,7 @@
               ]
             },
             {
-              "query": "q5_review_history",
+              "query": "q5_history",
               "params": {
                 "pid": "syn-p1",
                 "fid": "syn-p1:fnd-ccb-edema-loop-1"
@@ -806,7 +806,7 @@
               "result_ids": []
             },
             {
-              "query": "q5_review_history",
+              "query": "q5_history",
               "params": {
                 "pid": "syn-p2",
                 "fid": "syn-p2:fnd-ccb-edema-loop-1"
@@ -1284,7 +1284,7 @@
               "result_ids": []
             },
             {
-              "query": "q5_review_history",
+              "query": "q5_history",
               "params": {
                 "pid": "syn-p3",
                 "fid": "syn-p3:fnd-ccb-edema-loop-1"
@@ -1504,6 +1504,55 @@
                 "created_at": 62,
                 "previous_n": 1,
                 "eval_version": 1
+              }
+            ],
+            "finding_changes": [
+              {
+                "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+                "before": {
+                  "id": "syn-p3:fnd-ccb-edema-loop-1",
+                  "patient_id": "syn-p3",
+                  "pattern_id": "pat-ccb-edema-loop",
+                  "pattern_version": 1,
+                  "eval_version": 1,
+                  "status": "reviewed",
+                  "revision_n": 1,
+                  "index_episode_id": "syn-p3:ep-amlodipine",
+                  "marker_episode_id": "syn-p3:ep-furosemide",
+                  "effect": "peripheral_edema",
+                  "observation_ids": [
+                    "syn-p3:obs-ankle-swelling"
+                  ],
+                  "cited_source_ids": [
+                    "syn-p3:src-cardio-d0",
+                    "syn-p3:src-pharm-d40",
+                    "syn-p3:src-cg-d45"
+                  ],
+                  "requirement_ids": [],
+                  "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+                },
+                "after": {
+                  "id": "syn-p3:fnd-ccb-edema-loop-1",
+                  "patient_id": "syn-p3",
+                  "pattern_id": "pat-ccb-edema-loop",
+                  "pattern_version": 1,
+                  "eval_version": 1,
+                  "status": "needs_reassessment",
+                  "revision_n": 2,
+                  "index_episode_id": "syn-p3:ep-amlodipine",
+                  "marker_episode_id": "syn-p3:ep-furosemide",
+                  "effect": "peripheral_edema",
+                  "observation_ids": [
+                    "syn-p3:obs-ankle-swelling"
+                  ],
+                  "cited_source_ids": [
+                    "syn-p3:src-cardio-d0",
+                    "syn-p3:src-pharm-d40",
+                    "syn-p3:src-cg-d45"
+                  ],
+                  "requirement_ids": [],
+                  "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+                }
               }
             ],
             "pending_reevaluation_ids": [],
@@ -1847,7 +1896,7 @@
                   "result_ids": []
                 },
                 {
-                  "query": "q5_review_history",
+                  "query": "q5_history",
                   "params": {
                     "pid": "syn-p3",
                     "fid": "syn-p3:fnd-ccb-edema-loop-1"

@@ -1,12 +1,13 @@
 # API
 
 Base URL: `http://localhost:8000`. Types: `api/models.py` = `web/lib/types.ts`. OpenAPI: `/docs`.
-By default (`FD_STORE=fixtures`) every route serves the synthetic fixtures in `data/stories/`
-through `api/store.py`. With `FD_STORE=graph` (plus `FD_FAMILY`, default `demo`, and `FD_STORIES`,
-default `1`) findings, investigation, packet and patients come from FalkorDB (`api/graph_store.py`,
-seeded on first start); the timeline is still read from the fixtures, and the two writes return
-**501** until D-2. Full responses for every patient are in `data/snapshots/fixtures.json`
-(regenerate with `make snapshots`). Examples below come from those snapshots, trimmed (`…`).
+With `FD_STORE=graph` (the Docker Compose default, plus `FD_FAMILY`, default `demo`, and
+`FD_STORIES`, `1 2 3` in Compose) every route reads and writes FalkorDB through `api/graph_store.py`.
+Stories missing from the graph are seeded on start; a patient already in the graph is never reloaded,
+so restarts keep confirmed evidence. Without `FD_STORE` (e.g. `uv run uvicorn …`) every route serves
+the synthetic fixtures in `data/stories/` from memory through `api/store.py`. Full fixture-mode
+responses for every patient are in `data/snapshots/fixtures.json` (regenerate with `make snapshots`).
+Examples below come from those snapshots, trimmed (`…`).
 
 Conventions: IDs are patient-scoped (`syn-p1:…`), days are integers, and every write carries
 `case_version`.
@@ -18,7 +19,6 @@ Conventions: IDs are patient-scoped (`syn-p1:…`), days are integers, and every
 | 404 | `{"error": "not_found", "detail": "patient nobody"}` | unknown patient, finding or fact |
 | 409 | `{"error": "stale_case_version", "patient_id": "syn-p3", "sent": 3, "current": 4}` | write carries an old `case_version` |
 | 409 | `{"error": "stale_revision", "patient_id": "syn-p1", "sent": 0, "current": 1}` | review targets an old revision |
-| 501 | `{"error": "not_implemented", "detail": "review writes move into FalkorDB in D-2"}` | a write in graph mode (until D-2) |
 | 422 | `{"error": "invalid", "detail": "event_id syn-p1:evt-x is not scoped to syn-p3"}` | bad field, source or event scope (pydantic errors also use 422) |
 
 ---
@@ -143,7 +143,7 @@ requirement or revision IDs each query returned. `mode` is `live` in graph mode.
   "query_trace": [
     { "query": "q4_evidence_pack", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 4, "mode": "fixture", "result_ids": ["syn-p1:ep-amlodipine", "syn-p1:ep-furosemide", "syn-p1:obs-ankle-swelling"] },
     { "query": "q2_next_question", "params": { "pid": "syn-p1" }, "rows": 1, "mode": "fixture", "result_ids": ["syn-p1:req-furosemide-indication"] },
-    { "query": "q5_review_history", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 1, "mode": "fixture", "result_ids": ["syn-p1:fnd-ccb-edema-loop-1:rev-1"] }
+    { "query": "q5_history", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 1, "mode": "fixture", "result_ids": ["syn-p1:fnd-ccb-edema-loop-1:rev-1"] }
   ]
 }
 ```
@@ -189,14 +189,34 @@ Request (story 3's pending date correction):
       "changed_fact_ids": ["syn-p3:obs-ankle-swelling"], "created_at": 62, "previous_n": 1, "eval_version": 1
     }
   ],
+  "finding_changes": [
+    {
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "before": { "status": "reviewed", "revision_n": 1, "…": "…" },
+      "after":  { "status": "needs_reassessment", "revision_n": 2, "…": "…" }
+    }
+  ],
   "pending_reevaluation_ids": [],
   "replayed": false
 }
 ```
 
-`affected_finding_ids` is the Q3 scope. Reviewed findings get revision n+1 with status
-`needs_reassessment`, and their decision stays on revision n. Other affected findings are listed in
-`pending_reevaluation_ids` for the engine to re-evaluate.
+`affected_finding_ids` is the Q3 scope (`q3_affected`): the findings that cite, link or need the
+changed fact. Nothing else is touched. `finding_changes` gives each of them before and after.
+
+In graph mode, all of this runs in FalkorDB:
+
+- The compare-and-set on `case_version`, the new fact version and the event record are one query
+  (`write/evidence_apply`), so two racing writes on the same version get one 200 and one 409.
+- The fact keeps its ID and edges and holds the current values. The previous values stay in a
+  `FactVersion` node (with `superseded_at`); version n+1 `SUPERSEDES` version n.
+- The rules re-run for the affected findings only, and each gets `FindingRevision` n+1 (linked by
+  `PREVIOUS`, with `reason` and `changed_fact_ids`). A finding with a review decision gets
+  `needs_reassessment`; its decision stays on revision n. `pending_reevaluation_ids` is always empty.
+- The result is stored on the `EvidenceEvent`, so a repeated `event_id` replays it after a restart too.
+
+The fixture store only creates revisions for reviewed findings and lists the others in
+`pending_reevaluation_ids`, because it does not run the rules.
 
 **409**
 

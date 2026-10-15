@@ -1,8 +1,7 @@
-"""FastAPI routes. FD_STORE=fixtures (default) serves data/stories through FixtureStore;
-FD_STORE=graph reads findings and investigations from FalkorDB through GraphStore (api/graph_store.py),
-which checks the patient exists in a family graph before every patient-scoped call.
-
-TODO(Dev, D-2): evidence and review writes in graph mode (they return 501 until then).
+"""FastAPI routes. FD_STORE=graph (the docker-compose default) reads and writes FalkorDB through
+GraphStore (api/graph_store.py), which checks the patient exists in a family graph before every
+patient-scoped call. FD_STORE=fixtures (the default without compose) serves data/stories from memory
+through FixtureStore, which also produces the snapshots the web app uses offline.
 """
 
 from __future__ import annotations
@@ -13,7 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from api.graph_store import NotInGraphMode, graph_store_from_env
+from api.graph_store import graph_store_from_env
 from api.models import (
     ConflictError,
     EvidenceRequest,
@@ -58,11 +57,6 @@ async def _conflict(_: Request, exc: Conflict):
 @app.exception_handler(NotFound)
 async def _not_found(_: Request, exc: NotFound):
     return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(exc)})
-
-
-@app.exception_handler(NotInGraphMode)
-async def _not_in_graph_mode(_: Request, exc: NotInGraphMode):
-    return JSONResponse(status_code=501, content={"error": "not_implemented", "detail": str(exc)})
 
 
 @app.exception_handler(Invalid)
