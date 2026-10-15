@@ -85,6 +85,26 @@ def test_evidence_and_review_run_against_falkordb(api):
     assert api.post("/patients/syn-p1/evidence", json=P3_EVENT).status_code == 422  # p3 event via p1
 
 
+def test_unrelated_medicine_questions_and_agent_steps_over_http(api):
+    stop = {"event_id": "syn-p3:evt-atorva", "case_version": 4, "change": {
+        "fact_id": "syn-p3:ep-atorvastatin", "field": "stop_day", "value": 50, "state": "documented"}}
+    res = api.post("/patients/syn-p3/evidence", json=stop).json()
+    assert (res["affected_finding_ids"], res["new_revisions"], res["case_version"]) == ([], [], 5)
+    assert api.get(f"/findings/{P3_FINDING}/investigation").json()["finding"]["revision_n"] == 1
+
+    rid = "syn-p1:req-furosemide-indication"
+    q = api.post("/questions", json={"case_version": 2, "requirement_id": rid})
+    assert q.status_code == 200 and q.json()["case_version"] == 3 and q.json()["question"]["asked_at"] == 60
+    assert api.post("/questions", json={"case_version": 2, "requirement_id": rid}).json()["replayed"] is True
+
+    step = {"step_id": "syn-p1:step-2", "case_version": 3, "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+            "tool": "get_investigation", "ok": True, "args": {}, "result_ids": ["syn-p1:ep-furosemide"]}
+    assert api.post("/agent-steps", json=step).status_code == 200
+    steps = api.get("/patients/syn-p1/agent-steps").json()
+    assert [s["id"] for s in steps["steps"]] == ["syn-p1:step-1", "syn-p1:step-2"]
+    assert steps["case_version"] == 3  # an agent step does not move it
+
+
 def _compose(*args: str) -> str:
     return subprocess.run(
         ["docker", "compose", *args], cwd=REPO, check=True, capture_output=True, text=True,

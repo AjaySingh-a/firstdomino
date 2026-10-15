@@ -3,8 +3,9 @@
 Rules (data-model.md, "Finding statuses"), in precedence order:
 - Two documented facts in the reverse order of the pattern -> not_matched.
   If either side is only reported, the order is not settled: an `order` requirement instead.
-- The second medicine has a documented, different indication -> competing_explanation
-  (shown, never dismissed).
+- The second medicine has a known indication that is not the pattern's effect -> competing_explanation
+  (shown, never dismissed), whether that reason is documented or reported by the caregiver. The
+  headline and reason say which. A reported different reason never leaves the finding a candidate.
 - Any required fact unknown -> needs_evidence, one EvidenceRequirement per gap.
 - Conflicting facts -> stays candidate, with the conflict listed.
 
@@ -21,12 +22,12 @@ from typing import Any
 
 from api.models import EvidenceRequirement, FindingStatus
 
-EVAL_VERSION = 1
+EVAL_VERSION = 2  # 2: a reported different indication is a competing explanation too
 
 KNOWN = ("documented", "reported")
 
 # Indications that name the pattern's own effect. Exact phrases only: anything else that is
-# documented counts as a different indication and is shown as a competing explanation.
+# documented or reported counts as a different indication and is shown as a competing explanation.
 EFFECT_TERMS = {
     "peripheral_edema": {
         "ankle swelling", "leg swelling", "swelling", "swollen ankles", "swollen legs",
@@ -144,7 +145,7 @@ def evaluate(
 
     # --- indication of the second medicine ---
     ind, ind_state = row.get("b_indication"), row.get("b_ind_state") or "unknown"
-    competing = False
+    competing: str | None = None  # the state of a different indication: documented or reported
     if ind_state == "conflicting":
         conflicts.append(b.fact_id)
     elif ind_state == "not_available":
@@ -152,8 +153,8 @@ def evaluate(
              state="not_available")
     elif ind_state not in KNOWN or not ind:
         need("indication", b.fact_id, "indication", f"the reason {b.label} was started")
-    elif ind_state == "documented" and not _names_effect(ind, row["effect"]):
-        competing = True
+    elif not _names_effect(ind, row["effect"]):
+        competing = ind_state
 
     # --- status ---
     status: FindingStatus
@@ -172,8 +173,8 @@ def evaluate(
         effect=row["effect"], status=status, observation_ids=[o.fact_id for o in obs],
         requirements=reqs, conflicts=sorted(set(conflicts)),
     )
-    ev.headline = _headline(status, a, obs, b)
-    ev.reason = _reason(lead, status, b, ind, gaps, reversed_documented, ev.conflicts)
+    ev.headline = _headline(status, a, obs, b, competing)
+    ev.reason = _reason(lead, status, b, ind, competing, gaps, reversed_documented, ev.conflicts)
     return ev
 
 
@@ -198,14 +199,21 @@ def _names_effect(indication: str, effect: str) -> bool:
     return indication.strip().lower() in EFFECT_TERMS.get(effect, {effect.replace("_", " ")})
 
 
-def _headline(status: str, a: Point, obs: list[Point], b: Point) -> str:
+def _headline(status: str, a: Point, obs: list[Point], b: Point, competing: str | None) -> str:
     steps = [a.label, *([obs[0].label.lower()] if obs else []), b.label]
     if status == "not_matched":
         return "Order does not fit the pattern: " + ", ".join(steps)
+    if status == "competing_explanation":
+        return f"Possible pattern: {', then '.join(steps)} ({b.label} has a different {competing} reason)"
     return "Possible pattern: " + ", then ".join(steps)
 
 
-def _reason(lead, status, b, ind, gaps, reversed_documented, conflicts) -> str:
+# How the source of a different reason is named. Neutral on purpose: a second explanation sits next to
+# the pattern for the clinician to weigh; it never says the prescribing was wrong.
+INDICATION_SOURCE = {"documented": "is documented as", "reported": "is reported by the caregiver as"}
+
+
+def _reason(lead, status, b, ind, competing, gaps, reversed_documented, conflicts) -> str:
     parts = [lead]
     if status == "not_matched":
         first, second = reversed_documented[0]
@@ -215,7 +223,7 @@ def _reason(lead, status, b, ind, gaps, reversed_documented, conflicts) -> str:
         )
     if status == "competing_explanation":
         parts.append(
-            f"The reason {b.label} was started is documented as \"{ind}\". "
+            f"The reason {b.label} was started {INDICATION_SOURCE[competing]} \"{ind}\". "
             "This is another explanation worth reviewing alongside the pattern."
         )
     if gaps:

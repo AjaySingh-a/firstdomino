@@ -207,6 +207,24 @@ export interface ReviewRequest {
   reason: string;
 }
 
+/** Record that the question for one open requirement was asked. No text = the deterministic template. */
+export interface QuestionRequest {
+  case_version: number;
+  requirement_id: string;
+  text?: string | null;
+}
+
+/** One review-agent step. step_id is patient-scoped and idempotent. */
+export interface AgentStepRequest {
+  step_id: string;
+  case_version: number;
+  finding_id?: string | null;
+  tool: AgentTool;
+  ok: boolean;
+  args: Record<string, unknown>;
+  result_ids: string[];
+}
+
 // ---------- responses ----------
 
 export interface FactRef {
@@ -284,6 +302,25 @@ export interface ReviewResult {
   finding: Finding;
 }
 
+export interface QuestionResult {
+  case_version: number;
+  question: Question;
+  replayed: boolean;
+}
+
+/** case_version does not move for an agent step: it is an audit record. */
+export interface AgentStepResult {
+  case_version: number;
+  step: AgentStep;
+  replayed: boolean;
+}
+
+export interface AgentStepsResponse {
+  patient_id: string;
+  case_version: number;
+  steps: AgentStep[];
+}
+
 export interface ConflictError {
   error: "stale_case_version" | "stale_revision";
   patient_id: string;
@@ -353,6 +390,7 @@ export type SnapshotFile = {
       findings: FindingsResponse;
       investigations: Record<string, InvestigationResponse>;
       packet: PacketResponse;
+      agent_steps: AgentStepsResponse;
       evidence: Record<
         string,
         {

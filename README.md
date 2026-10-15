@@ -61,8 +61,8 @@ Three synthetic patients, all on the same pattern (amlodipine, then ankle swelli
 | Patient | Story | Finding |
 |---|---|---|
 | `syn-p1` | Nobody recorded why furosemide was started | `needs_evidence`: asks the caregiver for the reason |
-| `syn-p2` | A discharge summary documents a different reason (new heart failure) | `competing_explanation`: shown side by side, not dismissed |
-| `syn-p3` | A clinician reviewed revision 1; a GP note now moves the swelling onset from day 28 to day 14 | Confirming the correction creates revision 2, `needs_reassessment`, and keeps the decision on revision 1 |
+| `syn-p2` | A discharge summary documents a different reason (new heart failure) | `competing_explanation`: shown side by side, not dismissed, and the prescriber is never called mistaken. A different reason that is only reported by the caregiver gives the same status, labelled as reported |
+| `syn-p3` | A clinician reviewed revision 1; a GP note now moves the swelling onset from day 28 to day 14. Atorvastatin is in no pattern | Confirming the correction creates revision 2, `needs_reassessment`, and keeps the decision on revision 1. Editing atorvastatin re-evaluates nothing and creates no revision |
 
 ## Quick start
 
@@ -156,6 +156,8 @@ queries: [docs/data-model.md](docs/data-model.md).
 | API on FalkorDB: timeline, findings, investigation, packet | Done |
 | Evidence writes on FalkorDB: fact versions, 409 on stale `case_version`, idempotent `event_id`, re-evaluation of affected findings only, revision history | Done |
 | Review decisions on FalkorDB, kept on their revision | Done |
+| Stories 2 and 3 on FalkorDB with golden tests (`tests/test_golden.py`) | Done |
+| Questions and agent steps: `POST /questions`, `POST /agent-steps`, `GET /patients/{id}/agent-steps` | Done |
 | Docker Compose (FalkorDB, API in graph mode, web) | Done |
 | Named Cypher queries, checked against FalkorDB | Done |
 | Web workspace: Medication River, investigation drawer, review history, interface states | Done (fixture and live modes) |

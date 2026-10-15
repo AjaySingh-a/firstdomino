@@ -12,7 +12,7 @@ import type { EvidenceRequest, TimelineResponse } from "@/lib/types";
 import { DayInput, field, pill, useEventId, type SubmitEvidence } from "./next-question";
 import { Button } from "./ui/button";
 
-type Kind = "onset" | "indication";
+type Kind = "onset" | "start" | "indication";
 type ValueState = "documented" | "reported";
 
 export function SandboxPanel({
@@ -35,12 +35,16 @@ export function SandboxPanel({
   const eventId = useEventId(patient.id);
   const live = DATA_SOURCE === "live";
 
+  // Every medicine is listed, including ones no pattern involves: editing those re-evaluates nothing.
   const options =
     kind === "onset"
       ? observations.map((o) => ({ id: o.id, label: `${o.label} began`, current: o.happened_at, currentText: null }))
-      : episodes.map((e) => ({ id: e.id, label: `Reason for ${e.ingredient.name}`, current: null, currentText: e.indication }));
+      : kind === "start"
+        ? episodes.map((e) => ({ id: e.id, label: `${e.ingredient.name} started`, current: e.happened_at, currentText: null }))
+        : episodes.map((e) => ({ id: e.id, label: `Reason for ${e.ingredient.name}`, current: null, currentText: e.indication }));
   const chosen = options.find((o) => o.id === factId) ?? options[0];
-  const value = kind === "onset" ? (dayValue ?? chosen?.current ?? null) : text.trim() || null;
+  const isDay = kind !== "indication";
+  const value = isDay ? (dayValue ?? chosen?.current ?? null) : text.trim() || null;
 
   function pickKind(k: Kind) {
     setKind(k);
@@ -54,7 +58,7 @@ export function SandboxPanel({
     if (!chosen || value === null) return;
     const change: EvidenceRequest["change"] = {
       fact_id: chosen.id,
-      field: kind === "onset" ? "happened_at" : "indication",
+      field: isDay ? "happened_at" : "indication",
       value,
       state,
       source_id: sourceId || null,
@@ -89,7 +93,8 @@ export function SandboxPanel({
           </h2>
           <p className="mt-1.5 max-w-[60ch] text-[12.5px] text-ink-2">
             Try a different version of this synthetic story. Only the findings that depend on the edited fact are
-            re-evaluated, and each gets a new revision. Reset restores all three synthetic stories.
+            re-evaluated, and each gets a new revision. A medicine that no pattern involves changes no finding.
+            Reset restores all three synthetic stories.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={reset} disabled={busy !== null || !live}>
@@ -107,6 +112,10 @@ export function SandboxPanel({
                 <span className={pill}>Symptom onset date</span>
               </label>
             )}
+            <label>
+              <input type="radio" name="sandbox-kind" className="peer sr-only" checked={kind === "start"} onChange={() => pickKind("start")} />
+              <span className={pill}>Medicine start date</span>
+            </label>
             <label>
               <input type="radio" name="sandbox-kind" className="peer sr-only" checked={kind === "indication"} onChange={() => pickKind("indication")} />
               <span className={pill}>Reason a medicine was started</span>
@@ -132,7 +141,7 @@ export function SandboxPanel({
           </select>
           <span className="mt-1 block text-[11.5px] text-ink-3">
             Now:{" "}
-            {kind === "onset"
+            {isDay
               ? chosen?.current === null || chosen?.current === undefined
                 ? "date not known"
                 : `day ${chosen.current}`
@@ -141,8 +150,10 @@ export function SandboxPanel({
         </label>
 
         <div className="block">
-          <span className="smallcaps mb-1.5 block text-ink-3">{kind === "onset" ? "New onset day" : "New reason"}</span>
-          {kind === "onset" ? (
+          <span className="smallcaps mb-1.5 block text-ink-3">
+            {kind === "onset" ? "New onset day" : kind === "start" ? "New start day" : "New reason"}
+          </span>
+          {isDay ? (
             <div className="pt-2">
               <DayInput value={value as number | null} onChange={setDayValue} max={patient.as_of_day} />
             </div>

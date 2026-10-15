@@ -88,7 +88,7 @@
       "patient_id": "syn-p2",
       "pattern_id": "pat-ccb-edema-loop",
       "pattern_version": 1,
-      "eval_version": 1,
+      "eval_version": 2,
       "status": "competing_explanation",
       "revision_n": 1,
       "index_episode_id": "syn-p2:ep-amlodipine",
@@ -109,11 +109,11 @@
       "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
       "n": 1,
       "status": "competing_explanation",
-      "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+      "reason": "First evaluation. The reason furosemide was started is documented as \"heart failure, new diagnosis during hospital stay\". This is another explanation worth reviewing alongside the pattern.",
       "changed_fact_ids": [],
       "created_at": 60,
       "previous_n": null,
-      "eval_version": 1
+      "eval_version": 2
     }
   ],
   "decisions": [],
