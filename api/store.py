@@ -189,12 +189,17 @@ class FixtureStore:
             revisions=revisions,
             decisions=decisions,
             query_trace=[
-                QueryTraceEntry(query="q4_evidence_pack", params=params, rows=len(refs), mode="fixture"),
                 QueryTraceEntry(
-                    query="q2_next_question", params={"pid": pid}, rows=min(len(open_qs), 1), mode="fixture"
+                    query="q4_evidence_pack", params=params, rows=len(refs), mode="fixture",
+                    result_ids=list(dict.fromkeys(r.fact_id for r in refs)),
                 ),
                 QueryTraceEntry(
-                    query="q5_review_history", params=params, rows=len(revisions), mode="fixture"
+                    query="q2_next_question", params={"pid": pid}, rows=min(len(open_qs), 1), mode="fixture",
+                    result_ids=[q.requirement_id for q in open_qs[:1]],
+                ),
+                QueryTraceEntry(
+                    query="q5_review_history", params=params, rows=len(revisions), mode="fixture",
+                    result_ids=[r.id for r in revisions],
                 ),
             ],
         )
