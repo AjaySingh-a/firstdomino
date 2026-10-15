@@ -225,6 +225,7 @@ export interface QueryTraceEntry {
   params: Record<string, unknown>;
   rows: number;
   mode: "fixture" | "live";
+  result_ids: string[]; // IDs the query returned (facts, requirements, revisions)
 }
 
 export interface TimelineResponse {

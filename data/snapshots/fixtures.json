@@ -204,13 +204,13 @@
                 "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                 "doi": "10.1001/jamainternmed.2019.7087",
                 "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
               },
               {
                 "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                 "doi": "10.1001/jamanetworkopen.2019.18425",
                 "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
               }
             ]
           },
@@ -326,7 +326,12 @@
                 "fid": "syn-p1:fnd-ccb-edema-loop-1"
               },
               "rows": 4,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p1:ep-amlodipine",
+                "syn-p1:ep-furosemide",
+                "syn-p1:obs-ankle-swelling"
+              ]
             },
             {
               "query": "q2_next_question",
@@ -334,7 +339,10 @@
                 "pid": "syn-p1"
               },
               "rows": 1,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p1:req-furosemide-indication"
+              ]
             },
             {
               "query": "q5_review_history",
@@ -343,7 +351,10 @@
                 "fid": "syn-p1:fnd-ccb-edema-loop-1"
               },
               "rows": 1,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p1:fnd-ccb-edema-loop-1:rev-1"
+              ]
             }
           ]
         }
@@ -404,13 +415,13 @@
                   "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                   "doi": "10.1001/jamainternmed.2019.7087",
                   "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
                 },
                 {
                   "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                   "doi": "10.1001/jamanetworkopen.2019.18425",
                   "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
                 }
               ]
             },
@@ -666,13 +677,13 @@
                 "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                 "doi": "10.1001/jamainternmed.2019.7087",
                 "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
               },
               {
                 "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                 "doi": "10.1001/jamanetworkopen.2019.18425",
                 "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
               }
             ]
           },
@@ -778,7 +789,12 @@
                 "fid": "syn-p2:fnd-ccb-edema-loop-1"
               },
               "rows": 4,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p2:ep-amlodipine",
+                "syn-p2:ep-furosemide",
+                "syn-p2:obs-ankle-swelling"
+              ]
             },
             {
               "query": "q2_next_question",
@@ -786,7 +802,8 @@
                 "pid": "syn-p2"
               },
               "rows": 0,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": []
             },
             {
               "query": "q5_review_history",
@@ -795,7 +812,10 @@
                 "fid": "syn-p2:fnd-ccb-edema-loop-1"
               },
               "rows": 1,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p2:fnd-ccb-edema-loop-1:rev-1"
+              ]
             }
           ]
         }
@@ -854,13 +874,13 @@
                   "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                   "doi": "10.1001/jamainternmed.2019.7087",
                   "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
                 },
                 {
                   "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                   "doi": "10.1001/jamanetworkopen.2019.18425",
                   "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
                 }
               ]
             },
@@ -1124,13 +1144,13 @@
                 "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                 "doi": "10.1001/jamainternmed.2019.7087",
                 "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
               },
               {
                 "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                 "doi": "10.1001/jamanetworkopen.2019.18425",
                 "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
               }
             ]
           },
@@ -1247,7 +1267,12 @@
                 "fid": "syn-p3:fnd-ccb-edema-loop-1"
               },
               "rows": 4,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p3:ep-amlodipine",
+                "syn-p3:ep-furosemide",
+                "syn-p3:obs-ankle-swelling"
+              ]
             },
             {
               "query": "q2_next_question",
@@ -1255,7 +1280,8 @@
                 "pid": "syn-p3"
               },
               "rows": 0,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": []
             },
             {
               "query": "q5_review_history",
@@ -1264,7 +1290,10 @@
                 "fid": "syn-p3:fnd-ccb-edema-loop-1"
               },
               "rows": 1,
-              "mode": "fixture"
+              "mode": "fixture",
+              "result_ids": [
+                "syn-p3:fnd-ccb-edema-loop-1:rev-1"
+              ]
             }
           ]
         }
@@ -1323,13 +1352,13 @@
                   "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
                   "doi": "10.1001/jamainternmed.2019.7087",
                   "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
-                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 32091538). Primary outcome: loop diuretic dispensed within 90 days of a new CCB (Ontario, adults 66+ with hypertension); basis for window_days = 90."
                 },
                 {
                   "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
                   "doi": "10.1001/jamanetworkopen.2019.18425",
                   "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
-                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                  "note": "Verified 2026-10-15 (Crossref, PMID 31880802). Prescription sequence symmetry analysis of dihydropyridine CCB starters aged 20+ without heart failure, using a 360-day window before and after, so it does not set window_days."
                 }
               ]
             },

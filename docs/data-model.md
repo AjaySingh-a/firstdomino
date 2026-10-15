@@ -46,14 +46,14 @@ uniform names in the graph and the API:
 | Knowledge | `Ingredient` | `name`, `rxcui` |
 | | `DrugClass` | `code` (ATC, e.g. `C08CA`, `C03CA`) |
 | | `Effect` | `name` (e.g. `peripheral_edema`) |
-| | `Pattern` | `id`, `version`, `title`, `window_days`, `requires`, `evidence_refs` |
+| | `Pattern` | `id`, `version`, `title`, `window_days`, `requires`, `evidence_refs` (JSON string: FalkorDB has no map properties) |
 | Patient facts | `Patient` | `id`, `label`, `age_band`, `case_version`, `as_of_day`, `synthetic` |
-| | `Prescriber` | `specialty` |
+| | `Prescriber` | `id` (`<pid>:prs-<specialty>`, patient-scoped so no node is shared), `specialty` |
 | | `Source` | `id`, `kind`, `label`, `happened_at`, `recorded_at` |
 | | `MedicationEpisode` | `id`, `happened_at`, `recorded_at`, `state`, `dose_text`, `indication`, `indication_state`, `stop_day` |
 | | `Observation` | `id`, `happened_at`, `recorded_at`, `state`, `label` |
 | Reasoning | `Finding` | `id`, `patient_id`, `status`, `revision_n`, `pattern_version`, `eval_version`, `headline` |
-| | `EvidenceRequirement` | `id`, `kind` (`start_day`/`onset_day`/`indication`/`order`), `field`, `state` (`missing`/`provided`/`not_available`) |
+| | `EvidenceRequirement` | `id`, `patient_id`, `finding_id`, `kind` (`start_day`/`onset_day`/`indication`/`order`), `field`, `state` (`missing`/`provided`/`not_available`) |
 | Investigation + memory | `Question` | `id`, `ask_role`, `text`, `asked_at`, `answer`, `answer_state` |
 | | `FindingRevision` | `id`, `n`, `status`, `reason`, `changed_fact_ids`, `created_at`, `eval_version` |
 | | `ReviewDecision` | `id`, `by_role`, `decision`, `reason`, `decided_at` |
@@ -83,20 +83,30 @@ uniform names in the graph and the API:
 | | `ON` | `ReviewDecision` → `FindingRevision` |
 | | `FOR` | `AgentStep` → `Finding` |
 
-\* Q2 needs `Patient -[:HAS]-> fact`. Q3–Q5 find findings with `Finding {patient_id: $pid}` after
-anchoring on `Patient {id: $pid}`. Whether `Patient -[:HAS]-> Finding` is also written is Dev's call on Day 1.
+\* Q2 needs `Patient -[:HAS]-> fact`. **Decided (D-1):** `Patient -[:HAS]-> Finding` is written, and
+Q4–Q6 traverse it from `Patient {id: $pid}`, so a finding is reachable only through its own patient.
+Q3 still matches `Finding {patient_id: $pid}`.
 
 ## Finding statuses
 
 `candidate` · `needs_evidence` · `competing_explanation` · `needs_reassessment` · `reviewed` ·
 `not_matched`. None of them means "caused".
 
-Rules on Q1 rows (engine, not built yet):
+Rules on Q1 rows (`engine/rules.py`, tested in `tests/test_rules.py`), in precedence order:
 
-- Both starts documented and the order reversed → `not_matched`.
-- The second medicine has a documented, different indication → `competing_explanation`, shown and not dismissed.
-- Any required fact unknown → `needs_evidence`, with one requirement per gap.
-- Conflicting dates → stays `candidate`, with the conflict shown.
+- Two **documented** facts in the reverse of index start → onset → marker start → `not_matched`.
+  If either side is only `reported`, the order is not settled: an `order` requirement instead.
+- The second medicine has a documented, different indication → `competing_explanation`, shown and not
+  dismissed. "Same as the effect" means an exact phrase in `rules.EFFECT_TERMS` (e.g. "ankle swelling").
+- Any required fact unknown → `needs_evidence`, with one requirement per gap. A null day is never read
+  as 0 or as absent. No observation of the effect at all → an `onset_day` requirement about the index
+  episode (`field: via_effect`): not known yet, not "no".
+- Conflicting facts → stays `candidate`, with the conflict listed in the revision reason and `conflicts`.
+- `window_days` is shown with the pattern but excludes nothing (Savage 2020 saw the association persist
+  up to a year).
+
+Finding IDs: `<pid>:fnd-<pattern id without "pat-">-<k>`. Requirements: `<pid>:req-<fact>-<kind>`.
+First evaluation writes `FindingRevision` n=1 with `ON CREATE`, so reloading never rewrites history.
 
 When evidence changes under a reviewed finding: create revision n+1 with status `needs_reassessment`
 and the reason, linked by `PREVIOUS`. The clinician's decision stays attached to revision n.
@@ -112,9 +122,21 @@ Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always
 | `q3_dependency_scope` | findings that touch a changed fact (only these re-evaluate) | `$pid`, `$fact_id` |
 | `q4_evidence_pack` | evidence for the drawer | `$pid`, `$fid` |
 | `q5_review_history` | revisions with decisions kept intact | `$pid`, `$fid` |
+| `q6_patient_findings` | findings list with linked IDs (`GET /patients/{id}/findings`) | `$pid` |
 
-**Day 1 (Dev):** check each against FalkorDB's Cypher support and known limitations, especially
-comma-separated multi-patterns, pattern predicates in `WHERE`, `[:A|B]` multi-type relationships, and `UNION`.
+Loader and engine writes live in `engine/queries/write/` (MERGE, parameterised), admin reads in
+`engine/queries/admin/`. Neither starts from a patient, so `test_contracts` checks only the top level.
+
+**Checked on FalkorDB 4.22 (D-1):** comma-separated multi-patterns, pattern predicates in `WHERE`,
+`[:A|B]`, `UNION`, `SET n += $map` (null removes the property), `MERGE … ON CREATE SET`, empty-list
+properties and `GRAPH.COPY` all work. `collect([o.id, …])` over an empty `OPTIONAL MATCH` yields
+`[[null, …]]`; `engine/rules.py` and `api/graph_store.py` drop those entries.
+
+## Loading
+
+`uv run python -m engine.loaders.seed [--reset] [--family demo] [--stories 1 2 3]` (default: Story 1
+into `family_demo`). It MERGEs knowledge into `kb_template`, `GRAPH.COPY`s it to `family_<id>` (or
+MERGEs the same knowledge if that graph exists), loads each story, then runs Q1 + rules.
 
 ## Dropped from v1
 

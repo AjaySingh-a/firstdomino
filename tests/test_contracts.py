@@ -61,7 +61,7 @@ def test_typescript_mirrors_pydantic():
 def test_every_query_is_named_and_starts_from_patient():
     assert cypher.names() == [
         "q1_candidate_match", "q2_next_question", "q3_dependency_scope",
-        "q4_evidence_pack", "q5_review_history",
+        "q4_evidence_pack", "q5_review_history", "q6_patient_findings",
     ]
     for name in cypher.names():
         body = "\n".join(
@@ -75,7 +75,7 @@ def test_every_query_is_named_and_starts_from_patient():
 
 BANNED = re.compile(r"\bsafe\b|stop taking|\bcleared\b|caused by", re.I)
 COPY_ROOTS = [
-    "data/stories", "data/patterns", "data/snapshots", "api", "agent",
+    "data/stories", "data/patterns", "data/snapshots", "api", "agent", "engine",
     "web/app", "web/lib", "web/components",
 ]
 

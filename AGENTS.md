@@ -29,8 +29,8 @@ needs to review them. Findings are possible patterns, never causes.
 ## Layout
 
 ```
-api/        FastAPI (Python 3.11, uv). models.py = contracts, store.py = fixture stub, main.py = routes
-engine/     queries/*.cypher (named, parameterised), cypher.py (loader), rules.py, loaders/
+api/        FastAPI (Python 3.11, uv). models.py = contracts, store.py = fixture stub, graph_store.py = FalkorDB (FD_STORE=graph), main.py = routes
+engine/     queries/*.cypher (named, parameterised; write/ + admin/ for loads), cypher.py, db.py, rules.py, evaluate.py, loaders/
 agent/      one bounded review agent; tools.py holds the allowlist
 web/        Next.js 15 + TypeScript + Tailwind + shadcn/ui + framer-motion. lib/api.ts is the ONE adapter
 data/       patterns/, stories/ (synthetic fixtures), cases/, snapshots/
