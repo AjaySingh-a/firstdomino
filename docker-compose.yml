@@ -41,6 +41,8 @@ services:
       args:
         NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-live}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    environment:
+      API_INTERNAL_URL: http://api:8000  # server-side fetches; the browser uses NEXT_PUBLIC_API_URL
     ports:
       - "3001:3001"
     depends_on:

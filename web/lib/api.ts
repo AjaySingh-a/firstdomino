@@ -25,7 +25,11 @@ export type DataSource = "fixtures" | "live";
 
 export const DATA_SOURCE: DataSource =
   process.env.NEXT_PUBLIC_DATA_SOURCE === "live" ? "live" : "fixtures";
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Server components run inside the web container, where localhost is not the API.
+// API_INTERNAL_URL (runtime, e.g. http://api:8000 in docker compose) is used there instead.
+const API_URL =
+  typeof window === "undefined" ? (process.env.API_INTERNAL_URL ?? PUBLIC_API_URL) : PUBLIC_API_URL;
 
 export class ApiError extends Error {
   constructor(
