@@ -150,18 +150,18 @@ export function StaleState({
     <Notice
       tone="error"
       icon={<RefreshCw className="size-4" />}
-      title="This view is out of date"
+      title="This case changed. Reload"
       className={className}
       action={
         onReload && (
           <Button size="sm" onClick={onReload}>
-            <RefreshCw className="size-3.5" /> Reload the case
+            <RefreshCw className="size-3.5" /> Reload
           </Button>
         )
       }
     >
-      The change was prepared against version {sent} of this case, but the case is now at version {current}.
-      Nothing was saved (HTTP 409). Reload, re-check the evidence, then try again.
+      The case changed while you were working: your change was prepared against version {sent}, and
+      the case is now at version {current}. Nothing was saved (HTTP 409). Reload, re-check the evidence, then try again.
     </Notice>
   );
 }
