@@ -1,8 +1,11 @@
 # API
 
 Base URL: `http://localhost:8000`. Types: `api/models.py` = `web/lib/types.ts`. OpenAPI: `/docs`.
-The current server is a **stub**: every route serves the synthetic fixtures in `data/stories/`
-through `api/store.py`. Full responses for every patient are in `data/snapshots/fixtures.json`
+By default (`FD_STORE=fixtures`) every route serves the synthetic fixtures in `data/stories/`
+through `api/store.py`. With `FD_STORE=graph` (plus `FD_FAMILY`, default `demo`, and `FD_STORIES`,
+default `1`) findings, investigation, packet and patients come from FalkorDB (`api/graph_store.py`,
+seeded on first start); the timeline is still read from the fixtures, and the two writes return
+**501** until D-2. Full responses for every patient are in `data/snapshots/fixtures.json`
 (regenerate with `make snapshots`). Examples below come from those snapshots, trimmed (`…`).
 
 Conventions: IDs are patient-scoped (`syn-p1:…`), days are integers, and every write carries
@@ -15,6 +18,7 @@ Conventions: IDs are patient-scoped (`syn-p1:…`), days are integers, and every
 | 404 | `{"error": "not_found", "detail": "patient nobody"}` | unknown patient, finding or fact |
 | 409 | `{"error": "stale_case_version", "patient_id": "syn-p3", "sent": 3, "current": 4}` | write carries an old `case_version` |
 | 409 | `{"error": "stale_revision", "patient_id": "syn-p1", "sent": 0, "current": 1}` | review targets an old revision |
+| 501 | `{"error": "not_implemented", "detail": "review writes move into FalkorDB in D-2"}` | a write in graph mode (until D-2) |
 | 422 | `{"error": "invalid", "detail": "event_id syn-p1:evt-x is not scoped to syn-p3"}` | bad field, source or event scope (pydantic errors also use 422) |
 
 ---
@@ -101,7 +105,8 @@ The drawer. Each `FactRef` is one field of one fact:
 - `conflicts` holds `conflicting` facts.
 - `unknowns` holds `unknown` / `not_available` facts and anything with an open requirement.
 
-`query_trace` names the `engine/queries/*.cypher` files behind the answer.
+`query_trace` names the `engine/queries/*.cypher` files behind the answer, with `result_ids`: the fact,
+requirement or revision IDs each query returned. `mode` is `live` in graph mode.
 
 ```json
 {
@@ -136,9 +141,9 @@ The drawer. Each `FactRef` is one field of one fact:
   ],
   "decisions": [],
   "query_trace": [
-    { "query": "q4_evidence_pack", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 4, "mode": "fixture" },
-    { "query": "q2_next_question", "params": { "pid": "syn-p1" }, "rows": 1, "mode": "fixture" },
-    { "query": "q5_review_history", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 1, "mode": "fixture" }
+    { "query": "q4_evidence_pack", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 4, "mode": "fixture", "result_ids": ["syn-p1:ep-amlodipine", "syn-p1:ep-furosemide", "syn-p1:obs-ankle-swelling"] },
+    { "query": "q2_next_question", "params": { "pid": "syn-p1" }, "rows": 1, "mode": "fixture", "result_ids": ["syn-p1:req-furosemide-indication"] },
+    { "query": "q5_review_history", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 1, "mode": "fixture", "result_ids": ["syn-p1:fnd-ccb-edema-loop-1:rev-1"] }
   ]
 }
 ```

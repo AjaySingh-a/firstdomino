@@ -250,6 +250,7 @@ class QueryTraceEntry(Model):
     params: dict[str, Any]
     rows: int
     mode: Literal["fixture", "live"]
+    result_ids: list[str] = []  # IDs the query returned (facts, requirements, revisions)
 
 
 class TimelineResponse(Model):

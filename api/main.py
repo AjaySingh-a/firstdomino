@@ -1,7 +1,8 @@
-"""FastAPI stubs. Every route serves the synthetic fixtures through FixtureStore.
+"""FastAPI routes. FD_STORE=fixtures (default) serves data/stories through FixtureStore;
+FD_STORE=graph reads findings and investigations from FalkorDB through GraphStore (api/graph_store.py),
+which checks the patient exists in a family graph before every patient-scoped call.
 
-TODO(Dev): swap FixtureStore for a graph-backed store with the same methods, and
-check that the caller may access the patient before every patient-scoped call.
+TODO(Dev, D-2): evidence and review writes in graph mode (they return 501 until then).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from api.graph_store import NotInGraphMode, graph_store_from_env
 from api.models import (
     ConflictError,
     EvidenceRequest,
@@ -35,7 +37,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-store = default_store()
+
+
+def _make_store():
+    if os.environ.get("FD_STORE", "fixtures") == "graph":
+        return graph_store_from_env(default_store())
+    return default_store()
+
+
+store = _make_store()
 
 CONFLICT = {409: {"model": ConflictError}}
 
@@ -50,6 +60,11 @@ async def _not_found(_: Request, exc: NotFound):
     return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(exc)})
 
 
+@app.exception_handler(NotInGraphMode)
+async def _not_in_graph_mode(_: Request, exc: NotInGraphMode):
+    return JSONResponse(status_code=501, content={"error": "not_implemented", "detail": str(exc)})
+
+
 @app.exception_handler(Invalid)
 async def _invalid(_: Request, exc: Invalid):
     return JSONResponse(status_code=422, content={"error": "invalid", "detail": str(exc)})
@@ -57,6 +72,8 @@ async def _invalid(_: Request, exc: Invalid):
 
 @app.get("/health")
 def health() -> HealthResponse:
+    if getattr(store, "mode", "fixtures") == "graph":
+        return HealthResponse(status="ok", mode="graph", falkordb="up" if store.falkordb_up() else "down")
     return HealthResponse(status="ok", mode="fixtures", falkordb="not_used")
 
 
