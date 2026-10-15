@@ -10,6 +10,8 @@ import { describeError, useInvestigation, useWorkspace } from "@/lib/use-workspa
 import { cn } from "@/lib/utils";
 import { InvestigationDrawer } from "./investigation-drawer";
 import { MedicationRiver } from "./medication-river";
+import type { SubmitOutcome } from "./next-question";
+import { SandboxPanel } from "./sandbox-panel";
 import { Wordmark } from "./site-header";
 import { SourceList } from "./source-list";
 import { LoadingState, NoMatchState, StaleState, UnavailableState } from "./state-notice";
@@ -24,6 +26,15 @@ export function Workspace({ pid }: { pid: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyEvent, setBusyEvent] = useState<string | null>(null);
   const [results, setResults] = useState<EvidenceResult[]>([]);
+  // The last accepted change: its before/after card, and which findings' arcs re-draw.
+  const [lastChange, setLastChange] = useState<EvidenceResult | null>(null);
+  const changed = useMemo(
+    () =>
+      lastChange
+        ? { ids: new Set(lastChange.new_revisions.map((r) => r.finding_id)), token: lastChange.event_id }
+        : null,
+    [lastChange],
+  );
   const investigation = useInvestigation(selected, version);
 
   useEffect(() => {
@@ -53,18 +64,40 @@ export function Workspace({ pid }: { pid: string }) {
     else setActionError(describeError(err));
   };
 
-  async function confirmEvidence(req: EvidenceRequest) {
-    setBusyEvent(req.event_id);
+  async function submitEvidence(req: EvidenceRequest): Promise<SubmitOutcome> {
     setActionError(null);
     try {
       const r = await api.submitEvidence(pid, req);
       setResults((prev) => [...prev.filter((x) => x.event_id !== r.event_id), r]);
+      setLastChange(r);
+      setStale(null);
+      // Keep the drawer on a finding this change touched, so its before/after card has context.
+      const touched = r.affected_finding_ids;
+      if (touched.length && (!selected || !touched.includes(selected))) select(touched[0]);
+      await reload();
+      return "ok";
+    } catch (err) {
+      handleError(err);
+      return err instanceof StaleError ? "stale" : "error";
+    }
+  }
+
+  async function confirmEvidence(req: EvidenceRequest) {
+    setBusyEvent(req.event_id);
+    await submitEvidence(req);
+    setBusyEvent(null);
+  }
+
+  async function resetSandbox() {
+    setActionError(null);
+    try {
+      await api.reset();
+      setResults([]);
+      setLastChange(null);
       setStale(null);
       await reload();
     } catch (err) {
       handleError(err);
-    } finally {
-      setBusyEvent(null);
     }
   }
 
@@ -213,11 +246,13 @@ export function Workspace({ pid }: { pid: string }) {
                 findings={openFindings}
                 selectedId={selected}
                 lit={lit}
+                changed={changed}
                 onSelect={select}
               />
             </div>
             <p className="mt-1.5 text-[11.5px] text-ink-3 sm:hidden">Swipe the river sideways to follow the story &rarr;</p>
             <Legend />
+            <SandboxPanel timeline={timeline.data} onSubmit={submitEvidence} onReset={resetSandbox} />
           </section>
 
           <aside aria-label="Investigation" className="border-t border-rule px-4 py-5 [grid-area:drawer] sm:px-6 lg:border-t-0">
@@ -231,6 +266,10 @@ export function Workspace({ pid }: { pid: string }) {
                   state={investigation}
                   timeline={timeline.data}
                   evidenceResults={results}
+                  lastChange={lastChange}
+                  stale={stale !== null}
+                  onSubmitEvidence={submitEvidence}
+                  onDismissChange={() => setLastChange(null)}
                   onReview={review}
                   onRetry={reloadCase}
                 />

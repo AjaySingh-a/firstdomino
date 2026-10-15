@@ -39,6 +39,8 @@ interface Props {
   findings: Finding[];
   selectedId: string | null;
   lit: Set<string> | null;
+  /** Findings re-evaluated by the last evidence change. Only their arcs re-draw; token = event_id. */
+  changed: { ids: Set<string>; token: string } | null;
   onSelect: (id: string | null) => void;
 }
 
@@ -70,7 +72,7 @@ function markerStyle(state: AnswerState) {
   }
 }
 
-export function MedicationRiver({ timeline, findings, selectedId, lit, onSelect }: Props) {
+export function MedicationRiver({ timeline, findings, selectedId, lit, changed, onSelect }: Props) {
   const [wrapRef, measured] = useWidth<HTMLDivElement>();
   const W = Math.max(MIN_W, measured);
   const { episodes, observations, sources, patient, pending_evidence } = timeline;
@@ -290,19 +292,24 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, onSelect 
         })}
 
         {/* Findings as arcs */}
-        {arcs.map(({ f, link, tone }) => (
-          <Arc
-            key={`${link.key}:${selectedId === f.id}`}
-            link={link}
-            from={points.get(link.fromId)}
-            to={points.get(link.toId)}
-            tone={tone}
-            selected={selectedId === f.id}
-            dimmed={selectedId !== null && selectedId !== f.id}
-            title={f.headline}
-            onSelect={() => onSelect(f.id)}
-          />
-        ))}
+        {arcs.map(({ f, link, tone }) => {
+          const pulse = changed?.ids.has(f.id) ?? false;
+          return (
+            <Arc
+              // Remounting re-draws an arc, so only the arcs an evidence change touched get a new key.
+              key={pulse ? `${link.key}:${changed?.token}` : link.key}
+              pulse={pulse}
+              link={link}
+              from={points.get(link.fromId)}
+              to={points.get(link.toId)}
+              tone={tone}
+              selected={selectedId === f.id}
+              dimmed={selectedId !== null && selectedId !== f.id}
+              title={f.headline}
+              onSelect={() => onSelect(f.id)}
+            />
+          );
+        })}
       </svg>
     </div>
   );
@@ -316,9 +323,11 @@ function Arc({
   selected,
   dimmed,
   title,
+  pulse,
   onSelect,
 }: {
   link: FindingLink;
+  pulse: boolean;
   from?: Pt;
   to?: Pt;
   tone: Tone;
@@ -367,6 +376,18 @@ function Arc({
       className="cursor-pointer outline-none [&:focus-visible_.focus-ring]:opacity-100"
     >
       <path d={d} fill="none" stroke="transparent" strokeWidth={18} />
+      {pulse && (
+        <motion.path
+          d={d}
+          fill="none"
+          stroke={STROKE[tone]}
+          strokeWidth={12}
+          strokeLinecap="round"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.35, 0, 0.25, 0] }}
+          transition={{ duration: 2.2, delay: 0.5, ease: "easeInOut" }}
+        />
+      )}
       <path className="focus-ring opacity-0" d={d} fill="none" stroke="var(--ink)" strokeWidth={width + 5} strokeOpacity={0.15} />
       {link.state === "conflicting" && <path d={d} fill="none" stroke="url(#hatch-amber)" strokeWidth={9} strokeLinecap="round" />}
       {link.state === "documented" ? (

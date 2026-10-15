@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, ChevronRight, MessageCircleQuestion } from "lucide-react";
+import { BookOpen, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import queriesJson from "@/lib/fixtures/queries.json";
 import {
@@ -23,6 +23,8 @@ import type {
 } from "@/lib/types";
 import type { Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
+import { BeforeAfter, ChangeCard, factName } from "./change-card";
+import { NextQuestion, type SubmitEvidence } from "./next-question";
 import { InsufficientEvidenceState, LoadingState, UnavailableState } from "./state-notice";
 import { StateTag, StatusChip } from "./status";
 import { Button } from "./ui/button";
@@ -34,11 +36,25 @@ interface Props {
   state: Loadable<InvestigationResponse> | null;
   timeline: TimelineResponse;
   evidenceResults: EvidenceResult[];
+  lastChange: EvidenceResult | null;
+  stale: boolean;
+  onSubmitEvidence: SubmitEvidence;
+  onDismissChange: () => void;
   onReview: (fid: string, body: ReviewRequest) => Promise<boolean>;
   onRetry: () => void;
 }
 
-export function InvestigationDrawer({ state, timeline, evidenceResults, onReview, onRetry }: Props) {
+export function InvestigationDrawer({
+  state,
+  timeline,
+  evidenceResults,
+  lastChange,
+  stale,
+  onSubmitEvidence,
+  onDismissChange,
+  onReview,
+  onRetry,
+}: Props) {
   if (!state) {
     return (
       <div className="py-10 text-center">
@@ -68,6 +84,14 @@ export function InvestigationDrawer({ state, timeline, evidenceResults, onReview
         <p className="mt-2 text-[13px] leading-relaxed text-ink-2">{STATUS[f.status].blurb}</p>
       </header>
 
+      <AnimatePresence>
+        {lastChange && (
+          <div className="mt-4">
+            <ChangeCard key={lastChange.event_id} result={lastChange} timeline={timeline} onDismiss={onDismissChange} />
+          </div>
+        )}
+      </AnimatePresence>
+
       <Tabs defaultValue="investigation" className="mt-4">
         <TabsList>
           <TabsTrigger value="investigation">Evidence</TabsTrigger>
@@ -76,7 +100,7 @@ export function InvestigationDrawer({ state, timeline, evidenceResults, onReview
           </TabsTrigger>
         </TabsList>
         <TabsContent value="investigation">
-          <Investigation inv={inv} timeline={timeline} />
+          <Investigation inv={inv} timeline={timeline} stale={stale} onSubmitEvidence={onSubmitEvidence} onReload={onRetry} />
         </TabsContent>
         <TabsContent value="history">
           <History inv={inv} timeline={timeline} evidenceResults={evidenceResults} onReview={onReview} />
@@ -130,7 +154,19 @@ function FactList({ facts, timeline }: { facts: FactRef[]; timeline: TimelineRes
   );
 }
 
-function Investigation({ inv, timeline }: { inv: InvestigationResponse; timeline: TimelineResponse }) {
+function Investigation({
+  inv,
+  timeline,
+  stale,
+  onSubmitEvidence,
+  onReload,
+}: {
+  inv: InvestigationResponse;
+  timeline: TimelineResponse;
+  stale: boolean;
+  onSubmitEvidence: SubmitEvidence;
+  onReload: () => void;
+}) {
   const f = inv.finding;
   const ep = new Map(timeline.episodes.map((e) => [e.id, e]));
   const a = ep.get(f.index_episode_id);
@@ -209,86 +245,79 @@ function Investigation({ inv, timeline }: { inv: InvestigationResponse; timeline
       </Part>
 
       <Part n={5} title="Next question">
-        {inv.next_question ? (
-          <div className="rounded-[6px] border border-ink bg-paper p-3.5">
-            <p className="smallcaps flex items-center gap-1.5 text-ink-3">
-              <MessageCircleQuestion className="size-3.5" aria-hidden /> For the {inv.next_question.ask_role}
-            </p>
-            <p className="mt-1.5 font-serif text-[19px] leading-snug text-ink">{inv.next_question.text}</p>
-            <p className="mt-2 font-mono text-[11px] text-ink-3">
-              {inv.next_question.asked_at === null ? "not asked yet" : `asked ${day(inv.next_question.asked_at)}`}
-            </p>
-          </div>
-        ) : (
-          <Empty>No open question for this finding.</Empty>
-        )}
+        <NextQuestion
+          key={`${inv.next_question?.id}:${inv.case_version}`}
+          inv={inv}
+          timeline={timeline}
+          stale={stale}
+          onSubmit={onSubmitEvidence}
+          onReload={onReload}
+        />
       </Part>
 
-      <QueryTrace inv={inv} />
+      <QueryTrace inv={inv} timeline={timeline} />
     </div>
   );
 }
 
-function QueryTrace({ inv }: { inv: InvestigationResponse }) {
+function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: TimelineResponse }) {
+  const name = (id: string) => {
+    const label = factName(id, timeline);
+    return label === id ? id.slice(id.indexOf(":") + 1) : label;
+  };
   return (
     <details className="group mt-2 border-t border-ink pt-3">
       <summary className="smallcaps flex cursor-pointer list-none items-center gap-1 text-ink-3 hover:text-ink">
         <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" aria-hidden />
-        How this view was assembled
+        How we found this
       </summary>
-      <ul className="mt-3 space-y-3">
-        {inv.query_trace.map((q) => (
-          <li key={q.query}>
+      <p className="mt-2 text-[12px] text-ink-3">
+        The named graph queries behind this view, each starting from the patient, and the IDs each one returned.
+      </p>
+      <ol className="mt-3 space-y-3.5">
+        {inv.query_trace.map((q, i) => (
+          <li key={`${q.query}:${i}`}>
             <p className="font-mono text-[11.5px] text-ink">
-              {q.query}
+              <span className="text-ink-3">{i + 1}.</span> {q.query}
               <span className="text-ink-3">
                 {" "}
                 · {q.rows} row{q.rows === 1 ? "" : "s"} · {q.mode}
               </span>
             </p>
-            <p className="truncate font-mono text-[10.5px] text-ink-3">{JSON.stringify(q.params)}</p>
+            {q.result_ids.length ? (
+              <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label={`IDs returned by ${q.query}`}>
+                {q.result_ids.map((id) => (
+                  <li
+                    key={id}
+                    title={id}
+                    className="max-w-full truncate rounded-[3px] border border-rule-strong bg-paper px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2"
+                  >
+                    {name(id)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 font-mono text-[10.5px] italic text-ink-3">returned no IDs</p>
+            )}
             {QUERIES[q.query] && (
-              <pre className="mt-1.5 max-h-56 overflow-auto rounded-[4px] border border-rule bg-paper p-2.5 font-mono text-[10.5px] leading-relaxed text-ink-2">
-                {QUERIES[q.query]}
-              </pre>
+              <details className="group/q mt-1.5">
+                <summary className="flex cursor-pointer list-none items-center gap-1 font-mono text-[10.5px] text-ink-3 hover:text-ink">
+                  <ChevronRight className="size-3 transition-transform group-open/q:rotate-90" aria-hidden />
+                  <span className="truncate">cypher · {JSON.stringify(q.params)}</span>
+                </summary>
+                <pre className="mt-1.5 max-h-56 overflow-auto rounded-[4px] border border-rule bg-paper p-2.5 font-mono text-[10.5px] leading-relaxed text-ink-2">
+                  {QUERIES[q.query]}
+                </pre>
+              </details>
             )}
           </li>
         ))}
-      </ul>
+      </ol>
     </details>
   );
 }
 
 // ---------- Review history ----------
-
-const SKIP = new Set(["id", "patient_id", "label", "effect", "ingredient"]);
-
-function BeforeAfter({ result }: { result: EvidenceResult }) {
-  const keys = Object.keys(result.after).filter(
-    (k) => !SKIP.has(k) && JSON.stringify(result.before[k]) !== JSON.stringify(result.after[k]),
-  );
-  const show = (v: unknown) => (Array.isArray(v) ? `${v.length} source${v.length === 1 ? "" : "s"}` : String(v ?? "—"));
-  return (
-    <table className="mt-2 w-full border-collapse font-mono text-[11px]">
-      <thead>
-        <tr className="text-left text-ink-3">
-          <th className="py-1 font-normal">field</th>
-          <th className="py-1 font-normal">before</th>
-          <th className="py-1 font-normal">after</th>
-        </tr>
-      </thead>
-      <tbody>
-        {keys.map((k) => (
-          <tr key={k} className="border-t border-rule">
-            <td className="py-1 pr-2 text-ink-3">{k}</td>
-            <td className="py-1 pr-2 text-ink-3 line-through decoration-ink-3/50">{show(result.before[k])}</td>
-            <td className="py-1 text-ink">{show(result.after[k])}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
 
 function History({
   inv,
