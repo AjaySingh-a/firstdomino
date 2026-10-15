@@ -21,7 +21,7 @@ import sys
 
 from falkordb import FalkorDB, Graph
 
-from api.models import MedicationEpisode, Observation, Pattern, StoryFixture
+from api.models import AgentStep, MedicationEpisode, Observation, Pattern, StoryFixture
 from api.store import load_patterns, load_stories
 from engine.db import KB_GRAPH, connect, family_graph, props, run
 from engine.evaluate import evaluate_patient
@@ -79,13 +79,25 @@ def load_story(graph: Graph, story: StoryFixture) -> None:
         run(graph, "write/fact_sources", pid=pid, id=o.id, source_ids=o.source_ids)
 
 
+def agent_step_props(step: AgentStep) -> dict:
+    """FalkorDB properties hold no maps, so args is stored as JSON. FOR links the finding."""
+    args_json = json.dumps(step.args, sort_keys=True)
+    return {**step.model_dump(exclude={"args", "finding_id"}), "args_json": args_json}
+
+
 def load_history(graph: Graph, story: StoryFixture) -> None:
-    """What happened before the story's as_of_day: review decisions and unconfirmed evidence."""
+    """What happened before the story's as_of_day: review decisions, the review agent's steps and
+    unconfirmed evidence."""
     pid = story.patient.id
     for d in story.decisions:
         run(
             graph, "write/seed_decision", pid=pid, fid=d.finding_id, id=d.id, revision_n=d.revision_n,
             by_role=d.by_role, decision=d.decision, reason=d.reason, decided_at=d.decided_at,
+        )
+    for step in story.agent_steps:
+        run(
+            graph, "write/agent_step", pid=pid, case_version=story.patient.case_version, id=step.id,
+            fid=step.finding_id, props=agent_step_props(step),
         )
     for e in story.pending_evidence:
         run(

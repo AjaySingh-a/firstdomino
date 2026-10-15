@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app, store
+from api.store import change_summary
 
 P1_FINDING = "syn-p1:fnd-ccb-edema-loop-1"
 P3_FINDING = "syn-p3:fnd-ccb-edema-loop-1"
@@ -123,3 +124,60 @@ def test_packet_and_reset(client):
     assert "Synthetic" in pk["disclaimer"]
     client.post("/sandbox/reset")
     assert client.get("/patients/syn-p3/findings").json()["case_version"] == 4
+
+
+def test_a_missing_value_reads_not_recorded_never_none(client):
+    body = {"event_id": "syn-p3:evt-stop", "case_version": 4, "change": {
+        "fact_id": "syn-p3:ep-atorvastatin", "field": "stop_day", "value": 50, "state": "documented"}}
+    res = client.post("/patients/syn-p3/evidence", json=body).json()
+    assert res["affected_finding_ids"] == [] and res["new_revisions"] == []
+    summary = change_summary(res["before"], res["after"], "stop_day")
+    assert summary == "atorvastatin: stop_day changed from not recorded to 50."
+    before = {"id": "syn-p1:ep-furosemide", "ingredient": {"name": "furosemide"},
+              "indication": None, "indication_state": "unknown"}
+    after = {**before, "indication": "ankle swelling", "indication_state": "reported"}
+    text = change_summary(before, after, "indication")
+    assert text == "furosemide: indication changed from not recorded (unknown) to ankle swelling (reported)."
+    assert "None" not in change_summary(after, before, "indication_state")
+
+
+def test_questions_route(client):
+    rid = "syn-p1:req-furosemide-indication"
+    stale = client.post("/questions", json={"case_version": 1, "requirement_id": rid})
+    assert stale.status_code == 409 and stale.json()["error"] == "stale_case_version"
+    banned = client.post("/questions", json={"case_version": 2, "requirement_id": rid, "text": "Is it safe?"})
+    assert banned.status_code == 422
+    unknown = client.post("/questions", json={"case_version": 2, "requirement_id": "syn-p1:req-x"})
+    assert unknown.status_code == 404
+
+    r = client.post("/questions", json={"case_version": 2, "requirement_id": rid})
+    assert r.status_code == 200
+    body = r.json()
+    assert (body["case_version"], body["replayed"], body["question"]["asked_at"]) == (3, False, 60)
+    inv = client.get(f"/findings/{P1_FINDING}/investigation").json()
+    assert inv["next_question"]["asked_at"] == 60 and inv["case_version"] == 3
+    again = client.post("/questions", json={"case_version": 2, "requirement_id": rid}).json()
+    assert again["replayed"] is True and again["question"] == body["question"]
+
+
+def test_agent_steps_routes(client):
+    seeded = client.get("/patients/syn-p1/agent-steps").json()
+    assert [s["id"] for s in seeded["steps"]] == ["syn-p1:step-1"] and seeded["case_version"] == 2
+    step = {
+        "step_id": "syn-p1:step-2", "case_version": 2, "finding_id": P1_FINDING, "tool": "get_investigation",
+        "ok": True, "args": {"fid": P1_FINDING}, "result_ids": ["syn-p1:ep-furosemide"],
+    }
+    r = client.post("/agent-steps", json=step)
+    assert r.status_code == 200
+    assert (r.json()["case_version"], r.json()["replayed"], r.json()["step"]["at"]) == (2, False, 60)
+    assert client.post("/agent-steps", json=step).json()["replayed"] is True
+    steps = client.get("/patients/syn-p1/agent-steps").json()
+    assert [s["id"] for s in steps["steps"]] == ["syn-p1:step-1", "syn-p1:step-2"]
+    assert steps["case_version"] == 2  # an agent step does not move the case version
+
+    other = {**step, "step_id": "syn-p1:step-3"}
+    assert client.post("/agent-steps", json={**other, "case_version": 1}).status_code == 409
+    assert client.post("/agent-steps", json={**other, "result_ids": ["syn-p2:x"]}).status_code == 422
+    assert client.post("/agent-steps", json={**other, "tool": "create_finding"}).status_code == 422
+    assert client.post("/agent-steps", json={**other, "finding_id": "syn-p1:fnd-x"}).status_code == 404
+    assert client.get("/patients/nobody/agent-steps").status_code == 404

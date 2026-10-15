@@ -8,12 +8,18 @@ replays its stored result after an API or FalkorDB restart too.
 
 Evidence change, in order:
 1. replay an applied event_id; else write/evidence_apply: compare-and-set case_version, append a
-   FactVersion (old one kept), update the fact, record the event.
+   FactVersion (old one kept), update the fact, record the event as 'applying' with what steps 2-4
+   need (the fact before and after, the findings before).
 2. a "not available" answer marks the requirements about that field not_available (never "no").
 3. Q3 (q3_affected) names the findings that cite, link or need the fact; the rules re-run for those
    only (engine/evaluate.reevaluate) and each gets FindingRevision n+1, linked by PREVIOUS.
    A finding with a review decision gets needs_reassessment; the decision stays on its revision.
-4. the result is stored on the event for replay.
+4. the result is stored on the event for replay, and the event becomes 'applied'.
+If the same event_id comes back while its event is still 'applying' (the API stopped after step 1),
+steps 2-4 resume from what the event holds instead of answering 409. Each of them is idempotent: a
+revision already written for this event (BECAUSE) is reused, never written twice.
+
+Questions (POST /questions) and agent steps (POST /agent-steps) are compare-and-set writes too.
 """
 
 from __future__ import annotations
@@ -26,6 +32,10 @@ from typing import Any
 from falkordb import FalkorDB
 
 from api.models import (
+    AgentStep,
+    AgentStepRequest,
+    AgentStepResult,
+    AgentStepsResponse,
     EvidenceChange,
     EvidenceRequest,
     EvidenceResult,
@@ -43,6 +53,9 @@ from api.models import (
     Patient,
     Pattern,
     QueryTraceEntry,
+    Question,
+    QuestionRequest,
+    QuestionResult,
     ReviewDecision,
     ReviewRequest,
     ReviewResult,
@@ -56,7 +69,9 @@ from api.store import (
     Invalid,
     NotFound,
     change_summary,
+    check_agent_step,
     check_change,
+    check_copy,
     load_patterns,
     load_stories,
     mutate,
@@ -65,7 +80,7 @@ from api.store import (
 )
 from engine.db import connect, family_graph, props, run
 from engine.evaluate import reevaluate
-from engine.loaders.seed import DEFAULT_FAMILY, fact_props, seed
+from engine.loaders.seed import DEFAULT_FAMILY, agent_step_props, fact_props, seed
 from engine.questions import question_for
 
 
@@ -202,11 +217,18 @@ class GraphStore:
         q5 = run(g, "q5_history", **params)
         revisions, decisions = _history(pid, fid, q5)
 
-        next_q = None
+        next_q, asked = None, []
         if q2 and fid in q2[0]["finding_ids"]:
             row = q2[0]
             name, day = pack["names"][row["fact_id"]]
             next_q = question_for(pid, row["requirement_id"], row["requirement"], name, day)
+        else:  # Q2 skips asked requirements: show this finding's asked, still unanswered question
+            q9 = run(g, "q9_requirements", pid=pid)
+            asked = [
+                r for r in q9 if r["q"] is not None and r["state"] == "missing" and fid in r["finding_ids"]
+            ]
+            if asked:
+                next_q = _question(props(asked[0]["q"]))
 
         trace = [
             QueryTraceEntry(
@@ -222,6 +244,11 @@ class GraphStore:
                 result_ids=[r.id for r in revisions],
             ),
         ]
+        if asked:
+            trace.append(QueryTraceEntry(
+                query="q9_requirements", params={"pid": pid}, rows=len(asked), mode="live",
+                result_ids=[r["requirement_id"] for r in asked],
+            ))
         return pid, pack, next_q, revisions, decisions, trace
 
     def investigation(self, fid: str) -> InvestigationResponse:
@@ -251,19 +278,31 @@ class GraphStore:
 
     # ---------- writes ----------
 
-    def _replay(self, g, pid: str, event_id: str) -> EvidenceResult | None:
+    def _event(self, g, pid: str, event_id: str) -> dict:
         rows = run(g, "q8_evidence_event", pid=pid, event_id=event_id)
-        e = props(rows[0]["e"]) if rows else {}
+        return props(rows[0]["e"]) if rows else {}
+
+    @staticmethod
+    def _replay(e: dict) -> EvidenceResult | None:
         if e.get("status") != "applied":
             return None
         return EvidenceResult.model_validate_json(e["result"]).model_copy(update={"replayed": True})
+
+    @staticmethod
+    def _resumable(e: dict) -> bool:
+        """Applied to the fact, stopped before its revisions were finished. Older events (written before
+        the event kept its before/after) cannot be resumed and are answered as before."""
+        return e.get("status") == "applying" and "findings_before" in e
 
     def submit_evidence(self, pid: str, req: EvidenceRequest) -> EvidenceResult:
         g = self._graph(pid)
         if not req.event_id.startswith(f"{pid}:"):
             raise Invalid(f"event_id {req.event_id} is not scoped to {pid}")
-        if replay := self._replay(g, pid, req.event_id):  # checked before the version, like the stub
+        e = self._event(g, pid, req.event_id)
+        if replay := self._replay(e):  # checked before the version, like the stub
             return replay
+        if self._resumable(e):  # its case_version has moved on because of this very event
+            return self._finish(g, pid, req.event_id, e)
         timeline, versions = self._timeline(pid)
         patient = timeline.patient
         if req.case_version != patient.case_version:
@@ -274,8 +313,7 @@ class GraphStore:
         fact = check_change(facts.get(change.fact_id), change, {s.id for s in timeline.sources})
         after = fact.model_copy(deep=True)
         mutate(after, change, patient.as_of_day)
-        before_dump, after_dump = fact.model_dump(mode="json"), after.model_dump(mode="json")
-        findings_before = {f.id: f for f in self.findings(pid).findings}
+        findings_before = self.findings(pid).findings
 
         n = versions[fact.id]
         rows = run(
@@ -287,21 +325,35 @@ class GraphStore:
             event_props={
                 "patient_id": pid, "status": "applying", "case_version": req.case_version,
                 "change": change.model_dump_json(), "recorded_at": patient.as_of_day,
+                "before": fact.model_dump_json(), "after": after.model_dump_json(),
+                "findings_before": json.dumps([f.model_dump(mode="json") for f in findings_before]),
             },
         )
+        e = self._event(g, pid, req.event_id)
         if not rows:  # lost the compare-and-set: same event sent twice at once, or another write won
-            if replay := self._replay(g, pid, req.event_id):
+            if replay := self._replay(e):
                 return replay
+            if self._resumable(e):
+                return self._finish(g, pid, req.event_id, e)
             current = self._patient(pid).case_version
             raise Conflict("stale_case_version", pid, req.case_version, current)
+        return self._finish(g, pid, req.event_id, e)
+
+    def _finish(self, g, pid: str, event_id: str, e: dict) -> EvidenceResult:
+        """Steps 2-4 for an event that is applied to its fact. Running it again for the same event
+        writes nothing twice."""
+        change = EvidenceChange.model_validate_json(e["change"])
+        before_dump, after_dump = json.loads(e["before"]), json.loads(e["after"])
+        findings_before = {f["id"]: Finding.model_validate(f) for f in json.loads(e["findings_before"])}
+        fact_id, recorded_at = change.fact_id, e["recorded_at"]
 
         if change.source_id:
-            run(g, "write/fact_sources", pid=pid, id=fact.id, source_ids=[change.source_id])
+            run(g, "write/fact_sources", pid=pid, id=fact_id, source_ids=[change.source_id])
         if change.state == "not_available":
-            run(g, "write/requirement_not_available", pid=pid, fact_id=fact.id,
+            run(g, "write/requirement_not_available", pid=pid, fact_id=fact_id,
                 fields=sorted({change.field, value_field(change.field)}))
 
-        affected = sorted(r["finding"] for r in run(g, "q3_affected", pid=pid, fact_id=fact.id))
+        affected = sorted(r["finding"] for r in run(g, "q3_affected", pid=pid, fact_id=fact_id))
         summary = change_summary(before_dump, after_dump, change.field)
         reviewed, leads = {}, {}
         for fid in affected:
@@ -318,18 +370,25 @@ class GraphStore:
         new_revisions = []
         for fid, ev in evaluations.items():
             prev_n = findings_before[fid].revision_n
-            rev = run(
-                g, "write/revision_next", pid=pid, fid=fid, prev_n=prev_n, rev_id=f"{fid}:rev-{prev_n + 1}",
-                n=prev_n + 1, status="needs_reassessment" if reviewed[fid] else ev.status,
-                reason=ev.reason, changed_fact_ids=[fact.id], created_at=patient.as_of_day,
-                eval_version=ev.eval_version, headline=ev.headline, event_id=req.event_id,
-            )
-            new_revisions.append(_revision(pid, fid, props(rev[0]["rev"]), prev_n))
+            rev = _revision_for_event(g, pid, fid, event_id)
+            if rev is None:
+                rows = run(
+                    g, "write/revision_next", pid=pid, fid=fid, prev_n=prev_n,
+                    rev_id=f"{fid}:rev-{prev_n + 1}", n=prev_n + 1,
+                    status="needs_reassessment" if reviewed[fid] else ev.status,
+                    reason=ev.reason, changed_fact_ids=[fact_id], created_at=recorded_at,
+                    eval_version=ev.eval_version, headline=ev.headline, event_id=event_id,
+                )
+                # No row: a concurrent finish of the same event wrote it first.
+                rev = props(rows[0]["rev"]) if rows else _revision_for_event(g, pid, fid, event_id)
+                if rev is None:
+                    raise RuntimeError(f"no revision for {fid} after {event_id}")
+            new_revisions.append(_revision(pid, fid, rev, prev_n))
 
         findings_after = {f.id: f for f in self.findings(pid).findings}
         result = EvidenceResult(
-            event_id=req.event_id, patient_id=pid, case_version_before=req.case_version,
-            case_version=rows[0]["case_version"], before=before_dump, after=after_dump,
+            event_id=event_id, patient_id=pid, case_version_before=e["case_version"],
+            case_version=e["case_version"] + 1, before=before_dump, after=after_dump,
             affected_finding_ids=affected, new_revisions=new_revisions,
             finding_changes=[
                 FindingChange(finding_id=fid, before=findings_before[fid], after=findings_after[fid])
@@ -337,7 +396,7 @@ class GraphStore:
             ],
             pending_reevaluation_ids=[], replayed=False,
         )
-        run(g, "write/evidence_done", pid=pid, event_id=req.event_id, result=result.model_dump_json())
+        run(g, "write/evidence_done", pid=pid, event_id=event_id, result=result.model_dump_json())
         return result
 
     def review(self, fid: str, req: ReviewRequest) -> ReviewResult:
@@ -360,6 +419,57 @@ class GraphStore:
             case_version=rows[0]["case_version"], decision=_decision(pid, fid, props(rows[0]["dec"])),
             finding=current[fid],
         )
+
+    def ask_question(self, req: QuestionRequest) -> QuestionResult:
+        pid = patient_of(req.requirement_id)
+        g = self._graph(pid)
+        rows = {r["requirement_id"]: r for r in run(g, "q9_requirements", pid=pid)}
+        row = rows.get(req.requirement_id)
+        if row is None:
+            raise NotFound(f"requirement {req.requirement_id}")
+        patient = self._patient(pid)
+        if row["q"] is not None:  # already asked: replay, checked before the version
+            return QuestionResult(case_version=patient.case_version, question=_question(props(row["q"])),
+                                  replayed=True)
+        if req.case_version != patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, patient.case_version)
+        if row["state"] != "missing":
+            raise Invalid(f"requirement {req.requirement_id} is {row['state']}; there is nothing to ask")
+        check_copy(req.text)
+        q = question_for(pid, req.requirement_id, row["kind"], row["name"], row["day"])
+        q = q.model_copy(update={"asked_at": patient.as_of_day, **({"text": req.text} if req.text else {})})
+        out = run(g, "write/question", pid=pid, rid=req.requirement_id, case_version=req.case_version,
+                  props=q.model_dump(exclude_none=True))
+        if not out:  # lost the compare-and-set: asked at the same moment, or another write won
+            return self.ask_question(req)
+        return QuestionResult(case_version=out[0]["case_version"], question=_question(props(out[0]["q"])),
+                              replayed=False)
+
+    def agent_steps(self, pid: str) -> AgentStepsResponse:
+        g = self._graph(pid)
+        steps = [_agent_step(props(r["s"]), r["finding_id"]) for r in run(g, "q10_agent_steps", pid=pid)]
+        return AgentStepsResponse(patient_id=pid, case_version=self._patient(pid).case_version, steps=steps)
+
+    def record_agent_step(self, req: AgentStepRequest) -> AgentStepResult:
+        pid = patient_of(req.step_id)
+        existing = {s.id: s for s in self.agent_steps(pid).steps}  # also the access check
+        patient = self._patient(pid)
+        if req.step_id in existing:  # replay, checked before the version
+            return AgentStepResult(
+                case_version=patient.case_version, step=existing[req.step_id], replayed=True,
+            )
+        if req.case_version != patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, patient.case_version)
+        check_agent_step(pid, req, {f.id for f in self.findings(pid).findings})
+        step = AgentStep(
+            id=req.step_id, patient_id=pid, finding_id=req.finding_id, tool=req.tool, ok=req.ok,
+            args=req.args, result_ids=req.result_ids, at=patient.as_of_day,
+        )
+        rows = run(self._graph(pid), "write/agent_step", pid=pid, case_version=req.case_version, id=step.id,
+                   fid=step.finding_id, props=agent_step_props(step))
+        if not rows:
+            raise Conflict("stale_case_version", pid, req.case_version, self._patient(pid).case_version)
+        return AgentStepResult(case_version=patient.case_version, step=step, replayed=False)
 
     def reset(self) -> None:
         """Drop and re-seed kb_template and the configured family graph from the fixtures."""
@@ -485,6 +595,29 @@ def _decision(pid: str, fid: str, d: dict) -> ReviewDecision:
     return ReviewDecision(
         id=d["id"], patient_id=pid, finding_id=fid, revision_n=d["revision_n"], by_role=d["by_role"],
         decision=d["decision"], reason=d["reason"], decided_at=d["decided_at"],
+    )
+
+
+def _revision_for_event(g, pid: str, fid: str, event_id: str) -> dict | None:
+    """The revision of this finding that this evidence event already wrote (BECAUSE), if any."""
+    for r in run(g, "q5_history", pid=pid, fid=fid):
+        if event_id in r["event_ids"]:
+            return props(r["rev"])
+    return None
+
+
+def _question(q: dict) -> Question:
+    return Question(
+        id=q["id"], patient_id=q["patient_id"], requirement_id=q["requirement_id"], ask_role=q["ask_role"],
+        text=q["text"], asked_at=q.get("asked_at"), answer=q.get("answer"),
+        answer_state=q.get("answer_state"),
+    )
+
+
+def _agent_step(s: dict, finding_id: str | None) -> AgentStep:
+    return AgentStep(
+        id=s["id"], patient_id=s["patient_id"], finding_id=finding_id, tool=s["tool"], ok=s["ok"],
+        args=json.loads(s["args_json"]), result_ids=s.get("result_ids", []), at=s["at"],
     )
 
 

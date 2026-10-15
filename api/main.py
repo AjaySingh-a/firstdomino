@@ -14,6 +14,9 @@ from fastapi.responses import JSONResponse
 
 from api.graph_store import graph_store_from_env
 from api.models import (
+    AgentStepRequest,
+    AgentStepResult,
+    AgentStepsResponse,
     ConflictError,
     EvidenceRequest,
     EvidenceResult,
@@ -22,6 +25,8 @@ from api.models import (
     InvestigationResponse,
     PacketResponse,
     Patient,
+    QuestionRequest,
+    QuestionResult,
     ResetResponse,
     ReviewRequest,
     ReviewResult,
@@ -99,6 +104,21 @@ def evidence(pid: str, req: EvidenceRequest) -> EvidenceResult:
 @app.post("/findings/{fid}/review", responses=CONFLICT)
 def review(fid: str, req: ReviewRequest) -> ReviewResult:
     return store.review(fid, req)
+
+
+@app.post("/questions", responses=CONFLICT)
+def ask_question(req: QuestionRequest) -> QuestionResult:
+    return store.ask_question(req)
+
+
+@app.post("/agent-steps", responses=CONFLICT)
+def record_agent_step(req: AgentStepRequest) -> AgentStepResult:
+    return store.record_agent_step(req)
+
+
+@app.get("/patients/{pid}/agent-steps")
+def agent_steps(pid: str) -> AgentStepsResponse:
+    return store.agent_steps(pid)
 
 
 @app.get("/patients/{pid}/packet")

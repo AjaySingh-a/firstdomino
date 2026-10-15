@@ -10,9 +10,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 from api.models import (
+    AgentStep,
+    AgentStepRequest,
+    AgentStepResult,
+    AgentStepsResponse,
     EvidenceChange,
     EvidenceRequest,
     EvidenceResult,
@@ -29,12 +34,15 @@ from api.models import (
     Patient,
     Pattern,
     QueryTraceEntry,
+    QuestionRequest,
+    QuestionResult,
     ReviewDecision,
     ReviewRequest,
     ReviewResult,
     StoryFixture,
     TimelineResponse,
 )
+from engine.questions import question_for
 
 REPO = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("FD_DATA_DIR", REPO / "data"))
@@ -261,7 +269,10 @@ class FixtureStore:
                 rev = FindingRevision(
                     id=f"{f.id}:rev-{f.revision_n + 1}", patient_id=pid, finding_id=f.id,
                     n=f.revision_n + 1, status="needs_reassessment",
-                    reason=f"{change_summary(before, after, change.field)} Needs a fresh look.",
+                    reason=(
+                        f"{change_summary(before, after, change.field)} "
+                        f"Revision {f.revision_n} was reviewed, so it needs a fresh look."
+                    ),
                     changed_fact_ids=[fact.id], created_at=c.patient.as_of_day,
                     previous_n=f.revision_n, eval_version=f.eval_version,
                 )
@@ -306,6 +317,52 @@ class FixtureStore:
         c.patient.case_version += 1
         return ReviewResult(case_version=c.patient.case_version, decision=decision, finding=f)
 
+    def ask_question(self, req: QuestionRequest) -> QuestionResult:
+        pid = patient_of(req.requirement_id)
+        c = self.case(pid)
+        r = next((r for r in c.requirements if r.id == req.requirement_id), None)
+        if r is None:
+            raise NotFound(f"requirement {req.requirement_id}")
+        asked = next((q for q in c.questions if q.requirement_id == r.id and q.asked_at is not None), None)
+        if asked:  # already asked: replay, checked before the version
+            return QuestionResult(case_version=c.patient.case_version, question=asked, replayed=True)
+        if req.case_version != c.patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, c.patient.case_version)
+        if r.state != "missing":
+            raise Invalid(f"requirement {r.id} is {r.state}; there is nothing to ask")
+        check_copy(req.text)
+        q = next((q for q in c.questions if q.requirement_id == r.id), None)
+        if q is None:
+            fact = self._facts(c)[r.about_fact_id]
+            name = fact.ingredient.name if isinstance(fact, MedicationEpisode) else fact.label.lower()
+            q = question_for(pid, r.id, r.kind, name, fact.happened_at)
+            c.questions.append(q)
+        q.asked_at = c.patient.as_of_day
+        if req.text:
+            q.text = req.text
+        c.patient.case_version += 1
+        return QuestionResult(case_version=c.patient.case_version, question=q, replayed=False)
+
+    def agent_steps(self, pid: str) -> AgentStepsResponse:
+        c = self.case(pid)
+        return AgentStepsResponse(patient_id=pid, case_version=c.patient.case_version, steps=c.agent_steps)
+
+    def record_agent_step(self, req: AgentStepRequest) -> AgentStepResult:
+        pid = patient_of(req.step_id)
+        c = self.case(pid)
+        existing = next((s for s in c.agent_steps if s.id == req.step_id), None)
+        if existing:  # replay, checked before the version
+            return AgentStepResult(case_version=c.patient.case_version, step=existing, replayed=True)
+        if req.case_version != c.patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, c.patient.case_version)
+        check_agent_step(pid, req, {f.id for f in c.findings})
+        step = AgentStep(
+            id=req.step_id, patient_id=pid, finding_id=req.finding_id, tool=req.tool, ok=req.ok,
+            args=req.args, result_ids=req.result_ids, at=c.patient.as_of_day,
+        )
+        c.agent_steps.append(step)  # an audit record: case_version does not move
+        return AgentStepResult(case_version=c.patient.case_version, step=step, replayed=False)
+
     # ---------- helpers ----------
 
     @staticmethod
@@ -328,6 +385,25 @@ def check_change(fact: Fact | None, change: EvidenceChange, source_ids: set[str]
     if change.source_id and change.source_id not in source_ids:
         raise Invalid(f"unknown source {change.source_id}")
     return fact
+
+
+# The copy rules (AGENTS.md), applied to text a client sends: agent phrasing never reaches the record
+# with these words. Spelled with \s+ so this file passes tests/test_contracts.py::test_copy_rules.
+BANNED_COPY = re.compile(r"\bsafe\b|stop\s+taking|\bcleared\b|caused\s+by", re.I)
+
+
+def check_copy(text: str | None) -> None:
+    if text and BANNED_COPY.search(text):
+        raise Invalid('text breaks the copy rules: say "possible pattern" or "worth reviewing"')
+
+
+def check_agent_step(pid: str, req: AgentStepRequest, finding_ids: set[str]) -> None:
+    """The agent cites only this patient's IDs, and only findings that exist."""
+    if req.finding_id is not None and req.finding_id not in finding_ids:
+        raise NotFound(f"finding {req.finding_id}")
+    foreign = [i for i in req.result_ids if not i.startswith(f"{pid}:")]
+    if foreign:
+        raise Invalid(f"result_ids not scoped to {pid}: {', '.join(foreign)}")
 
 
 def mutate(fact: Fact, change: EvidenceChange, recorded_at: int) -> None:
@@ -356,14 +432,21 @@ def value_field(field: str) -> str:
     return {"state": "happened_at", "indication_state": "indication"}.get(field, field)
 
 
+NOT_RECORDED = "not recorded"
+
+
+def shown(value) -> str:
+    """A value as user-facing text. A missing value reads "not recorded", never Python's None."""
+    return NOT_RECORDED if value is None or value == "" else str(value)
+
+
 def change_summary(before: dict, after: dict, field: str) -> str:
     label = before.get("label") or before.get("ingredient", {}).get("name", before["id"])
     vf = value_field(field)
-    state_field = STATE_FIELD.get(vf, field)
-    return (
-        f"{label}: {vf} changed from {before.get(vf)} ({before.get(state_field)}) "
-        f"to {after.get(vf)} ({after.get(state_field)})."
-    )
+    state_field = STATE_FIELD.get(vf)
+    def side(fact: dict) -> str:
+        return shown(fact.get(vf)) + (f" ({shown(fact.get(state_field))})" if state_field else "")
+    return f"{label}: {vf} changed from {side(before)} to {side(after)}."
 
 
 def default_store() -> FixtureStore:

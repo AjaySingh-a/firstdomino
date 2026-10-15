@@ -231,6 +231,28 @@ class ReviewRequest(Model):
     reason: str = Field(min_length=1)
 
 
+class QuestionRequest(Model):
+    """Record that the question for one open requirement was asked. `text` is the agent's phrasing;
+    None uses the deterministic template (engine/questions.py)."""
+
+    case_version: int
+    requirement_id: str
+    text: str | None = Field(default=None, min_length=1)
+
+
+class AgentStepRequest(Model):
+    """One step of the review agent: an allowlisted tool and the evidence IDs it returned. `step_id`
+    is patient-scoped and idempotent. The agent never creates or changes findings."""
+
+    step_id: str
+    case_version: int
+    finding_id: str | None = None
+    tool: AgentTool
+    ok: bool
+    args: dict[str, Any]
+    result_ids: list[str]
+
+
 # ---------- responses ----------
 
 
@@ -308,6 +330,24 @@ class ReviewResult(Model):
     case_version: int
     decision: ReviewDecision
     finding: Finding
+
+
+class QuestionResult(Model):
+    case_version: int
+    question: Question
+    replayed: bool
+
+
+class AgentStepResult(Model):
+    case_version: int
+    step: AgentStep
+    replayed: bool
+
+
+class AgentStepsResponse(Model):
+    patient_id: str
+    case_version: int
+    steps: list[AgentStep]
 
 
 class ConflictError(Model):

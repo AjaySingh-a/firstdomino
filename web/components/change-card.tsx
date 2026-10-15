@@ -10,12 +10,16 @@ import type { EvidenceResult, TimelineResponse } from "@/lib/types";
 import { StatusChip } from "./status";
 
 const SKIP = new Set(["id", "patient_id", "label", "effect", "ingredient"]);
+// A missing value, as the API words it too (api/store.py NOT_RECORDED).
+const NOT_RECORDED = "not recorded";
+export const NOTHING_RE_EVALUATED = "No finding depends on this fact; nothing was re-evaluated.";
 
 export function BeforeAfter({ result }: { result: EvidenceResult }) {
   const keys = Object.keys(result.after).filter(
     (k) => !SKIP.has(k) && JSON.stringify(result.before[k]) !== JSON.stringify(result.after[k]),
   );
-  const show = (v: unknown) => (Array.isArray(v) ? `${v.length} source${v.length === 1 ? "" : "s"}` : String(v ?? "—"));
+  const show = (v: unknown) =>
+    Array.isArray(v) ? `${v.length} source${v.length === 1 ? "" : "s"}` : v === null || v === undefined || v === "" ? NOT_RECORDED : String(v);
   return (
     <table className="mt-2 w-full border-collapse font-mono text-[11px]">
       <thead>
@@ -81,7 +85,7 @@ export function ChangeCard({
         Findings re-evaluated <span className="tabular">{result.finding_changes.length}</span>
       </h3>
       {result.finding_changes.length === 0 ? (
-        <p className="mt-1 text-[12.5px] italic text-ink-3">No finding depends on this fact, so none was re-evaluated.</p>
+        <p className="mt-1 text-[12.5px] italic text-ink-3">{NOTHING_RE_EVALUATED}</p>
       ) : (
         <ul className="mt-1.5 space-y-3">
           {result.finding_changes.map((c) => (

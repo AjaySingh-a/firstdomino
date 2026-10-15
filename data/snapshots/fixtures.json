@@ -136,7 +136,7 @@
             "patient_id": "syn-p1",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "needs_evidence",
             "revision_n": 1,
             "index_episode_id": "syn-p1:ep-amlodipine",
@@ -166,7 +166,7 @@
             "patient_id": "syn-p1",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "needs_evidence",
             "revision_n": 1,
             "index_episode_id": "syn-p1:ep-amlodipine",
@@ -310,11 +310,11 @@
               "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
               "n": 1,
               "status": "needs_evidence",
-              "reason": "First evaluation. The reason furosemide was started is not recorded.",
+              "reason": "First evaluation. Not known yet: the reason furosemide was started.",
               "changed_fact_ids": [],
               "created_at": 60,
               "previous_n": null,
-              "eval_version": 1
+              "eval_version": 2
             }
           ],
           "decisions": [],
@@ -377,7 +377,7 @@
               "patient_id": "syn-p1",
               "pattern_id": "pat-ccb-edema-loop",
               "pattern_version": 1,
-              "eval_version": 1,
+              "eval_version": 2,
               "status": "needs_evidence",
               "revision_n": 1,
               "index_episode_id": "syn-p1:ep-amlodipine",
@@ -497,14 +497,34 @@
                 "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
                 "n": 1,
                 "status": "needs_evidence",
-                "reason": "First evaluation. The reason furosemide was started is not recorded.",
+                "reason": "First evaluation. Not known yet: the reason furosemide was started.",
                 "changed_fact_ids": [],
                 "created_at": 60,
                 "previous_n": null,
-                "eval_version": 1
+                "eval_version": 2
               }
             ],
             "decisions": []
+          }
+        ]
+      },
+      "agent_steps": {
+        "patient_id": "syn-p1",
+        "case_version": 2,
+        "steps": [
+          {
+            "id": "syn-p1:step-1",
+            "patient_id": "syn-p1",
+            "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+            "tool": "get_next_question",
+            "ok": true,
+            "args": {
+              "pid": "syn-p1"
+            },
+            "result_ids": [
+              "syn-p1:q-furosemide-indication"
+            ],
+            "at": 60
           }
         ]
       },
@@ -613,7 +633,7 @@
             "patient_id": "syn-p2",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "competing_explanation",
             "revision_n": 1,
             "index_episode_id": "syn-p2:ep-amlodipine",
@@ -641,7 +661,7 @@
             "patient_id": "syn-p2",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "competing_explanation",
             "revision_n": 1,
             "index_episode_id": "syn-p2:ep-amlodipine",
@@ -773,11 +793,11 @@
               "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
               "n": 1,
               "status": "competing_explanation",
-              "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+              "reason": "First evaluation. The reason furosemide was started is documented as \"heart failure, new diagnosis during hospital stay\". This is another explanation worth reviewing alongside the pattern.",
               "changed_fact_ids": [],
               "created_at": 60,
               "previous_n": null,
-              "eval_version": 1
+              "eval_version": 2
             }
           ],
           "decisions": [],
@@ -838,7 +858,7 @@
               "patient_id": "syn-p2",
               "pattern_id": "pat-ccb-edema-loop",
               "pattern_version": 1,
-              "eval_version": 1,
+              "eval_version": 2,
               "status": "competing_explanation",
               "revision_n": 1,
               "index_episode_id": "syn-p2:ep-amlodipine",
@@ -944,14 +964,36 @@
                 "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
                 "n": 1,
                 "status": "competing_explanation",
-                "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+                "reason": "First evaluation. The reason furosemide was started is documented as \"heart failure, new diagnosis during hospital stay\". This is another explanation worth reviewing alongside the pattern.",
                 "changed_fact_ids": [],
                 "created_at": 60,
                 "previous_n": null,
-                "eval_version": 1
+                "eval_version": 2
               }
             ],
             "decisions": []
+          }
+        ]
+      },
+      "agent_steps": {
+        "patient_id": "syn-p2",
+        "case_version": 2,
+        "steps": [
+          {
+            "id": "syn-p2:step-1",
+            "patient_id": "syn-p2",
+            "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+            "tool": "get_investigation",
+            "ok": true,
+            "args": {
+              "pid": "syn-p2",
+              "fid": "syn-p2:fnd-ccb-edema-loop-1"
+            },
+            "result_ids": [
+              "syn-p2:ep-furosemide",
+              "syn-p2:src-discharge-d33"
+            ],
+            "at": 60
           }
         ]
       },
@@ -1023,6 +1065,26 @@
             "prescriber_specialty": "cardiology"
           },
           {
+            "id": "syn-p3:ep-atorvastatin",
+            "patient_id": "syn-p3",
+            "happened_at": 0,
+            "recorded_at": 0,
+            "state": "documented",
+            "source_ids": [
+              "syn-p3:src-cardio-d0"
+            ],
+            "ingredient": {
+              "name": "atorvastatin",
+              "rxcui": "83367",
+              "drug_class": "C10AA"
+            },
+            "dose_text": "20 mg once daily",
+            "indication": "high cholesterol",
+            "indication_state": "documented",
+            "stop_day": null,
+            "prescriber_specialty": "cardiology"
+          },
+          {
             "id": "syn-p3:ep-furosemide",
             "patient_id": "syn-p3",
             "happened_at": 40,
@@ -1080,7 +1142,7 @@
             "patient_id": "syn-p3",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "reviewed",
             "revision_n": 1,
             "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1108,7 +1170,7 @@
             "patient_id": "syn-p3",
             "pattern_id": "pat-ccb-edema-loop",
             "pattern_version": 1,
-            "eval_version": 1,
+            "eval_version": 2,
             "status": "reviewed",
             "revision_n": 1,
             "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1240,11 +1302,11 @@
               "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
               "n": 1,
               "status": "candidate",
-              "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+              "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
               "changed_fact_ids": [],
               "created_at": 45,
               "previous_n": null,
-              "eval_version": 1
+              "eval_version": 2
             }
           ],
           "decisions": [
@@ -1316,7 +1378,7 @@
               "patient_id": "syn-p3",
               "pattern_id": "pat-ccb-edema-loop",
               "pattern_version": 1,
-              "eval_version": 1,
+              "eval_version": 2,
               "status": "reviewed",
               "revision_n": 1,
               "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1422,11 +1484,11 @@
                 "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                 "n": 1,
                 "status": "candidate",
-                "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+                "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
                 "changed_fact_ids": [],
                 "created_at": 45,
                 "previous_n": null,
-                "eval_version": 1
+                "eval_version": 2
               }
             ],
             "decisions": [
@@ -1441,6 +1503,29 @@
                 "decided_at": 50
               }
             ]
+          }
+        ]
+      },
+      "agent_steps": {
+        "patient_id": "syn-p3",
+        "case_version": 4,
+        "steps": [
+          {
+            "id": "syn-p3:step-1",
+            "patient_id": "syn-p3",
+            "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+            "tool": "draft_packet_text",
+            "ok": true,
+            "args": {
+              "pid": "syn-p3",
+              "fid": "syn-p3:fnd-ccb-edema-loop-1"
+            },
+            "result_ids": [
+              "syn-p3:ep-amlodipine",
+              "syn-p3:obs-ankle-swelling",
+              "syn-p3:ep-furosemide"
+            ],
+            "at": 46
           }
         ]
       },
@@ -1497,13 +1582,13 @@
                 "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                 "n": 2,
                 "status": "needs_reassessment",
-                "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Needs a fresh look.",
+                "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look.",
                 "changed_fact_ids": [
                   "syn-p3:obs-ankle-swelling"
                 ],
                 "created_at": 62,
                 "previous_n": 1,
-                "eval_version": 1
+                "eval_version": 2
               }
             ],
             "finding_changes": [
@@ -1514,7 +1599,7 @@
                   "patient_id": "syn-p3",
                   "pattern_id": "pat-ccb-edema-loop",
                   "pattern_version": 1,
-                  "eval_version": 1,
+                  "eval_version": 2,
                   "status": "reviewed",
                   "revision_n": 1,
                   "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1536,7 +1621,7 @@
                   "patient_id": "syn-p3",
                   "pattern_id": "pat-ccb-edema-loop",
                   "pattern_version": 1,
-                  "eval_version": 1,
+                  "eval_version": 2,
                   "status": "needs_reassessment",
                   "revision_n": 2,
                   "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1623,6 +1708,26 @@
                 "prescriber_specialty": "cardiology"
               },
               {
+                "id": "syn-p3:ep-atorvastatin",
+                "patient_id": "syn-p3",
+                "happened_at": 0,
+                "recorded_at": 0,
+                "state": "documented",
+                "source_ids": [
+                  "syn-p3:src-cardio-d0"
+                ],
+                "ingredient": {
+                  "name": "atorvastatin",
+                  "rxcui": "83367",
+                  "drug_class": "C10AA"
+                },
+                "dose_text": "20 mg once daily",
+                "indication": "high cholesterol",
+                "indication_state": "documented",
+                "stop_day": null,
+                "prescriber_specialty": "cardiology"
+              },
+              {
                 "id": "syn-p3:ep-furosemide",
                 "patient_id": "syn-p3",
                 "happened_at": 40,
@@ -1669,7 +1774,7 @@
                 "patient_id": "syn-p3",
                 "pattern_id": "pat-ccb-edema-loop",
                 "pattern_version": 1,
-                "eval_version": 1,
+                "eval_version": 2,
                 "status": "needs_reassessment",
                 "revision_n": 2,
                 "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1697,7 +1802,7 @@
                 "patient_id": "syn-p3",
                 "pattern_id": "pat-ccb-edema-loop",
                 "pattern_version": 1,
-                "eval_version": 1,
+                "eval_version": 2,
                 "status": "needs_reassessment",
                 "revision_n": 2,
                 "index_episode_id": "syn-p3:ep-amlodipine",
@@ -1838,11 +1943,11 @@
                   "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                   "n": 1,
                   "status": "candidate",
-                  "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+                  "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
                   "changed_fact_ids": [],
                   "created_at": 45,
                   "previous_n": null,
-                  "eval_version": 1
+                  "eval_version": 2
                 },
                 {
                   "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2",
@@ -1850,13 +1955,13 @@
                   "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                   "n": 2,
                   "status": "needs_reassessment",
-                  "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Needs a fresh look.",
+                  "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look.",
                   "changed_fact_ids": [
                     "syn-p3:obs-ankle-swelling"
                   ],
                   "created_at": 62,
                   "previous_n": 1,
-                  "eval_version": 1
+                  "eval_version": 2
                 }
               ],
               "decisions": [
@@ -1929,7 +2034,7 @@
                   "patient_id": "syn-p3",
                   "pattern_id": "pat-ccb-edema-loop",
                   "pattern_version": 1,
-                  "eval_version": 1,
+                  "eval_version": 2,
                   "status": "needs_reassessment",
                   "revision_n": 2,
                   "index_episode_id": "syn-p3:ep-amlodipine",
@@ -2036,11 +2141,11 @@
                     "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                     "n": 1,
                     "status": "candidate",
-                    "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+                    "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
                     "changed_fact_ids": [],
                     "created_at": 45,
                     "previous_n": null,
-                    "eval_version": 1
+                    "eval_version": 2
                   },
                   {
                     "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2",
@@ -2048,13 +2153,13 @@
                     "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
                     "n": 2,
                     "status": "needs_reassessment",
-                    "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Needs a fresh look.",
+                    "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look.",
                     "changed_fact_ids": [
                       "syn-p3:obs-ankle-swelling"
                     ],
                     "created_at": 62,
                     "previous_n": 1,
-                    "eval_version": 1
+                    "eval_version": 2
                   }
                 ],
                 "decisions": [

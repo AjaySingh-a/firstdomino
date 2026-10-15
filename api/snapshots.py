@@ -46,6 +46,7 @@ def build() -> dict:
             "findings": dump(store.findings(pid)),
             "investigations": {f.id: dump(store.investigation(f.id)) for f in story.findings},
             "packet": dump(store.packet(pid)),
+            "agent_steps": dump(store.agent_steps(pid)),
             "evidence": evidence,
         }
     return out

@@ -8,9 +8,17 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
+import api.graph_store
 import api.main
 from api.graph_store import GraphStore
-from api.models import EvidenceRequest, Ingredient, MedicationEpisode, ReviewRequest
+from api.models import (
+    AgentStepRequest,
+    EvidenceRequest,
+    Ingredient,
+    MedicationEpisode,
+    QuestionRequest,
+    ReviewRequest,
+)
 from api.store import Conflict, FixtureStore, Invalid, NotFound, load_patterns, load_stories
 from engine.db import connect, family_graph, props, run
 from engine.loaders.seed import seed
@@ -331,7 +339,8 @@ def test_an_answer_re_runs_the_rules_for_an_unreviewed_finding(db, family):
     (rev,) = res.new_revisions
     assert (rev.n, rev.status) == (2, "candidate")
     assert rev.reason.startswith(
-        "furosemide: indication changed from None (unknown) to ankle swelling (documented). Re-evaluated."
+        "furosemide: indication changed from not recorded (unknown) to ankle swelling (documented). "
+        "Re-evaluated."
     )
     (chg,) = res.finding_changes
     assert (chg.before.status, chg.after.status) == ("needs_evidence", "candidate")
@@ -518,3 +527,133 @@ def test_writes_never_cross_patients(db, family):
     assert p2() == p2_before
     assert "syn-p2" not in store.investigation(P1_FINDING).model_dump_json()
     assert run(g, "q5_history", pid="syn-p1", fid=P2_FINDING) == []
+
+
+# ---------- D-3: resuming an event stuck in 'applying', questions, agent steps ----------
+
+
+def event_status(g, pid, event_id):
+    (row,) = run(g, "q8_evidence_event", pid=pid, event_id=event_id)
+    return props(row["e"])["status"]
+
+
+@pytest.mark.parametrize("crash_at", ["re-evaluation", "evidence_done"])
+def test_a_resent_event_stuck_in_applying_resumes(db, family, monkeypatch, crash_at):
+    """The API stopped after the fact was applied (case_version already moved). Re-sending the same
+    event_id finishes the re-evaluation and revision writes instead of answering 409."""
+    g = family(STORIES["syn-p3"])
+    store = store_for(db, family)
+    real_run, real_reevaluate = api.graph_store.run, api.graph_store.reevaluate
+
+    def crash(*a, **k):
+        raise RuntimeError("API stopped")
+
+    if crash_at == "re-evaluation":
+        monkeypatch.setattr(api.graph_store, "reevaluate", crash)
+    else:  # the revision is written; only the event's result is missing
+        def run_until_done(g_, q, **p):
+            return crash() if q == "write/evidence_done" else real_run(g_, q, **p)
+
+        monkeypatch.setattr(api.graph_store, "run", run_until_done)
+    with pytest.raises(RuntimeError):
+        store.submit_evidence("syn-p3", P3_EVENT)
+    monkeypatch.setattr(api.graph_store, "run", real_run)
+    monkeypatch.setattr(api.graph_store, "reevaluate", real_reevaluate)
+
+    assert event_status(g, "syn-p3", P3_EVENT.event_id) == "applying"
+    assert store.timeline("syn-p3").patient.case_version == 5  # the sent case_version (4) is stale now
+    res = store.submit_evidence("syn-p3", P3_EVENT)
+    assert (res.case_version_before, res.case_version, res.replayed) == (4, 5, False)
+    assert [(r.n, r.previous_n, r.status) for r in res.new_revisions] == [(2, 1, "needs_reassessment")]
+    assert (res.before["happened_at"], res.after["happened_at"]) == (28, 14)
+    assert event_status(g, "syn-p3", P3_EVENT.event_id) == "applied"
+    inv = store.investigation(P3_FINDING)
+    assert [r.n for r in inv.revisions] == [1, 2] and [d.revision_n for d in inv.decisions] == [1]
+    assert versions(g, P3_OBS)[-1][:3] == (2, 14, "documented")  # applied once, not twice
+    assert store.submit_evidence("syn-p3", P3_EVENT) == res.model_copy(update={"replayed": True})
+
+
+def test_a_question_is_asked_once_and_stays_until_answered(db, family):
+    g = family(story1())
+    store = store_for(db, family)
+    rid = "syn-p1:req-furosemide-indication"
+    with pytest.raises(Conflict):
+        store.ask_question(QuestionRequest(case_version=1, requirement_id=rid))
+    with pytest.raises(Invalid):
+        store.ask_question(QuestionRequest(case_version=2, requirement_id=rid, text="Is it safe to stop?"))
+    with pytest.raises(NotFound):
+        store.ask_question(QuestionRequest(case_version=2, requirement_id="syn-p1:req-nothing"))
+    assert store.timeline("syn-p1").patient.case_version == 2  # none of those wrote anything
+
+    res = store.ask_question(QuestionRequest(case_version=2, requirement_id=rid))
+    q = res.question
+    assert (res.case_version, res.replayed) == (3, False)
+    assert (q.id, q.requirement_id, q.ask_role, q.asked_at) == (
+        "syn-p1:q-furosemide-indication", rid, "caregiver", 60,
+    )
+    assert q.text.startswith("Do you know why furosemide was started around day 35?")
+    assert run(g, "q2_next_question", pid="syn-p1") == []  # asked: not the next one to ask
+    inv = store.investigation(P1_FINDING)
+    assert inv.next_question == q  # still shown until it is answered
+    assert inv.query_trace[-1].query == "q9_requirements"
+    again = store.ask_question(QuestionRequest(case_version=2, requirement_id=rid, text="other"))
+    assert (again.replayed, again.question, again.case_version) == (True, q, 3)
+
+    store.submit_evidence("syn-p1", evidence(
+        "syn-p1", "ind", 3, "syn-p1:ep-furosemide", "indication", "ankle swelling", "reported",
+    ))
+    assert store.investigation(P1_FINDING).next_question is None
+
+
+def test_an_agent_phrased_question_keeps_its_text(db, family):
+    family(story1())
+    store = store_for(db, family)
+    text = "When the water tablet (furosemide) was started around day 35, what was it for?"
+    rid = "syn-p1:req-furosemide-indication"
+    res = store.ask_question(QuestionRequest(case_version=2, requirement_id=rid, text=text))
+    assert res.question.text == text
+    assert store.investigation(P1_FINDING).next_question.text == text
+
+
+def test_a_closed_requirement_is_not_asked(db, family):
+    family(story1())
+    store = store_for(db, family)
+    store.submit_evidence("syn-p1", evidence("syn-p1", "na", 2, "syn-p1:ep-furosemide", "indication",
+                                             state="not_available"))
+    with pytest.raises(Invalid):  # not_available: never asked again, and never read as "no"
+        store.ask_question(QuestionRequest(case_version=3, requirement_id="syn-p1:req-furosemide-indication"))
+
+
+def test_agent_steps_are_recorded_without_moving_the_case_version(db, family):
+    g = family(story1())
+    store = store_for(db, family)
+    seeded = store.agent_steps("syn-p1")
+    assert [(s.id, s.tool, s.finding_id) for s in seeded.steps] == [
+        ("syn-p1:step-1", "get_next_question", P1_FINDING),
+    ]
+    req = AgentStepRequest(
+        step_id="syn-p1:step-2", case_version=2, finding_id=P1_FINDING, tool="draft_question_text", ok=True,
+        args={"pid": "syn-p1", "requirement_id": "syn-p1:req-furosemide-indication"},
+        result_ids=["syn-p1:req-furosemide-indication"],
+    )
+    res = store.record_agent_step(req)
+    assert (res.case_version, res.replayed, res.step.at) == (2, False, 60)
+    assert store.timeline("syn-p1").patient.case_version == 2
+    assert [s.id for s in store.agent_steps("syn-p1").steps] == ["syn-p1:step-1", "syn-p1:step-2"]
+    assert store.agent_steps("syn-p1").steps[1] == res.step
+    assert store.record_agent_step(req).replayed is True
+    before = counts(g)
+
+    with pytest.raises(Conflict):
+        store.record_agent_step(req.model_copy(update={"step_id": "syn-p1:step-3", "case_version": 1}))
+    with pytest.raises(Invalid):  # cites another patient's IDs
+        store.record_agent_step(req.model_copy(update={"step_id": "syn-p1:step-3",
+                                                       "result_ids": ["syn-p2:ep-furosemide"]}))
+    with pytest.raises(NotFound):
+        store.record_agent_step(req.model_copy(update={"step_id": "syn-p1:step-3",
+                                                       "finding_id": "syn-p1:fnd-nothing-1"}))
+    assert counts(g) == before
+    no_finding = store.record_agent_step(
+        req.model_copy(update={"step_id": "syn-p1:step-3", "finding_id": None})
+    )
+    assert no_finding.step.finding_id is None

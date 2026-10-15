@@ -137,7 +137,7 @@ requirement or revision IDs each query returned. `mode` is `live` in graph mode.
   },
   "sources": ["…"],
   "revisions": [
-    { "id": "syn-p1:fnd-ccb-edema-loop-1:rev-1", "n": 1, "status": "needs_evidence", "reason": "First evaluation. …", "changed_fact_ids": [], "created_at": 60, "previous_n": null, "eval_version": 1, "…": "…" }
+    { "id": "syn-p1:fnd-ccb-edema-loop-1:rev-1", "n": 1, "status": "needs_evidence", "reason": "First evaluation. …", "changed_fact_ids": [], "created_at": 60, "previous_n": null, "eval_version": 2, "…": "…" }
   ],
   "decisions": [],
   "query_trace": [
@@ -169,6 +169,8 @@ Request (story 3's pending date correction):
 - `field` is one of `happened_at`, `state`, `indication`, `indication_state`, `stop_day`. Setting `happened_at` or `indication` also sets the matching state field to `change.state`.
 - `state: "not_available"` keeps the value empty and marks the requirement `not_available`. It is never read as "no".
 - `event_id` must be scoped to the patient. Re-sending an `event_id` that was already accepted returns the stored result with `"replayed": true`, even if `case_version` has moved since.
+- If the API stopped after applying the change but before finishing (the event is still `applying`), re-sending the same `event_id` resumes the re-evaluation and the revision writes and returns the result (`"replayed": false`) instead of 409. Nothing is applied twice.
+- A missing value reads "not recorded" in every reason and summary, never `None`.
 
 **200**
 
@@ -185,7 +187,7 @@ Request (story 3's pending date correction):
     {
       "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2", "patient_id": "syn-p3", "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
       "n": 2, "status": "needs_reassessment",
-      "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Needs a fresh look.",
+      "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look. …",
       "changed_fact_ids": ["syn-p3:obs-ankle-swelling"], "created_at": 62, "previous_n": 1, "eval_version": 1
     }
   ],
@@ -202,7 +204,10 @@ Request (story 3's pending date correction):
 ```
 
 `affected_finding_ids` is the Q3 scope (`q3_affected`): the findings that cite, link or need the
-changed fact. Nothing else is touched. `finding_changes` gives each of them before and after.
+changed fact. Nothing else is touched. `finding_changes` gives each of them before and after. A change
+to a fact no finding depends on (story 3's atorvastatin, which is in no pattern) returns
+`"affected_finding_ids": []`, `"new_revisions": []`, `"finding_changes": []`; the web change card then
+says "No finding depends on this fact; nothing was re-evaluated."
 
 In graph mode, all of this runs in FalkorDB:
 
@@ -247,6 +252,91 @@ decision attaches to `revision_n`. An accepted review bumps `case_version`.
 ```
 
 **409**: `stale_case_version` or `stale_revision` (see Errors).
+
+## POST /questions
+
+Records that the question for one open requirement was asked. The patient comes from the
+requirement ID. `text` is optional: the review agent's phrasing, checked against the copy rules
+(422 if it breaks them). Without it the deterministic template (`engine/questions.py`) is used.
+
+```json
+{ "case_version": 2, "requirement_id": "syn-p1:req-furosemide-indication" }
+```
+
+**200**: `case_version` moves on (the investigation now shows the question as asked).
+
+```json
+{
+  "case_version": 3,
+  "question": {
+    "id": "syn-p1:q-furosemide-indication", "patient_id": "syn-p1",
+    "requirement_id": "syn-p1:req-furosemide-indication", "ask_role": "caregiver",
+    "text": "Do you know why furosemide was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+    "asked_at": 60, "answer": null, "answer_state": null
+  },
+  "replayed": false
+}
+```
+
+- A requirement is asked once. Asking again returns the stored question with `"replayed": true` and
+  the current `case_version`, even if the sent one is stale.
+- `q2_next_question` then skips that requirement; the drawer keeps showing the asked question (with
+  `asked_at`) until evidence answers it. In graph mode `query_trace` then lists `q9_requirements`.
+- 404: unknown requirement. 409: stale `case_version`. 422: the requirement is `provided` or
+  `not_available` (nothing to ask), or `text` breaks the copy rules.
+
+## POST /agent-steps
+
+One step of the review agent: an allowlisted tool (`agent/tools.py`) and the evidence IDs it returned.
+The patient comes from `step_id`, which is patient-scoped and idempotent. The agent never creates or
+changes findings, so a step is an audit record: `case_version` is checked (409 if stale) but does not
+move.
+
+```json
+{
+  "step_id": "syn-p1:step-2", "case_version": 2, "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+  "tool": "draft_question_text", "ok": true,
+  "args": { "pid": "syn-p1", "requirement_id": "syn-p1:req-furosemide-indication" },
+  "result_ids": ["syn-p1:req-furosemide-indication"]
+}
+```
+
+**200**
+
+```json
+{
+  "case_version": 2,
+  "step": {
+    "id": "syn-p1:step-2", "patient_id": "syn-p1", "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+    "tool": "draft_question_text", "ok": true,
+    "args": { "pid": "syn-p1", "requirement_id": "syn-p1:req-furosemide-indication" },
+    "result_ids": ["syn-p1:req-furosemide-indication"], "at": 60
+  },
+  "replayed": false
+}
+```
+
+- Re-sending a `step_id` returns the stored step with `"replayed": true`.
+- 404: unknown patient or `finding_id`. 409: stale `case_version`. 422: a `tool` outside the
+  allowlist, or a `result_ids` entry that is not scoped to the patient.
+
+## GET /patients/{id}/agent-steps
+
+The agent's steps for one patient, oldest first (`q10_agent_steps` in graph mode).
+
+```json
+{
+  "patient_id": "syn-p1",
+  "case_version": 2,
+  "steps": [
+    {
+      "id": "syn-p1:step-1", "patient_id": "syn-p1", "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "tool": "get_next_question", "ok": true, "args": { "pid": "syn-p1" },
+      "result_ids": ["syn-p1:q-furosemide-indication"], "at": 60
+    }
+  ]
+}
+```
 
 ## GET /patients/{id}/packet
 

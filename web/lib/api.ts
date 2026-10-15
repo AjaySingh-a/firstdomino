@@ -6,6 +6,10 @@
 
 import snapshotJson from "./fixtures/fixtures.json";
 import type {
+  AgentStep,
+  AgentStepRequest,
+  AgentStepResult,
+  AgentStepsResponse,
   ConflictError,
   EvidenceRequest,
   EvidenceResult,
@@ -14,6 +18,8 @@ import type {
   InvestigationResponse,
   PacketResponse,
   Patient,
+  QuestionRequest,
+  QuestionResult,
   ResetResponse,
   ReviewDecision,
   ReviewRequest,
@@ -56,6 +62,9 @@ export interface FirstDominoApi {
   investigation(fid: string): Promise<InvestigationResponse>;
   submitEvidence(pid: string, body: EvidenceRequest): Promise<EvidenceResult>;
   review(fid: string, body: ReviewRequest): Promise<ReviewResult>;
+  askQuestion(body: QuestionRequest): Promise<QuestionResult>;
+  recordAgentStep(body: AgentStepRequest): Promise<AgentStepResult>;
+  agentSteps(pid: string): Promise<AgentStepsResponse>;
   packet(pid: string): Promise<PacketResponse>;
   reset(): Promise<ResetResponse>;
 }
@@ -85,6 +94,9 @@ const liveApi: FirstDominoApi = {
   investigation: (fid) => call(`/findings/${enc(fid)}/investigation`),
   submitEvidence: (pid, body) => call(`/patients/${enc(pid)}/evidence`, post(body)),
   review: (fid, body) => call(`/findings/${enc(fid)}/review`, post(body)),
+  askQuestion: (body) => call("/questions", post(body)),
+  recordAgentStep: (body) => call("/agent-steps", post(body)),
+  agentSteps: (pid) => call(`/patients/${enc(pid)}/agent-steps`),
   packet: (pid) => call(`/patients/${enc(pid)}/packet`),
   reset: () => call("/sandbox/reset", post({})),
 };
@@ -95,7 +107,10 @@ const liveApi: FirstDominoApi = {
 // Evidence events must be one of the precomputed pending_evidence events.
 
 const snapshot = snapshotJson as unknown as SnapshotFile;
-type CaseView = Pick<SnapshotFile["cases"][string], "timeline" | "findings" | "investigations" | "packet">;
+type CaseView = Pick<
+  SnapshotFile["cases"][string],
+  "timeline" | "findings" | "investigations" | "packet" | "agent_steps"
+>;
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 let session: Record<string, CaseView> = {};
@@ -105,7 +120,13 @@ function resetSession() {
   session = Object.fromEntries(
     Object.entries(snapshot.cases).map(([pid, c]) => [
       pid,
-      clone({ timeline: c.timeline, findings: c.findings, investigations: c.investigations, packet: c.packet }),
+      clone({
+        timeline: c.timeline,
+        findings: c.findings,
+        investigations: c.investigations,
+        packet: c.packet,
+        agent_steps: c.agent_steps,
+      }),
     ]),
   );
   applied = {};
@@ -125,7 +146,12 @@ function setVersion(c: CaseView, v: number) {
   c.findings.case_version = v;
   c.packet.case_version = v;
   c.packet.patient.case_version = v;
+  c.agent_steps.case_version = v;
   for (const inv of Object.values(c.investigations)) inv.case_version = v;
+}
+
+function stale(pid: string, sent: number, current: number): never {
+  throw new StaleError({ error: "stale_case_version", patient_id: pid, sent, current });
 }
 
 const fixtureApi: FirstDominoApi = {
@@ -155,6 +181,7 @@ const fixtureApi: FirstDominoApi = {
       findings: known.findings_after,
       investigations: known.investigations_after,
       packet: known.packet_after,
+      agent_steps: c.agent_steps,
     });
     applied[body.event_id] = clone(known.result);
     return clone(known.result);
@@ -194,6 +221,46 @@ const fixtureApi: FirstDominoApi = {
     setVersion(c, current + 1);
     return { case_version: current + 1, decision: clone(decision), finding: clone(reviewed) };
   },
+  askQuestion: async (body) => {
+    const pid = patientOf(body.requirement_id);
+    const c = caseOf(pid);
+    const views = [
+      ...Object.values(c.investigations).map((inv) => (inv.next_question ? [inv.next_question] : [])),
+      ...c.packet.items.map((item) => item.open_questions),
+    ].flat();
+    const found = views.find((q) => q.requirement_id === body.requirement_id);
+    if (!found) throw new ApiError(404, { error: "not_found", detail: `requirement ${body.requirement_id}` });
+    const current = c.timeline.patient.case_version;
+    if (found.asked_at !== null) return { case_version: current, question: clone(found), replayed: true };
+    if (body.case_version !== current) stale(pid, body.case_version, current);
+    for (const q of views.filter((q) => q.requirement_id === body.requirement_id)) {
+      q.asked_at = c.timeline.patient.as_of_day;
+      if (body.text) q.text = body.text;
+    }
+    setVersion(c, current + 1);
+    return { case_version: current + 1, question: clone(found), replayed: false };
+  },
+  recordAgentStep: async (body) => {
+    const pid = patientOf(body.step_id);
+    const c = caseOf(pid);
+    const current = c.timeline.patient.case_version;
+    const existing = c.agent_steps.steps.find((s) => s.id === body.step_id);
+    if (existing) return { case_version: current, step: clone(existing), replayed: true };
+    if (body.case_version !== current) stale(pid, body.case_version, current);
+    const step: AgentStep = {
+      id: body.step_id,
+      patient_id: pid,
+      finding_id: body.finding_id ?? null,
+      tool: body.tool,
+      ok: body.ok,
+      args: body.args,
+      result_ids: body.result_ids,
+      at: c.timeline.patient.as_of_day,
+    };
+    c.agent_steps.steps = [...c.agent_steps.steps, step]; // an audit record: case_version does not move
+    return { case_version: current, step: clone(step), replayed: false };
+  },
+  agentSteps: async (pid) => clone(caseOf(pid).agent_steps),
   packet: async (pid) => clone(caseOf(pid).packet),
   reset: async () => {
     resetSession();

@@ -39,7 +39,7 @@ def test_story1_needs_the_furosemide_indication():
 
 
 def test_unknown_onset_stays_unknown_and_becomes_a_requirement():
-    e = ev(b_indication="high blood pressure is not it", b_ind_state="reported",
+    e = ev(b_indication="ankle swelling", b_ind_state="reported",
            observations=[["syn-p1:obs-ankle-swelling", None, "unknown", "Ankle swelling"]])
     assert e.status == "needs_evidence"  # never not_matched, never candidate
     assert kinds(e) == [("onset_day", "syn-p1:obs-ankle-swelling", "happened_at", "missing")]
@@ -79,10 +79,37 @@ def test_reversed_but_only_reported_asks_for_the_order():
     assert kinds(e) == [("order", "syn-p1:obs-ankle-swelling", "happened_at", "missing")]
 
 
-def test_documented_different_indication_is_a_competing_explanation():
-    e = ev(b_indication="heart failure, new diagnosis during hospital stay", b_ind_state="documented")
-    assert e.status == "competing_explanation"
+@pytest.mark.parametrize(("state", "says"), [
+    ("documented", "is documented as"),
+    ("reported", "is reported by the caregiver as"),
+])
+def test_a_different_indication_is_a_competing_explanation_documented_or_reported(state, says):
+    e = ev(b_indication="heart failure, new diagnosis during hospital stay", b_ind_state=state)
+    assert e.status == "competing_explanation"  # never candidate, whichever way it was recorded
     assert e.requirements == []
+    assert e.headline == (
+        "Possible pattern: amlodipine, then ankle swelling, then furosemide "
+        f"(furosemide has a different {state} reason)"
+    )
+    reason = 'The reason furosemide was started {} "heart failure, new diagnosis during hospital stay".'
+    assert reason.format(says) in e.reason
+
+
+def test_a_reported_different_indication_is_never_candidate():
+    for obs in ([["syn-p1:obs-ankle-swelling", 21, "reported", "Ankle swelling"]],
+                [["syn-p1:obs-ankle-swelling", 21, "documented", "Ankle swelling"]]):
+        e = ev(b_indication="heart failure", b_ind_state="reported", observations=obs)
+        assert e.status == "competing_explanation"
+
+
+def test_a_competing_explanation_never_calls_the_prescriber_mistaken():
+    blame = re.compile(
+        r"mistake|error|wrong|inappropriate|unnecessary|should not|shouldn't|incorrect", re.I
+    )
+    for state in ("documented", "reported"):
+        e = ev(b_indication="heart failure", b_ind_state=state)
+        for text in (e.headline, e.reason):
+            assert not blame.search(text), text
 
 
 def test_reported_effect_indication_is_candidate():
@@ -125,6 +152,7 @@ CAUSAL = re.compile(
 @pytest.mark.parametrize("over", [
     {}, {"a_start": 40}, {"b_indication": "heart failure", "b_ind_state": "documented"},
     {"b_indication": "ankle swelling", "b_ind_state": "reported"},
+    {"b_indication": "heart failure", "b_ind_state": "reported"},
     {"observations": [["syn-p1:obs-ankle-swelling", 21, "conflicting", "Ankle swelling"]]},
     {"observations": [[None, None, None, None]]}, {"a_start": None, "a_state": "unknown"},
 ])

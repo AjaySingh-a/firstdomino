@@ -5,7 +5,8 @@
   "notes": [
     "SYNTHETIC PATIENT. Not a real person. Built for the FirstDomino demo.",
     "pending_evidence holds a correction that has not been confirmed yet, so case_version has not moved.",
-    "Expected after confirming it: case_version 5, revision 2 with status needs_reassessment, and the clinician decision still attached to revision 1."
+    "Expected after confirming it: case_version 5, revision 2 with status needs_reassessment, and the clinician decision still attached to revision 1.",
+    "Atorvastatin is in no curated pattern. Editing it (in the sandbox) affects no finding and creates no revision."
   ],
   "patient": {
     "id": "syn-p3",
@@ -65,6 +66,20 @@
       "prescriber_specialty": "cardiology"
     },
     {
+      "id": "syn-p3:ep-atorvastatin",
+      "patient_id": "syn-p3",
+      "happened_at": 0,
+      "recorded_at": 0,
+      "state": "documented",
+      "source_ids": ["syn-p3:src-cardio-d0"],
+      "ingredient": { "name": "atorvastatin", "rxcui": "83367", "drug_class": "C10AA" },
+      "dose_text": "20 mg once daily",
+      "indication": "high cholesterol",
+      "indication_state": "documented",
+      "stop_day": null,
+      "prescriber_specialty": "cardiology"
+    },
+    {
       "id": "syn-p3:ep-furosemide",
       "patient_id": "syn-p3",
       "happened_at": 40,
@@ -97,7 +112,7 @@
       "patient_id": "syn-p3",
       "pattern_id": "pat-ccb-edema-loop",
       "pattern_version": 1,
-      "eval_version": 1,
+      "eval_version": 2,
       "status": "reviewed",
       "revision_n": 1,
       "index_episode_id": "syn-p3:ep-amlodipine",
@@ -118,11 +133,11 @@
       "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
       "n": 1,
       "status": "candidate",
-      "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+      "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
       "changed_fact_ids": [],
       "created_at": 45,
       "previous_n": null,
-      "eval_version": 1
+      "eval_version": 2
     }
   ],
   "decisions": [

@@ -58,12 +58,12 @@ uniform names in the graph and the API:
 | | `Observation` | `id`, `happened_at`, `recorded_at`, `state`, `label` |
 | Reasoning | `Finding` | `id`, `patient_id`, `status`, `revision_n`, `pattern_version`, `eval_version`, `headline` |
 | | `EvidenceRequirement` | `id`, `patient_id`, `finding_id`, `kind` (`start_day`/`onset_day`/`indication`/`order`), `field`, `state` (`missing`/`provided`/`not_available`) |
-| Investigation + memory | `Question` | `id`, `ask_role`, `text`, `asked_at`, `answer`, `answer_state` |
+| Investigation + memory | `Question` | `id`, `patient_id`, `requirement_id`, `ask_role`, `text`, `asked_at`, `answer`, `answer_state` (written by `POST /questions`) |
 | | `FindingRevision` | `id`, `n`, `status`, `reason`, `changed_fact_ids`, `created_at`, `eval_version` |
 | | `ReviewDecision` | `id`, `patient_id`, `finding_id`, `revision_n`, `by_role`, `decision`, `reason`, `decided_at` |
 | | `FactVersion` | `id` (`<fact id>:ver-<n>`), `fact_id`, `n`, the fact's stored properties and `source_ids` at that version, `superseded_at`, `event_id` |
-| | `EvidenceEvent` | `id` (the request's `event_id`), `patient_id`, `status` (`pending`/`applying`/`applied`), `case_version`, `change` and `result` (JSON strings), `recorded_at` |
-| | `AgentStep` | `id`, `tool`, `ok`, `args`, `result_ids`, `at` |
+| | `EvidenceEvent` | `id` (the request's `event_id`), `patient_id`, `status` (`pending`/`applying`/`applied`), `case_version`, `change`, `before`, `after`, `findings_before` and `result` (JSON strings), `recorded_at` |
+| | `AgentStep` | `id`, `patient_id`, `tool`, `ok`, `args_json` (FalkorDB stores no maps), `result_ids`, `at`, `seq` |
 
 ## Relationships
 
@@ -73,7 +73,7 @@ uniform names in the graph and the API:
 | | `INDEX` | `Pattern` → `DrugClass` (first medicine) |
 | | `VIA` | `Pattern` → `Effect` |
 | | `MARKER` | `Pattern` → `DrugClass` (second medicine) |
-| Patient facts | `HAS` | `Patient` → `MedicationEpisode` / `Observation` / `Source` / `Finding`* / `EvidenceEvent` |
+| Patient facts | `HAS` | `Patient` → `MedicationEpisode` / `Observation` / `Source` / `Finding`* / `EvidenceEvent` / `Question` / `AgentStep` |
 | | `OF` | `MedicationEpisode` → `Ingredient` |
 | | `OF_EFFECT` | `Observation` → `Effect` |
 | | `FROM_SOURCE` | `MedicationEpisode` / `Observation` → `Source` |
@@ -83,7 +83,7 @@ uniform names in the graph and the API:
 | | `MATCHES` | `Finding` → `Pattern` |
 | | `NEEDS` | `Finding` → `EvidenceRequirement` |
 | | `ABOUT` | `EvidenceRequirement` → fact |
-| Investigation + memory | `RESOLVES` | `Question` → `EvidenceRequirement` |
+| Investigation + memory | `RESOLVES` | `Question` → `EvidenceRequirement` it was asked for (Q2 then skips that requirement) |
 | | `OF` | `FindingRevision` → `Finding` |
 | | `PREVIOUS` | `FindingRevision` (n+1) → `FindingRevision` (n) |
 | | `ON` | `ReviewDecision` → `FindingRevision` |
@@ -105,8 +105,12 @@ Rules on Q1 rows (`engine/rules.py`, tested in `tests/test_rules.py`), in preced
 
 - Two **documented** facts in the reverse of index start → onset → marker start → `not_matched`.
   If either side is only `reported`, the order is not settled: an `order` requirement instead.
-- The second medicine has a documented, different indication → `competing_explanation`, shown and not
-  dismissed. "Same as the effect" means an exact phrase in `rules.EFFECT_TERMS` (e.g. "ankle swelling").
+- The second medicine has a known indication that is not the pattern's effect → `competing_explanation`,
+  shown and not dismissed, whether that reason is `documented` or `reported` (the headline and reason
+  say which: "has a different reported reason", "is reported by the caregiver as …"). A reported
+  different reason never leaves the finding `candidate`. "Same as the effect" means an exact phrase in
+  `rules.EFFECT_TERMS` (e.g. "ankle swelling"). The text never says the prescribing was wrong: it is
+  another explanation worth reviewing alongside the pattern. (`EVAL_VERSION` 2.)
 - Any required fact unknown → `needs_evidence`, with one requirement per gap. A null day is never read
   as 0 or as absent. No observation of the effect at all → an `onset_day` requirement about the index
   episode (`field: via_effect`): not known yet, not "no".
@@ -129,6 +133,13 @@ When evidence changes (`api/graph_store.py`, `engine/evaluate.reevaluate`):
    `missing`. A `not_available` answer marks the requirement `not_available` and it stays that way
    while the gap is open: never read as "no", never asked again.
 
+Reasons and change summaries never show Python's `None`: a missing value reads "not recorded".
+
+The `EvidenceEvent` is written as `applying` in the same query as the fact change, holding the fact
+before and after and the findings before. Steps 1-4 then run and the event becomes `applied` with its
+result. If the API stops in between, re-sending the same `event_id` resumes steps 1-4 from the event
+(each is idempotent; a revision already linked to the event by `BECAUSE` is reused) instead of 409.
+
 ## Queries
 
 Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always parameterised:
@@ -142,7 +153,9 @@ Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always
 | `q5_history` | full history: revisions, `PREVIOUS`, decisions on their revision, events behind each | `$pid`, `$fid` |
 | `q6_patient_findings` | findings list with linked IDs (`GET /patients/{id}/findings`) | `$pid` |
 | `q7_timeline` | current facts, sources, pending evidence (`GET /patients/{id}/timeline`) | `$pid` |
-| `q8_evidence_event` | one evidence event, for idempotent replay | `$pid`, `$event_id` |
+| `q8_evidence_event` | one evidence event, for idempotent replay or resuming an `applying` one | `$pid`, `$event_id` |
+| `q9_requirements` | requirements, what each is about, and the `Question` asked for it (`POST /questions`, asked questions in the drawer) | `$pid` |
+| `q10_agent_steps` | the review agent's steps, oldest first (`GET /patients/{id}/agent-steps`) | `$pid` |
 
 Loader and engine writes live in `engine/queries/write/` (MERGE, parameterised), admin reads in
 `engine/queries/admin/`. Neither starts from a patient, so `test_contracts` checks only the top level.
@@ -157,7 +170,7 @@ properties and `GRAPH.COPY` all work. `collect([o.id, …])` over an empty `OPTI
 `uv run python -m engine.loaders.seed [--reset] [--family demo] [--stories 1 2 3]` (default: Story 1
 into `family_demo`). It MERGEs knowledge into `kb_template`, `GRAPH.COPY`s it to `family_<id>` (or
 MERGEs the same knowledge if that graph exists), loads each story, runs Q1 + rules, then loads the
-story's earlier review decisions and pending evidence. A patient already in the graph is skipped: the
+story's earlier review decisions, agent steps and pending evidence. A patient already in the graph is skipped: the
 graph is the record, and the fixture must not overwrite evidence confirmed since (`--reset` starts
 over). The API runs the same seed on start, so it only ever adds missing stories.
 
