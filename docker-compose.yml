@@ -1,6 +1,11 @@
 services:
   falkordb:
     image: falkordb/falkordb:latest
+    restart: unless-stopped
+    environment:
+      # RDB snapshots alone only save on a clean shutdown or every few minutes; the append-only
+      # file also keeps confirmed evidence across a crash or a kill.
+      REDIS_ARGS: --appendonly yes --appendfsync everysec
     ports:
       - "6379:6379"  # Redis protocol
       - "3000:3000"  # FalkorDB Browser
@@ -16,10 +21,16 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+      target: runtime
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false
     environment:
+      # FalkorDB is the source of truth here. Set FD_STORE=fixtures to serve the in-memory stub instead.
+      FD_STORE: ${FD_STORE:-graph}
+      FD_FAMILY: ${FD_FAMILY:-demo}
+      FD_STORIES: ${FD_STORIES:-1 2 3}
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
       FD_CORS_ORIGINS: http://localhost:3001
@@ -39,12 +50,29 @@ services:
       context: .
       dockerfile: web/Dockerfile
       args:
+        # live = the api service above (FalkorDB). fixtures = data/snapshots, no API needed.
         NEXT_PUBLIC_DATA_SOURCE: ${NEXT_PUBLIC_DATA_SOURCE:-live}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     environment:
       API_INTERNAL_URL: http://api:8000  # server-side fetches; the browser uses NEXT_PUBLIC_API_URL
     ports:
       - "3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # `make test-stack`: graph tests against the falkordb service and HTTP tests against the running
+  # api container (graph mode), from inside the compose network.
+  api-test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: test
+    environment:
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: "6379"
+      FD_API_URL: http://api:8000
     depends_on:
       api:
         condition: service_healthy

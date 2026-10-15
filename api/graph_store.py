@@ -1,27 +1,43 @@
-"""Graph-backed store (FD_STORE=graph). Same methods as FixtureStore.
+"""Graph-backed store (FD_STORE=graph). Same methods as FixtureStore; FalkorDB is the only state.
 
-D-1 scope: patients, findings, investigation and packet are read from FalkorDB through the named
-queries. The timeline is still served from the fixtures (the graph holds the same facts until D-2
-adds writes). Evidence and review writes return 501 in graph mode until D-2 moves the 409 /
-event_id / revision logic into the graph.
+Reads: patients, timeline (Q7), findings (Q6), investigation and packet (Q4, Q2, Q5).
+Writes: every check that must hold under concurrency runs inside FalkorDB as a compare-and-set in
+ONE named query (write/evidence_apply, write/review), so a stale case_version gets 409 even when two
+API processes race. Evidence events live in the graph (EvidenceEvent), so a repeated event_id
+replays its stored result after an API or FalkorDB restart too.
+
+Evidence change, in order:
+1. replay an applied event_id; else write/evidence_apply: compare-and-set case_version, append a
+   FactVersion (old one kept), update the fact, record the event.
+2. a "not available" answer marks the requirements about that field not_available (never "no").
+3. Q3 (q3_affected) names the findings that cite, link or need the fact; the rules re-run for those
+   only (engine/evaluate.reevaluate) and each gets FindingRevision n+1, linked by PREVIOUS.
+   A finding with a review decision gets needs_reassessment; the decision stays on its revision.
+4. the result is stored on the event for replay.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from falkordb import FalkorDB
 
 from api.models import (
+    EvidenceChange,
     EvidenceRequest,
     EvidenceResult,
     FactRef,
     Finding,
+    FindingChange,
     FindingRevision,
     FindingsResponse,
+    Ingredient,
     InvestigationResponse,
+    MedicationEpisode,
+    Observation,
     PacketItem,
     PacketResponse,
     Patient,
@@ -33,14 +49,24 @@ from api.models import (
     Source,
     TimelineResponse,
 )
-from api.store import DISCLAIMER, FixtureStore, NotFound, load_patterns, load_stories, patient_of
+from api.store import (
+    DISCLAIMER,
+    Conflict,
+    FixtureStore,
+    Invalid,
+    NotFound,
+    change_summary,
+    check_change,
+    load_patterns,
+    load_stories,
+    mutate,
+    patient_of,
+    value_field,
+)
 from engine.db import connect, family_graph, props, run
-from engine.loaders.seed import DEFAULT_FAMILY, seed
+from engine.evaluate import reevaluate
+from engine.loaders.seed import DEFAULT_FAMILY, fact_props, seed
 from engine.questions import question_for
-
-
-class NotInGraphMode(Exception):
-    pass
 
 
 class GraphStore:
@@ -48,7 +74,7 @@ class GraphStore:
 
     def __init__(self, db: FalkorDB, fixtures: FixtureStore, family_id: str, story_numbers: list[int]):
         self.db = db
-        self.fixtures = fixtures
+        self.fixtures = fixtures  # the fixture stories seed the graph; nothing is served from them
         self.family_id = family_id
         self.story_numbers = story_numbers
         self._graph_of: dict[str, str] = {}  # patient id -> family graph name
@@ -77,10 +103,16 @@ class GraphStore:
         except Exception:
             return False
 
+    def _stories(self):
+        by_number = {s.story_id.removeprefix("story-"): s for s in load_stories().values()}
+        return [by_number[str(n)] for n in self.story_numbers]
+
     def ensure_seeded(self) -> None:
+        """Load any configured story that is not in the graph yet. Patients already there are kept as
+        they are, so a restart never overwrites confirmed evidence."""
+        if self.story_numbers:
+            seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()))
         self._refresh()
-        if not self._graph_of:
-            self.reset()
 
     # ---------- reads ----------
 
@@ -89,7 +121,7 @@ class GraphStore:
         out = []
         for name in sorted(set(self._graph_of.values())):
             for r in run(self.db.select_graph(name), "admin/patients_in_graph"):
-                out.append(Patient.model_validate(props(r["p"])))
+                out.append(_patient(props(r["p"])))
         return sorted(out, key=lambda p: p.id)
 
     def _patient(self, pid: str) -> Patient:
@@ -98,9 +130,51 @@ class GraphStore:
                 return p
         raise NotFound(f"patient {pid}")
 
+    def _timeline(self, pid: str) -> tuple[TimelineResponse, dict[str, int]]:
+        """The timeline, plus each fact's current version number."""
+        g = self._graph(pid)
+        sources, episodes, observations, pending, versions = [], [], [], [], {}
+        rows = run(g, "q7_timeline", pid=pid)
+        for r in rows:
+            if r["kind"] == "source":
+                sources.append(_source(r["node"]))
+        day = {s.id: (s.happened_at if s.happened_at is not None else s.recorded_at, s.id) for s in sources}
+        for r in rows:
+            n = props(r["node"])
+            source_ids = sorted(r["source_ids"], key=lambda sid: day.get(sid, (0, sid)))
+            if r["kind"] == "episode":
+                versions[n["id"]] = n.get("version", 1)
+                episodes.append(MedicationEpisode(
+                    id=n["id"], patient_id=pid, happened_at=n.get("happened_at"),
+                    recorded_at=n["recorded_at"], state=n["state"], source_ids=source_ids,
+                    ingredient=Ingredient(name=r["ingredient"], rxcui=r["rxcui"], drug_class=r["drug_class"]),
+                    dose_text=n["dose_text"], indication=n.get("indication"),
+                    indication_state=n["indication_state"], stop_day=n.get("stop_day"),
+                    prescriber_specialty=r["extra"],
+                ))
+            elif r["kind"] == "observation":
+                versions[n["id"]] = n.get("version", 1)
+                observations.append(Observation(
+                    id=n["id"], patient_id=pid, happened_at=n.get("happened_at"),
+                    recorded_at=n["recorded_at"], state=n["state"], source_ids=source_ids,
+                    label=n["label"], effect=r["extra"],
+                ))
+            elif r["kind"] == "pending":
+                pending.append(EvidenceRequest(
+                    event_id=n["id"], case_version=n["case_version"],
+                    change=EvidenceChange.model_validate_json(n["change"]),
+                ))
+        timeline = TimelineResponse(
+            patient=self._patient(pid),
+            sources=sorted(sources, key=lambda s: day[s.id]),
+            episodes=sorted(episodes, key=lambda e: e.id),
+            observations=sorted(observations, key=lambda o: o.id),
+            pending_evidence=sorted(pending, key=lambda e: e.event_id),
+        )
+        return timeline, versions
+
     def timeline(self, pid: str) -> TimelineResponse:
-        self._graph(pid)
-        return self.fixtures.timeline(pid)
+        return self._timeline(pid)[0]
 
     def findings(self, pid: str) -> FindingsResponse:
         g = self._graph(pid)
@@ -125,7 +199,7 @@ class GraphStore:
             raise NotFound(f"finding {fid}")
         pack = _evidence_pack(q4)
         q2 = run(g, "q2_next_question", pid=pid)
-        q5 = run(g, "q5_review_history", **params)
+        q5 = run(g, "q5_history", **params)
         revisions, decisions = _history(pid, fid, q5)
 
         next_q = None
@@ -144,7 +218,7 @@ class GraphStore:
                 result_ids=[r["requirement_id"] for r in q2],
             ),
             QueryTraceEntry(
-                query="q5_review_history", params=params, rows=len(q5), mode="live",
+                query="q5_history", params=params, rows=len(q5), mode="live",
                 result_ids=[r.id for r in revisions],
             ),
         ]
@@ -175,26 +249,139 @@ class GraphStore:
             patient=patient, case_version=patient.case_version, disclaimer=DISCLAIMER, items=items
         )
 
-    # ---------- writes (D-2) ----------
+    # ---------- writes ----------
+
+    def _replay(self, g, pid: str, event_id: str) -> EvidenceResult | None:
+        rows = run(g, "q8_evidence_event", pid=pid, event_id=event_id)
+        e = props(rows[0]["e"]) if rows else {}
+        if e.get("status") != "applied":
+            return None
+        return EvidenceResult.model_validate_json(e["result"]).model_copy(update={"replayed": True})
 
     def submit_evidence(self, pid: str, req: EvidenceRequest) -> EvidenceResult:
-        self._graph(pid)
-        raise NotInGraphMode("evidence writes move into FalkorDB in D-2")
+        g = self._graph(pid)
+        if not req.event_id.startswith(f"{pid}:"):
+            raise Invalid(f"event_id {req.event_id} is not scoped to {pid}")
+        if replay := self._replay(g, pid, req.event_id):  # checked before the version, like the stub
+            return replay
+        timeline, versions = self._timeline(pid)
+        patient = timeline.patient
+        if req.case_version != patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, patient.case_version)
+
+        change = req.change
+        facts = {x.id: x for x in [*timeline.episodes, *timeline.observations]}
+        fact = check_change(facts.get(change.fact_id), change, {s.id for s in timeline.sources})
+        after = fact.model_copy(deep=True)
+        mutate(after, change, patient.as_of_day)
+        before_dump, after_dump = fact.model_dump(mode="json"), after.model_dump(mode="json")
+        findings_before = {f.id: f for f in self.findings(pid).findings}
+
+        n = versions[fact.id]
+        rows = run(
+            g, "write/evidence_apply", pid=pid, fact_id=fact.id, case_version=req.case_version,
+            fact_props={**fact_props(after), "version": n + 1},
+            old_id=f"{fact.id}:ver-{n}", old_props=_version_props(fact, n),
+            new_props={**_version_props(after, n + 1), "event_id": req.event_id},
+            recorded_at=patient.as_of_day, event_id=req.event_id,
+            event_props={
+                "patient_id": pid, "status": "applying", "case_version": req.case_version,
+                "change": change.model_dump_json(), "recorded_at": patient.as_of_day,
+            },
+        )
+        if not rows:  # lost the compare-and-set: same event sent twice at once, or another write won
+            if replay := self._replay(g, pid, req.event_id):
+                return replay
+            current = self._patient(pid).case_version
+            raise Conflict("stale_case_version", pid, req.case_version, current)
+
+        if change.source_id:
+            run(g, "write/fact_sources", pid=pid, id=fact.id, source_ids=[change.source_id])
+        if change.state == "not_available":
+            run(g, "write/requirement_not_available", pid=pid, fact_id=fact.id,
+                fields=sorted({change.field, value_field(change.field)}))
+
+        affected = sorted(r["finding"] for r in run(g, "q3_affected", pid=pid, fact_id=fact.id))
+        summary = change_summary(before_dump, after_dump, change.field)
+        reviewed, leads = {}, {}
+        for fid in affected:
+            f = findings_before[fid]
+            reviewed[fid] = any(r["decisions"] for r in run(g, "q5_history", pid=pid, fid=fid))
+            leads[fid] = summary + (
+                f" Revision {f.revision_n} was reviewed, so it needs a fresh look." if reviewed[fid]
+                else " Re-evaluated."
+            )
+        targets = {fid: (findings_before[fid].index_episode_id, findings_before[fid].marker_episode_id)
+                   for fid in affected}
+        evaluations = reevaluate(g, pid, targets, leads)
+
+        new_revisions = []
+        for fid, ev in evaluations.items():
+            prev_n = findings_before[fid].revision_n
+            rev = run(
+                g, "write/revision_next", pid=pid, fid=fid, prev_n=prev_n, rev_id=f"{fid}:rev-{prev_n + 1}",
+                n=prev_n + 1, status="needs_reassessment" if reviewed[fid] else ev.status,
+                reason=ev.reason, changed_fact_ids=[fact.id], created_at=patient.as_of_day,
+                eval_version=ev.eval_version, headline=ev.headline, event_id=req.event_id,
+            )
+            new_revisions.append(_revision(pid, fid, props(rev[0]["rev"]), prev_n))
+
+        findings_after = {f.id: f for f in self.findings(pid).findings}
+        result = EvidenceResult(
+            event_id=req.event_id, patient_id=pid, case_version_before=req.case_version,
+            case_version=rows[0]["case_version"], before=before_dump, after=after_dump,
+            affected_finding_ids=affected, new_revisions=new_revisions,
+            finding_changes=[
+                FindingChange(finding_id=fid, before=findings_before[fid], after=findings_after[fid])
+                for fid in affected
+            ],
+            pending_reevaluation_ids=[], replayed=False,
+        )
+        run(g, "write/evidence_done", pid=pid, event_id=req.event_id, result=result.model_dump_json())
+        return result
 
     def review(self, fid: str, req: ReviewRequest) -> ReviewResult:
-        self._graph(patient_of(fid))
-        raise NotInGraphMode("review writes move into FalkorDB in D-2")
+        pid = patient_of(fid)
+        g = self._graph(pid)
+        patient = self._patient(pid)
+        rows = run(
+            g, "write/review", pid=pid, fid=fid, case_version=req.case_version, revision_n=req.revision_n,
+            by_role=req.by_role, decision=req.decision, reason=req.reason, decided_at=patient.as_of_day,
+        )
+        current = {f.id: f for f in self.findings(pid).findings}
+        if fid not in current:
+            raise NotFound(f"finding {fid}")
+        if not rows:  # lost the compare-and-set: say which check failed
+            now = self._patient(pid).case_version
+            if req.case_version != now:
+                raise Conflict("stale_case_version", pid, req.case_version, now)
+            raise Conflict("stale_revision", pid, req.revision_n, current[fid].revision_n)
+        return ReviewResult(
+            case_version=rows[0]["case_version"], decision=_decision(pid, fid, props(rows[0]["dec"])),
+            finding=current[fid],
+        )
 
     def reset(self) -> None:
         """Drop and re-seed kb_template and the configured family graph from the fixtures."""
         self.fixtures.reset()
-        by_number = {s.story_id.removeprefix("story-"): s for s in load_stories().values()}
-        stories = [by_number[str(n)] for n in self.story_numbers]
-        seed(self.db, self.family_id, stories, list(self.fixtures.patterns.values()), reset=True)
+        seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()), reset=True)
         self._refresh()
 
 
 # ---------- row -> contract ----------
+
+
+def _patient(p: dict) -> Patient:
+    return Patient(
+        id=p["id"], label=p["label"], age_band=p["age_band"], case_version=p["case_version"],
+        as_of_day=p["as_of_day"], synthetic=p["synthetic"],
+    )
+
+
+def _version_props(fact: MedicationEpisode | Observation, n: int) -> dict:
+    """A FactVersion holds the fact's stored properties plus its sources at that version."""
+    return {**fact_props(fact), "id": f"{fact.id}:ver-{n}", "fact_id": fact.id, "n": n,
+            "source_ids": fact.source_ids}
 
 
 def _source(node: Any) -> Source:
@@ -286,30 +473,45 @@ def _evidence_pack(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _revision(pid: str, fid: str, rev: dict, previous_n: int | None) -> FindingRevision:
+    return FindingRevision(
+        id=rev["id"], patient_id=pid, finding_id=fid, n=rev["n"], status=rev["status"],
+        reason=rev["reason"], changed_fact_ids=rev.get("changed_fact_ids", []),
+        created_at=rev["created_at"], previous_n=previous_n, eval_version=rev["eval_version"],
+    )
+
+
+def _decision(pid: str, fid: str, d: dict) -> ReviewDecision:
+    return ReviewDecision(
+        id=d["id"], patient_id=pid, finding_id=fid, revision_n=d["revision_n"], by_role=d["by_role"],
+        decision=d["decision"], reason=d["reason"], decided_at=d["decided_at"],
+    )
+
+
 def _history(pid: str, fid: str, rows: list[dict[str, Any]]):
     revisions, decisions = [], []
     for r in rows:
         rev = props(r["rev"])
-        revisions.append(FindingRevision(
-            id=rev["id"], patient_id=pid, finding_id=fid, n=rev["n"], status=rev["status"],
-            reason=rev["reason"], changed_fact_ids=rev.get("changed_fact_ids", []),
-            created_at=rev["created_at"], previous_n=r["previous_n"], eval_version=rev["eval_version"],
-        ))
-        for d in r["decisions"]:
-            d = props(d)
-            decisions.append(ReviewDecision(
-                id=d["id"], patient_id=pid, finding_id=fid, revision_n=rev["n"], by_role=d["by_role"],
-                decision=d["decision"], reason=d["reason"], decided_at=d["decided_at"],
-            ))
+        revisions.append(_revision(pid, fid, rev, r["previous_n"]))
+        decisions += sorted((_decision(pid, fid, props(d)) for d in r["decisions"]), key=lambda d: d.id)
     return revisions, decisions
 
 
 def graph_store_from_env(fixtures: FixtureStore | None = None) -> GraphStore:
     numbers = [int(n) for n in os.environ.get("FD_STORIES", "1").replace(",", " ").split()]
+    db = connect()
+    deadline = time.monotonic() + float(os.environ.get("FD_DB_WAIT_SECONDS", "30"))
+    while True:  # FalkorDB may still be starting (compose restarts both services together)
+        try:
+            db.connection.ping()
+            break
+        except Exception:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(1)
     store = GraphStore(
-        connect(), fixtures or FixtureStore(load_stories(), load_patterns()),
+        db, fixtures or FixtureStore(load_stories(), load_patterns()),
         os.environ.get("FD_FAMILY", DEFAULT_FAMILY), numbers,
     )
     store.ensure_seeded()
     return store
-

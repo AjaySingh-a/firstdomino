@@ -41,9 +41,11 @@ tests/      pytest: API behaviour + contract guards
 
 ## Commands
 
-`make up | down | seed | reseed | test | lint | snapshots | dev-api | dev-web`. Without `make`
-(e.g. on Windows): `uv run pytest`, `uv run ruff check .`, `uv run uvicorn api.main:app --reload`,
-`cd web && npm run dev`.
+`make up | down | seed | reseed | test | test-stack | test-restart | lint | snapshots | dev-api | dev-web`.
+Without `make` (e.g. on Windows): `uv run pytest`, `uv run ruff check .`, `uv run uvicorn api.main:app --reload`,
+`cd web && npm run dev`, `docker compose --profile test run --rm --build api-test`.
+
+Docker Compose runs the API with `FD_STORE=graph` (FalkorDB). Without it the API serves the fixtures.
 
 Web data source: `NEXT_PUBLIC_DATA_SOURCE=fixtures` (default) or `live` with `NEXT_PUBLIC_API_URL`.
 

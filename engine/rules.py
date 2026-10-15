@@ -82,7 +82,10 @@ def observations(row: dict[str, Any]) -> list[Point]:
     return sorted(out, key=lambda p: p.fact_id)
 
 
-def evaluate(row: dict[str, Any], patient_id: str, finding_id: str) -> Evaluation:
+def evaluate(
+    row: dict[str, Any], patient_id: str, finding_id: str, lead: str = "First evaluation."
+) -> Evaluation:
+    """`lead` opens the revision reason: the first evaluation, or what changed before a re-evaluation."""
     requires = set(row.get("requires") or ["start_day", "onset_day", "indication", "order"])
     a = Point(row["index_ep"], row["a_name"], row["a_start"], row["a_state"] or "unknown")
     b = Point(row["marker_ep"], row["b_name"], row["b_start"], row["b_state"] or "unknown")
@@ -170,7 +173,7 @@ def evaluate(row: dict[str, Any], patient_id: str, finding_id: str) -> Evaluatio
         requirements=reqs, conflicts=sorted(set(conflicts)),
     )
     ev.headline = _headline(status, a, obs, b)
-    ev.reason = _reason(status, b, ind, gaps, reversed_documented, ev.conflicts)
+    ev.reason = _reason(lead, status, b, ind, gaps, reversed_documented, ev.conflicts)
     return ev
 
 
@@ -202,8 +205,8 @@ def _headline(status: str, a: Point, obs: list[Point], b: Point) -> str:
     return "Possible pattern: " + ", then ".join(steps)
 
 
-def _reason(status, b, ind, gaps, reversed_documented, conflicts) -> str:
-    parts = ["First evaluation."]
+def _reason(lead, status, b, ind, gaps, reversed_documented, conflicts) -> str:
+    parts = [lead]
     if status == "not_matched":
         first, second = reversed_documented[0]
         parts.append(

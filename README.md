@@ -96,6 +96,8 @@ curl localhost:8000/patients/syn-p1/timeline
 | API with reload | `make dev-api` | `uv run uvicorn api.main:app --reload --port 8000` |
 | Web with reload | `make dev-web` | `cd web && npm install && npm run dev` |
 | Tests | `make test` | `uv run pytest` and `cd web && npm run typecheck` |
+| Tests in the API container (graph mode) | `make test-stack` | `docker compose --profile test run --rm --build api-test` |
+| Restart FalkorDB + API, check nothing is lost | `make test-restart` | `FD_API_URL=http://localhost:8000 FD_STACK_RESTART=1 uv run pytest tests/test_stack.py` |
 | Lint | `make lint` | `uv run ruff check .` and `cd web && npm run lint` |
 | Seed the graph | `make seed` / `make reseed` | `uv run python -m engine.loaders.seed [--reset]` |
 | Regenerate web fixtures | `make snapshots` | `uv run python -m api.snapshots` |
@@ -106,6 +108,10 @@ The web app reads data through one adapter, `web/lib/api.ts`:
   `data/snapshots/fixtures.json`, so the UI works without a backend.
 - `NEXT_PUBLIC_DATA_SOURCE=live` calls the API at `NEXT_PUBLIC_API_URL`. Docker Compose uses this.
 
+In Docker Compose the API runs with `FD_STORE=graph`: FalkorDB holds every fact, version, finding,
+revision, decision and evidence event, and survives a restart of either container (append-only file
+on the `falkordb_data` volume). `uv run uvicorn …` without `FD_STORE` serves the in-memory fixtures.
+
 > [!NOTE]
 > If `next build` fails with `<Html> should not be imported outside of pages/_document`, your shell
 > has `NODE_ENV=development` set. Build with `NODE_ENV=production npm run build`
@@ -114,7 +120,8 @@ The web app reads data through one adapter, `web/lib/api.ts`:
 ## Repository layout
 
 ```
-api/        FastAPI (Python 3.11, uv). models.py = contract types, store.py = fixture stub, main.py = routes
+api/        FastAPI (Python 3.11, uv). models.py = contract types, graph_store.py = FalkorDB,
+            store.py = fixture stub, main.py = routes
 engine/     queries/*.cypher (named, parameterised), cypher.py, rules.py, loaders/
 agent/      the bounded review agent and its tool allowlist
 web/        Next.js 15, TypeScript, Tailwind, shadcn/ui, framer-motion
@@ -146,11 +153,13 @@ queries: [docs/data-model.md](docs/data-model.md).
 | Piece | State |
 |---|---|
 | Contract types (Python + TypeScript), docs, synthetic stories | Done |
-| API serving the fixtures, with versioning, 409s and idempotent events | Done |
-| Docker Compose (FalkorDB, API, web) | Done |
-| Named Cypher queries | Written, not yet checked against FalkorDB |
+| API on FalkorDB: timeline, findings, investigation, packet | Done |
+| Evidence writes on FalkorDB: fact versions, 409 on stale `case_version`, idempotent `event_id`, re-evaluation of affected findings only, revision history | Done |
+| Review decisions on FalkorDB, kept on their revision | Done |
+| Docker Compose (FalkorDB, API in graph mode, web) | Done |
+| Named Cypher queries, checked against FalkorDB | Done |
 | Web workspace: Medication River, investigation drawer, review history, interface states | Done (fixture and live modes) |
-| Graph loader and finding rules | Next |
+| Graph loader and finding rules | Done |
 | Review agent | Next |
 | MCP server | Planned |
 

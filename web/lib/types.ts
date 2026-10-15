@@ -257,6 +257,13 @@ export interface InvestigationResponse {
   query_trace: QueryTraceEntry[];
 }
 
+/** One affected finding before and after an evidence change. */
+export interface FindingChange {
+  finding_id: string;
+  before: Finding;
+  after: Finding;
+}
+
 export interface EvidenceResult {
   event_id: string;
   patient_id: string;
@@ -266,6 +273,7 @@ export interface EvidenceResult {
   after: Record<string, unknown>;
   affected_finding_ids: string[];
   new_revisions: FindingRevision[];
+  finding_changes: FindingChange[];
   pending_reevaluation_ids: string[];
   replayed: boolean;
 }

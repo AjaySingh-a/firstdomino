@@ -1,9 +1,9 @@
-"""In-memory fixture store behind the API stubs.
+"""In-memory fixture store (FD_STORE=fixtures) behind the snapshots the web app uses offline.
 
-It assembles responses from data/stories and enforces the write contract
-(409 on a stale case_version, idempotent event_id, revision n+1 when evidence
-changes under a reviewed finding). It does NOT decide finding statuses: that is
-engine/rules.py, run against FalkorDB.
+It assembles responses from data/stories and mirrors the write contract (409 on a stale
+case_version, idempotent event_id, revision n+1 when evidence changes under a reviewed finding).
+It does NOT decide finding statuses: that is engine/rules.py, run against FalkorDB by
+api/graph_store.py, which is where the real writes happen.
 """
 
 from __future__ import annotations
@@ -13,10 +13,12 @@ import os
 from pathlib import Path
 
 from api.models import (
+    EvidenceChange,
     EvidenceRequest,
     EvidenceResult,
     FactRef,
     Finding,
+    FindingChange,
     FindingRevision,
     FindingsResponse,
     InvestigationResponse,
@@ -198,7 +200,7 @@ class FixtureStore:
                     result_ids=[q.requirement_id for q in open_qs[:1]],
                 ),
                 QueryTraceEntry(
-                    query="q5_review_history", params=params, rows=len(revisions), mode="fixture",
+                    query="q5_history", params=params, rows=len(revisions), mode="fixture",
                     result_ids=[r.id for r in revisions],
                 ),
             ],
@@ -234,34 +236,16 @@ class FixtureStore:
             raise Conflict("stale_case_version", pid, req.case_version, c.patient.case_version)
 
         change = req.change
-        fact = self._facts(c).get(change.fact_id)
-        if fact is None:
-            raise NotFound(f"fact {change.fact_id}")
-        if change.field not in type(fact).model_fields:
-            raise Invalid(f"{type(fact).__name__} has no field {change.field}")
-        if change.source_id and change.source_id not in {s.id for s in c.sources}:
-            raise Invalid(f"unknown source {change.source_id}")
+        fact = check_change(self._facts(c).get(change.fact_id), change, {s.id for s in c.sources})
 
         before = fact.model_dump(mode="json")
-        if change.field in ("state", "indication_state"):
-            self._set_state(fact, change.field, change.state)
-        elif change.state == "not_available":
-            # "not available" never overwrites a value and never means "no".
-            if change.field in STATE_FIELD:
-                self._set_state(fact, STATE_FIELD[change.field], "not_available")
-        else:
-            setattr(fact, change.field, change.value)
-            if change.field in STATE_FIELD:
-                self._set_state(fact, STATE_FIELD[change.field], change.state)
-        fact.recorded_at = c.patient.as_of_day
-        if change.source_id and change.source_id not in fact.source_ids:
-            fact.source_ids = [*fact.source_ids, change.source_id]
+        mutate(fact, change, c.patient.as_of_day)
         after = fact.model_dump(mode="json")
 
         req_state = "not_available" if change.state == "not_available" else "provided"
         touched_reqs = set()
         for r in c.requirements:
-            if r.about_fact_id == fact.id and r.field in (change.field, _value_field(change.field)):
+            if r.about_fact_id == fact.id and r.field in (change.field, value_field(change.field)):
                 r.state = req_state
                 touched_reqs.add(r.id)
         for q in c.questions:
@@ -270,13 +254,14 @@ class FixtureStore:
                 q.answer_state = change.state
 
         affected = [f for f in c.findings if self._touches(c, f, fact.id)]
+        findings_before = [f.model_copy(deep=True) for f in affected]
         new_revisions, pending = [], []
         for f in affected:
             if f.status == "reviewed" or any(d.finding_id == f.id for d in c.decisions):
                 rev = FindingRevision(
                     id=f"{f.id}:rev-{f.revision_n + 1}", patient_id=pid, finding_id=f.id,
                     n=f.revision_n + 1, status="needs_reassessment",
-                    reason=_reason(before, after, change.field),
+                    reason=f"{change_summary(before, after, change.field)} Needs a fresh look.",
                     changed_fact_ids=[fact.id], created_at=c.patient.as_of_day,
                     previous_n=f.revision_n, eval_version=f.eval_version,
                 )
@@ -294,6 +279,10 @@ class FixtureStore:
             event_id=req.event_id, patient_id=pid, case_version_before=version_before,
             case_version=c.patient.case_version, before=before, after=after,
             affected_finding_ids=[f.id for f in affected], new_revisions=new_revisions,
+            finding_changes=[
+                FindingChange(finding_id=b.id, before=b, after=a.model_copy(deep=True))
+                for b, a in zip(findings_before, affected, strict=True)
+            ],
             pending_reevaluation_ids=pending, replayed=False,
         )
         self.events[req.event_id] = result
@@ -320,29 +309,60 @@ class FixtureStore:
     # ---------- helpers ----------
 
     @staticmethod
-    def _set_state(fact, field: str, state: str) -> None:
-        if field == "state" and state == "not_available":
-            state = "unknown"  # a fact's own state has no not_available; the requirement records it
-        setattr(fact, field, state)
-
-    @staticmethod
     def _touches(c: StoryFixture, f: Finding, fact_id: str) -> bool:
         if fact_id in (f.index_episode_id, f.marker_episode_id) or fact_id in f.observation_ids:
             return True
         return any(r.finding_id == f.id and r.about_fact_id == fact_id for r in c.requirements)
 
 
-def _value_field(field: str) -> str:
+# ---------- the evidence-change rules both stores share ----------
+
+Fact = MedicationEpisode | Observation
+
+
+def check_change(fact: Fact | None, change: EvidenceChange, source_ids: set[str]) -> Fact:
+    if fact is None:
+        raise NotFound(f"fact {change.fact_id}")
+    if change.field not in type(fact).model_fields:
+        raise Invalid(f"{type(fact).__name__} has no field {change.field}")
+    if change.source_id and change.source_id not in source_ids:
+        raise Invalid(f"unknown source {change.source_id}")
+    return fact
+
+
+def mutate(fact: Fact, change: EvidenceChange, recorded_at: int) -> None:
+    """Apply one change to a fact in place. "not available" never overwrites a value and never means "no"."""
+    if change.field in ("state", "indication_state"):
+        _set_state(fact, change.field, change.state)
+    elif change.state == "not_available":
+        if change.field in STATE_FIELD:
+            _set_state(fact, STATE_FIELD[change.field], "not_available")
+    else:
+        setattr(fact, change.field, change.value)
+        if change.field in STATE_FIELD:
+            _set_state(fact, STATE_FIELD[change.field], change.state)
+    fact.recorded_at = recorded_at
+    if change.source_id and change.source_id not in fact.source_ids:
+        fact.source_ids = [*fact.source_ids, change.source_id]
+
+
+def _set_state(fact: Fact, field: str, state: str) -> None:
+    if field == "state" and state == "not_available":
+        state = "unknown"  # a fact's own state has no not_available; the requirement records it
+    setattr(fact, field, state)
+
+
+def value_field(field: str) -> str:
     return {"state": "happened_at", "indication_state": "indication"}.get(field, field)
 
 
-def _reason(before: dict, after: dict, field: str) -> str:
+def change_summary(before: dict, after: dict, field: str) -> str:
     label = before.get("label") or before.get("ingredient", {}).get("name", before["id"])
-    value_field = _value_field(field)
-    state_field = STATE_FIELD.get(value_field, field)
+    vf = value_field(field)
+    state_field = STATE_FIELD.get(vf, field)
     return (
-        f"{label}: {value_field} changed from {before.get(value_field)} ({before.get(state_field)}) "
-        f"to {after.get(value_field)} ({after.get(state_field)}). Needs a fresh look."
+        f"{label}: {vf} changed from {before.get(vf)} ({before.get(state_field)}) "
+        f"to {after.get(vf)} ({after.get(state_field)})."
     )
 
 

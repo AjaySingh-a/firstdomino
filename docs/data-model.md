@@ -23,6 +23,10 @@ around evidence IDs it was given. Types: `api/models.py` (mirrored in `web/lib/t
   and the requirement is marked `not_available` rather than `provided`.
 - **Versioning**: `Patient.case_version` goes up with every accepted write. A write that carries an old
   version gets HTTP 409. Each evidence change has an `event_id`, so re-sending it is idempotent.
+  The check is a compare-and-set inside one FalkorDB query (`write/evidence_apply`, `write/review`).
+- **Fact versions**: a confirmed change never overwrites history. The fact node keeps its ID and
+  edges and holds the current values plus `version`. Each version is a `FactVersion`
+  (`<fact id>:ver-<n>`); the old one is kept with `superseded_at`, and version n+1 `SUPERSEDES` n.
 
 ### Naming decision (differs from the plan's section 6)
 
@@ -56,7 +60,9 @@ uniform names in the graph and the API:
 | | `EvidenceRequirement` | `id`, `patient_id`, `finding_id`, `kind` (`start_day`/`onset_day`/`indication`/`order`), `field`, `state` (`missing`/`provided`/`not_available`) |
 | Investigation + memory | `Question` | `id`, `ask_role`, `text`, `asked_at`, `answer`, `answer_state` |
 | | `FindingRevision` | `id`, `n`, `status`, `reason`, `changed_fact_ids`, `created_at`, `eval_version` |
-| | `ReviewDecision` | `id`, `by_role`, `decision`, `reason`, `decided_at` |
+| | `ReviewDecision` | `id`, `patient_id`, `finding_id`, `revision_n`, `by_role`, `decision`, `reason`, `decided_at` |
+| | `FactVersion` | `id` (`<fact id>:ver-<n>`), `fact_id`, `n`, the fact's stored properties and `source_ids` at that version, `superseded_at`, `event_id` |
+| | `EvidenceEvent` | `id` (the request's `event_id`), `patient_id`, `status` (`pending`/`applying`/`applied`), `case_version`, `change` and `result` (JSON strings), `recorded_at` |
 | | `AgentStep` | `id`, `tool`, `ok`, `args`, `result_ids`, `at` |
 
 ## Relationships
@@ -67,7 +73,7 @@ uniform names in the graph and the API:
 | | `INDEX` | `Pattern` → `DrugClass` (first medicine) |
 | | `VIA` | `Pattern` → `Effect` |
 | | `MARKER` | `Pattern` → `DrugClass` (second medicine) |
-| Patient facts | `HAS` | `Patient` → `MedicationEpisode` / `Observation` / `Source` / `Finding`* |
+| Patient facts | `HAS` | `Patient` → `MedicationEpisode` / `Observation` / `Source` / `Finding`* / `EvidenceEvent` |
 | | `OF` | `MedicationEpisode` → `Ingredient` |
 | | `OF_EFFECT` | `Observation` → `Effect` |
 | | `FROM_SOURCE` | `MedicationEpisode` / `Observation` → `Source` |
@@ -81,11 +87,14 @@ uniform names in the graph and the API:
 | | `OF` | `FindingRevision` → `Finding` |
 | | `PREVIOUS` | `FindingRevision` (n+1) → `FindingRevision` (n) |
 | | `ON` | `ReviewDecision` → `FindingRevision` |
+| | `BECAUSE` | `FindingRevision` → `EvidenceEvent` that caused it |
+| | `VERSION` | `MedicationEpisode` / `Observation` → `FactVersion` |
+| | `SUPERSEDES` | `FactVersion` (n+1) → `FactVersion` (n) |
+| | `RECORDED` | `EvidenceEvent` → the `FactVersion` it created |
 | | `FOR` | `AgentStep` → `Finding` |
 
 \* Q2 needs `Patient -[:HAS]-> fact`. **Decided (D-1):** `Patient -[:HAS]-> Finding` is written, and
-Q4–Q6 traverse it from `Patient {id: $pid}`, so a finding is reachable only through its own patient.
-Q3 still matches `Finding {patient_id: $pid}`.
+Q3–Q6 traverse it from `Patient {id: $pid}`, so a finding is reachable only through its own patient.
 
 ## Finding statuses
 
@@ -108,8 +117,17 @@ Rules on Q1 rows (`engine/rules.py`, tested in `tests/test_rules.py`), in preced
 Finding IDs: `<pid>:fnd-<pattern id without "pat-">-<k>`. Requirements: `<pid>:req-<fact>-<kind>`.
 First evaluation writes `FindingRevision` n=1 with `ON CREATE`, so reloading never rewrites history.
 
-When evidence changes under a reviewed finding: create revision n+1 with status `needs_reassessment`
-and the reason, linked by `PREVIOUS`. The clinician's decision stays attached to revision n.
+When evidence changes (`api/graph_store.py`, `engine/evaluate.reevaluate`):
+
+1. Q3 (`q3_affected`) finds the findings that cite, link or need the changed fact. Only those re-run
+   the rules; a change to any other fact reopens nothing.
+2. Each affected finding gets revision n+1 with the reason (what changed, then the rules' view) and
+   `changed_fact_ids`, linked by `PREVIOUS` to n and by `BECAUSE` to the event.
+3. If the finding has a review decision, the new revision is `needs_reassessment` and the decision
+   stays on the revision it was made on. Otherwise the status is what the rules now say.
+4. Requirements follow the rules: a gap that closed becomes `provided`, a new or reopened gap is
+   `missing`. A `not_available` answer marks the requirement `not_available` and it stays that way
+   while the gap is open: never read as "no", never asked again.
 
 ## Queries
 
@@ -119,10 +137,12 @@ Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always
 |---|---|---|
 | `q1_candidate_match` | candidate rows + fact states for one patient | `$pid` |
 | `q2_next_question` | the missing fact the most open findings depend on | `$pid` |
-| `q3_dependency_scope` | findings that touch a changed fact (only these re-evaluate) | `$pid`, `$fact_id` |
+| `q3_affected` | findings that cite, link or need a changed fact (only these re-evaluate) | `$pid`, `$fact_id` |
 | `q4_evidence_pack` | evidence for the drawer | `$pid`, `$fid` |
-| `q5_review_history` | revisions with decisions kept intact | `$pid`, `$fid` |
+| `q5_history` | full history: revisions, `PREVIOUS`, decisions on their revision, events behind each | `$pid`, `$fid` |
 | `q6_patient_findings` | findings list with linked IDs (`GET /patients/{id}/findings`) | `$pid` |
+| `q7_timeline` | current facts, sources, pending evidence (`GET /patients/{id}/timeline`) | `$pid` |
+| `q8_evidence_event` | one evidence event, for idempotent replay | `$pid`, `$event_id` |
 
 Loader and engine writes live in `engine/queries/write/` (MERGE, parameterised), admin reads in
 `engine/queries/admin/`. Neither starts from a patient, so `test_contracts` checks only the top level.
@@ -136,7 +156,10 @@ properties and `GRAPH.COPY` all work. `collect([o.id, …])` over an empty `OPTI
 
 `uv run python -m engine.loaders.seed [--reset] [--family demo] [--stories 1 2 3]` (default: Story 1
 into `family_demo`). It MERGEs knowledge into `kb_template`, `GRAPH.COPY`s it to `family_<id>` (or
-MERGEs the same knowledge if that graph exists), loads each story, then runs Q1 + rules.
+MERGEs the same knowledge if that graph exists), loads each story, runs Q1 + rules, then loads the
+story's earlier review decisions and pending evidence. A patient already in the graph is skipped: the
+graph is the record, and the fixture must not overwrite evidence confirmed since (`--reset` starts
+over). The API runs the same seed on start, so it only ever adds missing stories.
 
 ## Dropped from v1
 
