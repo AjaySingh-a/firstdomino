@@ -1,0 +1,345 @@
+"""In-memory fixture store behind the API stubs.
+
+It assembles responses from data/stories and enforces the write contract
+(409 on a stale case_version, idempotent event_id, revision n+1 when evidence
+changes under a reviewed finding). It does NOT decide finding statuses: that is
+engine/rules.py, run against FalkorDB.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+from api.models import (
+    EvidenceRequest,
+    EvidenceResult,
+    FactRef,
+    Finding,
+    FindingRevision,
+    FindingsResponse,
+    InvestigationResponse,
+    MedicationEpisode,
+    Observation,
+    PacketItem,
+    PacketResponse,
+    Patient,
+    Pattern,
+    QueryTraceEntry,
+    ReviewDecision,
+    ReviewRequest,
+    ReviewResult,
+    StoryFixture,
+    TimelineResponse,
+)
+
+REPO = Path(__file__).resolve().parent.parent
+DATA_DIR = Path(os.environ.get("FD_DATA_DIR", REPO / "data"))
+
+DISCLAIMER = (
+    "Synthetic data. These are possible patterns for a clinician to review, not conclusions "
+    "about what led to what. Any change to a medicine is decided by the prescribing clinician."
+)
+
+# Which state field travels with which value field.
+STATE_FIELD = {"happened_at": "state", "indication": "indication_state"}
+
+
+class NotFound(Exception):
+    pass
+
+
+class Invalid(Exception):
+    pass
+
+
+class Conflict(Exception):
+    def __init__(self, error: str, patient_id: str, sent: int, current: int):
+        super().__init__(error)
+        self.body = {"error": error, "patient_id": patient_id, "sent": sent, "current": current}
+
+
+def load_patterns(data_dir: Path = DATA_DIR) -> dict[str, Pattern]:
+    out = {}
+    for path in sorted((data_dir / "patterns").glob("*.json")):
+        pattern = Pattern.model_validate(json.loads(path.read_text(encoding="utf-8")))
+        out[pattern.id] = pattern
+    return out
+
+
+def load_stories(data_dir: Path = DATA_DIR) -> dict[str, StoryFixture]:
+    out = {}
+    for path in sorted((data_dir / "stories").glob("*.json")):
+        story = StoryFixture.model_validate_json(path.read_text(encoding="utf-8"))
+        out[story.patient.id] = story
+    return out
+
+
+def patient_of(scoped_id: str) -> str:
+    return scoped_id.split(":", 1)[0]
+
+
+class FixtureStore:
+    def __init__(self, stories: dict[str, StoryFixture], patterns: dict[str, Pattern]):
+        self._pristine = stories
+        self.patterns = patterns
+        self.reset()
+
+    def reset(self) -> None:
+        self.cases = {pid: s.model_copy(deep=True) for pid, s in self._pristine.items()}
+        self.events: dict[str, EvidenceResult] = {}
+
+    # ---------- reads ----------
+
+    def case(self, pid: str) -> StoryFixture:
+        if pid not in self.cases:
+            raise NotFound(f"patient {pid}")
+        return self.cases[pid]
+
+    def patients(self) -> list[Patient]:
+        return [c.patient for c in self.cases.values()]
+
+    def timeline(self, pid: str) -> TimelineResponse:
+        c = self.case(pid)
+        return TimelineResponse(
+            patient=c.patient,
+            sources=c.sources,
+            episodes=c.episodes,
+            observations=c.observations,
+            pending_evidence=c.pending_evidence,
+        )
+
+    def findings(self, pid: str) -> FindingsResponse:
+        c = self.case(pid)
+        return FindingsResponse(
+            patient_id=pid, case_version=c.patient.case_version, findings=c.findings
+        )
+
+    def _finding(self, fid: str) -> tuple[StoryFixture, Finding]:
+        c = self.case(patient_of(fid))
+        for f in c.findings:
+            if f.id == fid:
+                return c, f
+        raise NotFound(f"finding {fid}")
+
+    def _facts(self, c: StoryFixture) -> dict[str, MedicationEpisode | Observation]:
+        return {x.id: x for x in [*c.episodes, *c.observations]}
+
+    def _fact_refs(self, c: StoryFixture, f: Finding) -> list[FactRef]:
+        facts = self._facts(c)
+        missing = {
+            (r.about_fact_id, r.field): r.id
+            for r in c.requirements
+            if r.finding_id == f.id and r.state != "provided"
+        }
+        refs: list[FactRef] = []
+
+        def add(fact, field, label, value, state):
+            refs.append(
+                FactRef(
+                    fact_id=fact.id, field=field, label=label, value=value, state=state,
+                    happened_at=fact.happened_at, source_ids=fact.source_ids,
+                    requirement_id=missing.get((fact.id, field)),
+                )
+            )
+
+        for ep_id in (f.index_episode_id, f.marker_episode_id):
+            ep = facts[ep_id]
+            add(ep, "happened_at", f"{ep.ingredient.name} started", ep.happened_at, ep.state)
+        marker = facts[f.marker_episode_id]
+        add(marker, "indication", f"Reason {marker.ingredient.name} was started",
+            marker.indication, marker.indication_state)
+        for obs_id in f.observation_ids:
+            o = facts[obs_id]
+            add(o, "happened_at", f"{o.label} began", o.happened_at, o.state)
+        return refs
+
+    def _investigation_parts(self, c: StoryFixture, f: Finding):
+        refs = self._fact_refs(c, f)
+        documented = [r for r in refs if r.state in ("documented", "reported") and not r.requirement_id]
+        conflicts = [r for r in refs if r.state == "conflicting"]
+        unknowns = [r for r in refs if r not in documented and r not in conflicts]
+        req_ids = {r.requirement_id for r in unknowns if r.requirement_id}
+        open_questions = [
+            q for q in c.questions if q.requirement_id in req_ids and q.answer_state is None
+        ]
+        revisions = sorted([r for r in c.revisions if r.finding_id == f.id], key=lambda r: r.n)
+        decisions = [d for d in c.decisions if d.finding_id == f.id]
+        return refs, documented, conflicts, unknowns, open_questions, revisions, decisions
+
+    def investigation(self, fid: str) -> InvestigationResponse:
+        c, f = self._finding(fid)
+        pid = c.patient.id
+        refs, documented, conflicts, unknowns, open_qs, revisions, decisions = (
+            self._investigation_parts(c, f)
+        )
+        source_ids = set(f.cited_source_ids) | {s for r in refs for s in r.source_ids}
+        params = {"pid": pid, "fid": fid}
+        return InvestigationResponse(
+            patient_id=pid,
+            case_version=c.patient.case_version,
+            finding=f,
+            pattern=self.patterns[f.pattern_id],
+            documented=documented,
+            conflicts=conflicts,
+            unknowns=unknowns,
+            next_question=open_qs[0] if open_qs else None,
+            sources=[s for s in c.sources if s.id in source_ids],
+            revisions=revisions,
+            decisions=decisions,
+            query_trace=[
+                QueryTraceEntry(query="q4_evidence_pack", params=params, rows=len(refs), mode="fixture"),
+                QueryTraceEntry(
+                    query="q2_next_question", params={"pid": pid}, rows=min(len(open_qs), 1), mode="fixture"
+                ),
+                QueryTraceEntry(
+                    query="q5_review_history", params=params, rows=len(revisions), mode="fixture"
+                ),
+            ],
+        )
+
+    def packet(self, pid: str) -> PacketResponse:
+        c = self.case(pid)
+        items = []
+        for f in c.findings:
+            if f.status == "not_matched":
+                continue
+            _, documented, conflicts, unknowns, open_qs, revisions, decisions = (
+                self._investigation_parts(c, f)
+            )
+            items.append(PacketItem(
+                finding=f, pattern=self.patterns[f.pattern_id], documented=documented,
+                conflicts=conflicts, unknowns=unknowns, open_questions=open_qs,
+                revisions=revisions, decisions=decisions,
+            ))
+        return PacketResponse(
+            patient=c.patient, case_version=c.patient.case_version, disclaimer=DISCLAIMER, items=items
+        )
+
+    # ---------- writes ----------
+
+    def submit_evidence(self, pid: str, req: EvidenceRequest) -> EvidenceResult:
+        c = self.case(pid)
+        if not req.event_id.startswith(f"{pid}:"):
+            raise Invalid(f"event_id {req.event_id} is not scoped to {pid}")
+        if req.event_id in self.events:  # idempotent replay, checked before the version
+            return self.events[req.event_id].model_copy(update={"replayed": True})
+        if req.case_version != c.patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, c.patient.case_version)
+
+        change = req.change
+        fact = self._facts(c).get(change.fact_id)
+        if fact is None:
+            raise NotFound(f"fact {change.fact_id}")
+        if change.field not in type(fact).model_fields:
+            raise Invalid(f"{type(fact).__name__} has no field {change.field}")
+        if change.source_id and change.source_id not in {s.id for s in c.sources}:
+            raise Invalid(f"unknown source {change.source_id}")
+
+        before = fact.model_dump(mode="json")
+        if change.field in ("state", "indication_state"):
+            self._set_state(fact, change.field, change.state)
+        elif change.state == "not_available":
+            # "not available" never overwrites a value and never means "no".
+            if change.field in STATE_FIELD:
+                self._set_state(fact, STATE_FIELD[change.field], "not_available")
+        else:
+            setattr(fact, change.field, change.value)
+            if change.field in STATE_FIELD:
+                self._set_state(fact, STATE_FIELD[change.field], change.state)
+        fact.recorded_at = c.patient.as_of_day
+        if change.source_id and change.source_id not in fact.source_ids:
+            fact.source_ids = [*fact.source_ids, change.source_id]
+        after = fact.model_dump(mode="json")
+
+        req_state = "not_available" if change.state == "not_available" else "provided"
+        touched_reqs = set()
+        for r in c.requirements:
+            if r.about_fact_id == fact.id and r.field in (change.field, _value_field(change.field)):
+                r.state = req_state
+                touched_reqs.add(r.id)
+        for q in c.questions:
+            if q.requirement_id in touched_reqs:
+                q.answer = None if change.value is None else str(change.value)
+                q.answer_state = change.state
+
+        affected = [f for f in c.findings if self._touches(c, f, fact.id)]
+        new_revisions, pending = [], []
+        for f in affected:
+            if f.status == "reviewed" or any(d.finding_id == f.id for d in c.decisions):
+                rev = FindingRevision(
+                    id=f"{f.id}:rev-{f.revision_n + 1}", patient_id=pid, finding_id=f.id,
+                    n=f.revision_n + 1, status="needs_reassessment",
+                    reason=_reason(before, after, change.field),
+                    changed_fact_ids=[fact.id], created_at=c.patient.as_of_day,
+                    previous_n=f.revision_n, eval_version=f.eval_version,
+                )
+                c.revisions.append(rev)
+                f.revision_n = rev.n
+                f.status = "needs_reassessment"
+                new_revisions.append(rev)
+            else:
+                pending.append(f.id)  # engine re-evaluates these (Q3 scope)
+
+        c.pending_evidence = [p for p in c.pending_evidence if p.event_id != req.event_id]
+        version_before = c.patient.case_version
+        c.patient.case_version += 1
+        result = EvidenceResult(
+            event_id=req.event_id, patient_id=pid, case_version_before=version_before,
+            case_version=c.patient.case_version, before=before, after=after,
+            affected_finding_ids=[f.id for f in affected], new_revisions=new_revisions,
+            pending_reevaluation_ids=pending, replayed=False,
+        )
+        self.events[req.event_id] = result
+        return result
+
+    def review(self, fid: str, req: ReviewRequest) -> ReviewResult:
+        c, f = self._finding(fid)
+        pid = c.patient.id
+        if req.case_version != c.patient.case_version:
+            raise Conflict("stale_case_version", pid, req.case_version, c.patient.case_version)
+        if req.revision_n != f.revision_n:
+            raise Conflict("stale_revision", pid, req.revision_n, f.revision_n)
+        k = 1 + sum(1 for d in c.decisions if d.finding_id == fid and d.revision_n == f.revision_n)
+        decision = ReviewDecision(
+            id=f"{fid}:rev-{f.revision_n}:dec-{k}", patient_id=pid, finding_id=fid,
+            revision_n=f.revision_n, by_role=req.by_role, decision=req.decision,
+            reason=req.reason, decided_at=c.patient.as_of_day,
+        )
+        c.decisions.append(decision)
+        f.status = "reviewed"
+        c.patient.case_version += 1
+        return ReviewResult(case_version=c.patient.case_version, decision=decision, finding=f)
+
+    # ---------- helpers ----------
+
+    @staticmethod
+    def _set_state(fact, field: str, state: str) -> None:
+        if field == "state" and state == "not_available":
+            state = "unknown"  # a fact's own state has no not_available; the requirement records it
+        setattr(fact, field, state)
+
+    @staticmethod
+    def _touches(c: StoryFixture, f: Finding, fact_id: str) -> bool:
+        if fact_id in (f.index_episode_id, f.marker_episode_id) or fact_id in f.observation_ids:
+            return True
+        return any(r.finding_id == f.id and r.about_fact_id == fact_id for r in c.requirements)
+
+
+def _value_field(field: str) -> str:
+    return {"state": "happened_at", "indication_state": "indication"}.get(field, field)
+
+
+def _reason(before: dict, after: dict, field: str) -> str:
+    label = before.get("label") or before.get("ingredient", {}).get("name", before["id"])
+    value_field = _value_field(field)
+    state_field = STATE_FIELD.get(value_field, field)
+    return (
+        f"{label}: {value_field} changed from {before.get(value_field)} ({before.get(state_field)}) "
+        f"to {after.get(value_field)} ({after.get(state_field)}). Needs a fresh look."
+    )
+
+
+def default_store() -> FixtureStore:
+    return FixtureStore(load_stories(), load_patterns())

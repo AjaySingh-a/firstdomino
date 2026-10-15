@@ -1,0 +1,1515 @@
+{
+  "_generated_by": "uv run python -m api.snapshots",
+  "synthetic": true,
+  "health": {
+    "status": "ok",
+    "mode": "fixtures",
+    "falkordb": "not_used"
+  },
+  "patients": [
+    {
+      "id": "syn-p1",
+      "label": "Synthetic patient A",
+      "age_band": "75-79",
+      "case_version": 2,
+      "as_of_day": 60,
+      "synthetic": true
+    },
+    {
+      "id": "syn-p2",
+      "label": "Synthetic patient B",
+      "age_band": "80-84",
+      "case_version": 2,
+      "as_of_day": 60,
+      "synthetic": true
+    },
+    {
+      "id": "syn-p3",
+      "label": "Synthetic patient C",
+      "age_band": "70-74",
+      "case_version": 4,
+      "as_of_day": 62,
+      "synthetic": true
+    }
+  ],
+  "cases": {
+    "syn-p1": {
+      "timeline": {
+        "patient": {
+          "id": "syn-p1",
+          "label": "Synthetic patient A",
+          "age_band": "75-79",
+          "case_version": 2,
+          "as_of_day": 60,
+          "synthetic": true
+        },
+        "sources": [
+          {
+            "id": "syn-p1:src-cardio-d0",
+            "patient_id": "syn-p1",
+            "kind": "clinic_letter",
+            "label": "Cardiology clinic letter (synthetic)",
+            "happened_at": 0,
+            "recorded_at": 0
+          },
+          {
+            "id": "syn-p1:src-pharm-d35",
+            "patient_id": "syn-p1",
+            "kind": "pharmacy_record",
+            "label": "Community pharmacy dispensing record (synthetic)",
+            "happened_at": 35,
+            "recorded_at": 35
+          },
+          {
+            "id": "syn-p1:src-cg-d60",
+            "patient_id": "syn-p1",
+            "kind": "caregiver_report",
+            "label": "Caregiver conversation at medication review (synthetic)",
+            "happened_at": 60,
+            "recorded_at": 60
+          }
+        ],
+        "episodes": [
+          {
+            "id": "syn-p1:ep-amlodipine",
+            "patient_id": "syn-p1",
+            "happened_at": 0,
+            "recorded_at": 0,
+            "state": "documented",
+            "source_ids": [
+              "syn-p1:src-cardio-d0"
+            ],
+            "ingredient": {
+              "name": "amlodipine",
+              "rxcui": "17767",
+              "drug_class": "C08CA"
+            },
+            "dose_text": "5 mg once daily",
+            "indication": "high blood pressure",
+            "indication_state": "documented",
+            "stop_day": null,
+            "prescriber_specialty": "cardiology"
+          },
+          {
+            "id": "syn-p1:ep-furosemide",
+            "patient_id": "syn-p1",
+            "happened_at": 35,
+            "recorded_at": 35,
+            "state": "documented",
+            "source_ids": [
+              "syn-p1:src-pharm-d35"
+            ],
+            "ingredient": {
+              "name": "furosemide",
+              "rxcui": "4603",
+              "drug_class": "C03CA"
+            },
+            "dose_text": "20 mg once daily",
+            "indication": null,
+            "indication_state": "unknown",
+            "stop_day": null,
+            "prescriber_specialty": "general_practice"
+          }
+        ],
+        "observations": [
+          {
+            "id": "syn-p1:obs-ankle-swelling",
+            "patient_id": "syn-p1",
+            "happened_at": 21,
+            "recorded_at": 60,
+            "state": "reported",
+            "source_ids": [
+              "syn-p1:src-cg-d60"
+            ],
+            "label": "Ankle swelling",
+            "effect": "peripheral_edema"
+          }
+        ],
+        "pending_evidence": []
+      },
+      "findings": {
+        "patient_id": "syn-p1",
+        "case_version": 2,
+        "findings": [
+          {
+            "id": "syn-p1:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p1",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "needs_evidence",
+            "revision_n": 1,
+            "index_episode_id": "syn-p1:ep-amlodipine",
+            "marker_episode_id": "syn-p1:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p1:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p1:src-cardio-d0",
+              "syn-p1:src-pharm-d35",
+              "syn-p1:src-cg-d60"
+            ],
+            "requirement_ids": [
+              "syn-p1:req-furosemide-indication"
+            ],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+          }
+        ]
+      },
+      "investigations": {
+        "syn-p1:fnd-ccb-edema-loop-1": {
+          "patient_id": "syn-p1",
+          "case_version": 2,
+          "finding": {
+            "id": "syn-p1:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p1",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "needs_evidence",
+            "revision_n": 1,
+            "index_episode_id": "syn-p1:ep-amlodipine",
+            "marker_episode_id": "syn-p1:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p1:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p1:src-cardio-d0",
+              "syn-p1:src-pharm-d35",
+              "syn-p1:src-cg-d60"
+            ],
+            "requirement_ids": [
+              "syn-p1:req-furosemide-indication"
+            ],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+          },
+          "pattern": {
+            "id": "pat-ccb-edema-loop",
+            "version": 1,
+            "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+            "index_class": "C08CA",
+            "via_effect": "peripheral_edema",
+            "marker_class": "C03CA",
+            "window_days": 90,
+            "requires": [
+              "start_day",
+              "onset_day",
+              "indication",
+              "order"
+            ],
+            "evidence_refs": [
+              {
+                "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                "doi": "10.1001/jamainternmed.2019.7087",
+                "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+              },
+              {
+                "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                "doi": "10.1001/jamanetworkopen.2019.18425",
+                "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+              }
+            ]
+          },
+          "documented": [
+            {
+              "fact_id": "syn-p1:ep-amlodipine",
+              "field": "happened_at",
+              "label": "amlodipine started",
+              "value": 0,
+              "state": "documented",
+              "happened_at": 0,
+              "source_ids": [
+                "syn-p1:src-cardio-d0"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p1:ep-furosemide",
+              "field": "happened_at",
+              "label": "furosemide started",
+              "value": 35,
+              "state": "documented",
+              "happened_at": 35,
+              "source_ids": [
+                "syn-p1:src-pharm-d35"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p1:obs-ankle-swelling",
+              "field": "happened_at",
+              "label": "Ankle swelling began",
+              "value": 21,
+              "state": "reported",
+              "happened_at": 21,
+              "source_ids": [
+                "syn-p1:src-cg-d60"
+              ],
+              "requirement_id": null
+            }
+          ],
+          "conflicts": [],
+          "unknowns": [
+            {
+              "fact_id": "syn-p1:ep-furosemide",
+              "field": "indication",
+              "label": "Reason furosemide was started",
+              "value": null,
+              "state": "unknown",
+              "happened_at": 35,
+              "source_ids": [
+                "syn-p1:src-pharm-d35"
+              ],
+              "requirement_id": "syn-p1:req-furosemide-indication"
+            }
+          ],
+          "next_question": {
+            "id": "syn-p1:q-furosemide-indication",
+            "patient_id": "syn-p1",
+            "requirement_id": "syn-p1:req-furosemide-indication",
+            "ask_role": "caregiver",
+            "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+            "asked_at": null,
+            "answer": null,
+            "answer_state": null
+          },
+          "sources": [
+            {
+              "id": "syn-p1:src-cardio-d0",
+              "patient_id": "syn-p1",
+              "kind": "clinic_letter",
+              "label": "Cardiology clinic letter (synthetic)",
+              "happened_at": 0,
+              "recorded_at": 0
+            },
+            {
+              "id": "syn-p1:src-pharm-d35",
+              "patient_id": "syn-p1",
+              "kind": "pharmacy_record",
+              "label": "Community pharmacy dispensing record (synthetic)",
+              "happened_at": 35,
+              "recorded_at": 35
+            },
+            {
+              "id": "syn-p1:src-cg-d60",
+              "patient_id": "syn-p1",
+              "kind": "caregiver_report",
+              "label": "Caregiver conversation at medication review (synthetic)",
+              "happened_at": 60,
+              "recorded_at": 60
+            }
+          ],
+          "revisions": [
+            {
+              "id": "syn-p1:fnd-ccb-edema-loop-1:rev-1",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "n": 1,
+              "status": "needs_evidence",
+              "reason": "First evaluation. The reason furosemide was started is not recorded.",
+              "changed_fact_ids": [],
+              "created_at": 60,
+              "previous_n": null,
+              "eval_version": 1
+            }
+          ],
+          "decisions": [],
+          "query_trace": [
+            {
+              "query": "q4_evidence_pack",
+              "params": {
+                "pid": "syn-p1",
+                "fid": "syn-p1:fnd-ccb-edema-loop-1"
+              },
+              "rows": 4,
+              "mode": "fixture"
+            },
+            {
+              "query": "q2_next_question",
+              "params": {
+                "pid": "syn-p1"
+              },
+              "rows": 1,
+              "mode": "fixture"
+            },
+            {
+              "query": "q5_review_history",
+              "params": {
+                "pid": "syn-p1",
+                "fid": "syn-p1:fnd-ccb-edema-loop-1"
+              },
+              "rows": 1,
+              "mode": "fixture"
+            }
+          ]
+        }
+      },
+      "packet": {
+        "patient": {
+          "id": "syn-p1",
+          "label": "Synthetic patient A",
+          "age_band": "75-79",
+          "case_version": 2,
+          "as_of_day": 60,
+          "synthetic": true
+        },
+        "case_version": 2,
+        "disclaimer": "Synthetic data. These are possible patterns for a clinician to review, not conclusions about what led to what. Any change to a medicine is decided by the prescribing clinician.",
+        "items": [
+          {
+            "finding": {
+              "id": "syn-p1:fnd-ccb-edema-loop-1",
+              "patient_id": "syn-p1",
+              "pattern_id": "pat-ccb-edema-loop",
+              "pattern_version": 1,
+              "eval_version": 1,
+              "status": "needs_evidence",
+              "revision_n": 1,
+              "index_episode_id": "syn-p1:ep-amlodipine",
+              "marker_episode_id": "syn-p1:ep-furosemide",
+              "effect": "peripheral_edema",
+              "observation_ids": [
+                "syn-p1:obs-ankle-swelling"
+              ],
+              "cited_source_ids": [
+                "syn-p1:src-cardio-d0",
+                "syn-p1:src-pharm-d35",
+                "syn-p1:src-cg-d60"
+              ],
+              "requirement_ids": [
+                "syn-p1:req-furosemide-indication"
+              ],
+              "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+            },
+            "pattern": {
+              "id": "pat-ccb-edema-loop",
+              "version": 1,
+              "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+              "index_class": "C08CA",
+              "via_effect": "peripheral_edema",
+              "marker_class": "C03CA",
+              "window_days": 90,
+              "requires": [
+                "start_day",
+                "onset_day",
+                "indication",
+                "order"
+              ],
+              "evidence_refs": [
+                {
+                  "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                  "doi": "10.1001/jamainternmed.2019.7087",
+                  "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                },
+                {
+                  "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                  "doi": "10.1001/jamanetworkopen.2019.18425",
+                  "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                }
+              ]
+            },
+            "documented": [
+              {
+                "fact_id": "syn-p1:ep-amlodipine",
+                "field": "happened_at",
+                "label": "amlodipine started",
+                "value": 0,
+                "state": "documented",
+                "happened_at": 0,
+                "source_ids": [
+                  "syn-p1:src-cardio-d0"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p1:ep-furosemide",
+                "field": "happened_at",
+                "label": "furosemide started",
+                "value": 35,
+                "state": "documented",
+                "happened_at": 35,
+                "source_ids": [
+                  "syn-p1:src-pharm-d35"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p1:obs-ankle-swelling",
+                "field": "happened_at",
+                "label": "Ankle swelling began",
+                "value": 21,
+                "state": "reported",
+                "happened_at": 21,
+                "source_ids": [
+                  "syn-p1:src-cg-d60"
+                ],
+                "requirement_id": null
+              }
+            ],
+            "conflicts": [],
+            "unknowns": [
+              {
+                "fact_id": "syn-p1:ep-furosemide",
+                "field": "indication",
+                "label": "Reason furosemide was started",
+                "value": null,
+                "state": "unknown",
+                "happened_at": 35,
+                "source_ids": [
+                  "syn-p1:src-pharm-d35"
+                ],
+                "requirement_id": "syn-p1:req-furosemide-indication"
+              }
+            ],
+            "open_questions": [
+              {
+                "id": "syn-p1:q-furosemide-indication",
+                "patient_id": "syn-p1",
+                "requirement_id": "syn-p1:req-furosemide-indication",
+                "ask_role": "caregiver",
+                "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+                "asked_at": null,
+                "answer": null,
+                "answer_state": null
+              }
+            ],
+            "revisions": [
+              {
+                "id": "syn-p1:fnd-ccb-edema-loop-1:rev-1",
+                "patient_id": "syn-p1",
+                "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+                "n": 1,
+                "status": "needs_evidence",
+                "reason": "First evaluation. The reason furosemide was started is not recorded.",
+                "changed_fact_ids": [],
+                "created_at": 60,
+                "previous_n": null,
+                "eval_version": 1
+              }
+            ],
+            "decisions": []
+          }
+        ]
+      },
+      "evidence": {}
+    },
+    "syn-p2": {
+      "timeline": {
+        "patient": {
+          "id": "syn-p2",
+          "label": "Synthetic patient B",
+          "age_band": "80-84",
+          "case_version": 2,
+          "as_of_day": 60,
+          "synthetic": true
+        },
+        "sources": [
+          {
+            "id": "syn-p2:src-cardio-d0",
+            "patient_id": "syn-p2",
+            "kind": "clinic_letter",
+            "label": "Cardiology clinic letter (synthetic)",
+            "happened_at": 0,
+            "recorded_at": 0
+          },
+          {
+            "id": "syn-p2:src-discharge-d33",
+            "patient_id": "syn-p2",
+            "kind": "discharge_summary",
+            "label": "Hospital discharge summary (synthetic)",
+            "happened_at": 33,
+            "recorded_at": 34
+          },
+          {
+            "id": "syn-p2:src-cg-d60",
+            "patient_id": "syn-p2",
+            "kind": "caregiver_report",
+            "label": "Caregiver conversation at medication review (synthetic)",
+            "happened_at": 60,
+            "recorded_at": 60
+          }
+        ],
+        "episodes": [
+          {
+            "id": "syn-p2:ep-amlodipine",
+            "patient_id": "syn-p2",
+            "happened_at": 0,
+            "recorded_at": 0,
+            "state": "documented",
+            "source_ids": [
+              "syn-p2:src-cardio-d0"
+            ],
+            "ingredient": {
+              "name": "amlodipine",
+              "rxcui": "17767",
+              "drug_class": "C08CA"
+            },
+            "dose_text": "5 mg once daily",
+            "indication": "high blood pressure",
+            "indication_state": "documented",
+            "stop_day": null,
+            "prescriber_specialty": "cardiology"
+          },
+          {
+            "id": "syn-p2:ep-furosemide",
+            "patient_id": "syn-p2",
+            "happened_at": 33,
+            "recorded_at": 34,
+            "state": "documented",
+            "source_ids": [
+              "syn-p2:src-discharge-d33"
+            ],
+            "ingredient": {
+              "name": "furosemide",
+              "rxcui": "4603",
+              "drug_class": "C03CA"
+            },
+            "dose_text": "40 mg once daily",
+            "indication": "heart failure, new diagnosis during hospital stay",
+            "indication_state": "documented",
+            "stop_day": null,
+            "prescriber_specialty": "internal_medicine"
+          }
+        ],
+        "observations": [
+          {
+            "id": "syn-p2:obs-ankle-swelling",
+            "patient_id": "syn-p2",
+            "happened_at": 21,
+            "recorded_at": 60,
+            "state": "reported",
+            "source_ids": [
+              "syn-p2:src-cg-d60"
+            ],
+            "label": "Ankle swelling",
+            "effect": "peripheral_edema"
+          }
+        ],
+        "pending_evidence": []
+      },
+      "findings": {
+        "patient_id": "syn-p2",
+        "case_version": 2,
+        "findings": [
+          {
+            "id": "syn-p2:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p2",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "competing_explanation",
+            "revision_n": 1,
+            "index_episode_id": "syn-p2:ep-amlodipine",
+            "marker_episode_id": "syn-p2:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p2:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p2:src-cardio-d0",
+              "syn-p2:src-discharge-d33",
+              "syn-p2:src-cg-d60"
+            ],
+            "requirement_ids": [],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide (furosemide has a different documented reason)"
+          }
+        ]
+      },
+      "investigations": {
+        "syn-p2:fnd-ccb-edema-loop-1": {
+          "patient_id": "syn-p2",
+          "case_version": 2,
+          "finding": {
+            "id": "syn-p2:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p2",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "competing_explanation",
+            "revision_n": 1,
+            "index_episode_id": "syn-p2:ep-amlodipine",
+            "marker_episode_id": "syn-p2:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p2:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p2:src-cardio-d0",
+              "syn-p2:src-discharge-d33",
+              "syn-p2:src-cg-d60"
+            ],
+            "requirement_ids": [],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide (furosemide has a different documented reason)"
+          },
+          "pattern": {
+            "id": "pat-ccb-edema-loop",
+            "version": 1,
+            "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+            "index_class": "C08CA",
+            "via_effect": "peripheral_edema",
+            "marker_class": "C03CA",
+            "window_days": 90,
+            "requires": [
+              "start_day",
+              "onset_day",
+              "indication",
+              "order"
+            ],
+            "evidence_refs": [
+              {
+                "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                "doi": "10.1001/jamainternmed.2019.7087",
+                "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+              },
+              {
+                "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                "doi": "10.1001/jamanetworkopen.2019.18425",
+                "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+              }
+            ]
+          },
+          "documented": [
+            {
+              "fact_id": "syn-p2:ep-amlodipine",
+              "field": "happened_at",
+              "label": "amlodipine started",
+              "value": 0,
+              "state": "documented",
+              "happened_at": 0,
+              "source_ids": [
+                "syn-p2:src-cardio-d0"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p2:ep-furosemide",
+              "field": "happened_at",
+              "label": "furosemide started",
+              "value": 33,
+              "state": "documented",
+              "happened_at": 33,
+              "source_ids": [
+                "syn-p2:src-discharge-d33"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p2:ep-furosemide",
+              "field": "indication",
+              "label": "Reason furosemide was started",
+              "value": "heart failure, new diagnosis during hospital stay",
+              "state": "documented",
+              "happened_at": 33,
+              "source_ids": [
+                "syn-p2:src-discharge-d33"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p2:obs-ankle-swelling",
+              "field": "happened_at",
+              "label": "Ankle swelling began",
+              "value": 21,
+              "state": "reported",
+              "happened_at": 21,
+              "source_ids": [
+                "syn-p2:src-cg-d60"
+              ],
+              "requirement_id": null
+            }
+          ],
+          "conflicts": [],
+          "unknowns": [],
+          "next_question": null,
+          "sources": [
+            {
+              "id": "syn-p2:src-cardio-d0",
+              "patient_id": "syn-p2",
+              "kind": "clinic_letter",
+              "label": "Cardiology clinic letter (synthetic)",
+              "happened_at": 0,
+              "recorded_at": 0
+            },
+            {
+              "id": "syn-p2:src-discharge-d33",
+              "patient_id": "syn-p2",
+              "kind": "discharge_summary",
+              "label": "Hospital discharge summary (synthetic)",
+              "happened_at": 33,
+              "recorded_at": 34
+            },
+            {
+              "id": "syn-p2:src-cg-d60",
+              "patient_id": "syn-p2",
+              "kind": "caregiver_report",
+              "label": "Caregiver conversation at medication review (synthetic)",
+              "happened_at": 60,
+              "recorded_at": 60
+            }
+          ],
+          "revisions": [
+            {
+              "id": "syn-p2:fnd-ccb-edema-loop-1:rev-1",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "n": 1,
+              "status": "competing_explanation",
+              "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+              "changed_fact_ids": [],
+              "created_at": 60,
+              "previous_n": null,
+              "eval_version": 1
+            }
+          ],
+          "decisions": [],
+          "query_trace": [
+            {
+              "query": "q4_evidence_pack",
+              "params": {
+                "pid": "syn-p2",
+                "fid": "syn-p2:fnd-ccb-edema-loop-1"
+              },
+              "rows": 4,
+              "mode": "fixture"
+            },
+            {
+              "query": "q2_next_question",
+              "params": {
+                "pid": "syn-p2"
+              },
+              "rows": 0,
+              "mode": "fixture"
+            },
+            {
+              "query": "q5_review_history",
+              "params": {
+                "pid": "syn-p2",
+                "fid": "syn-p2:fnd-ccb-edema-loop-1"
+              },
+              "rows": 1,
+              "mode": "fixture"
+            }
+          ]
+        }
+      },
+      "packet": {
+        "patient": {
+          "id": "syn-p2",
+          "label": "Synthetic patient B",
+          "age_band": "80-84",
+          "case_version": 2,
+          "as_of_day": 60,
+          "synthetic": true
+        },
+        "case_version": 2,
+        "disclaimer": "Synthetic data. These are possible patterns for a clinician to review, not conclusions about what led to what. Any change to a medicine is decided by the prescribing clinician.",
+        "items": [
+          {
+            "finding": {
+              "id": "syn-p2:fnd-ccb-edema-loop-1",
+              "patient_id": "syn-p2",
+              "pattern_id": "pat-ccb-edema-loop",
+              "pattern_version": 1,
+              "eval_version": 1,
+              "status": "competing_explanation",
+              "revision_n": 1,
+              "index_episode_id": "syn-p2:ep-amlodipine",
+              "marker_episode_id": "syn-p2:ep-furosemide",
+              "effect": "peripheral_edema",
+              "observation_ids": [
+                "syn-p2:obs-ankle-swelling"
+              ],
+              "cited_source_ids": [
+                "syn-p2:src-cardio-d0",
+                "syn-p2:src-discharge-d33",
+                "syn-p2:src-cg-d60"
+              ],
+              "requirement_ids": [],
+              "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide (furosemide has a different documented reason)"
+            },
+            "pattern": {
+              "id": "pat-ccb-edema-loop",
+              "version": 1,
+              "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+              "index_class": "C08CA",
+              "via_effect": "peripheral_edema",
+              "marker_class": "C03CA",
+              "window_days": 90,
+              "requires": [
+                "start_day",
+                "onset_day",
+                "indication",
+                "order"
+              ],
+              "evidence_refs": [
+                {
+                  "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                  "doi": "10.1001/jamainternmed.2019.7087",
+                  "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                },
+                {
+                  "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                  "doi": "10.1001/jamanetworkopen.2019.18425",
+                  "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                }
+              ]
+            },
+            "documented": [
+              {
+                "fact_id": "syn-p2:ep-amlodipine",
+                "field": "happened_at",
+                "label": "amlodipine started",
+                "value": 0,
+                "state": "documented",
+                "happened_at": 0,
+                "source_ids": [
+                  "syn-p2:src-cardio-d0"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p2:ep-furosemide",
+                "field": "happened_at",
+                "label": "furosemide started",
+                "value": 33,
+                "state": "documented",
+                "happened_at": 33,
+                "source_ids": [
+                  "syn-p2:src-discharge-d33"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p2:ep-furosemide",
+                "field": "indication",
+                "label": "Reason furosemide was started",
+                "value": "heart failure, new diagnosis during hospital stay",
+                "state": "documented",
+                "happened_at": 33,
+                "source_ids": [
+                  "syn-p2:src-discharge-d33"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p2:obs-ankle-swelling",
+                "field": "happened_at",
+                "label": "Ankle swelling began",
+                "value": 21,
+                "state": "reported",
+                "happened_at": 21,
+                "source_ids": [
+                  "syn-p2:src-cg-d60"
+                ],
+                "requirement_id": null
+              }
+            ],
+            "conflicts": [],
+            "unknowns": [],
+            "open_questions": [],
+            "revisions": [
+              {
+                "id": "syn-p2:fnd-ccb-edema-loop-1:rev-1",
+                "patient_id": "syn-p2",
+                "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+                "n": 1,
+                "status": "competing_explanation",
+                "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+                "changed_fact_ids": [],
+                "created_at": 60,
+                "previous_n": null,
+                "eval_version": 1
+              }
+            ],
+            "decisions": []
+          }
+        ]
+      },
+      "evidence": {}
+    },
+    "syn-p3": {
+      "timeline": {
+        "patient": {
+          "id": "syn-p3",
+          "label": "Synthetic patient C",
+          "age_band": "70-74",
+          "case_version": 4,
+          "as_of_day": 62,
+          "synthetic": true
+        },
+        "sources": [
+          {
+            "id": "syn-p3:src-cardio-d0",
+            "patient_id": "syn-p3",
+            "kind": "clinic_letter",
+            "label": "Cardiology clinic letter (synthetic)",
+            "happened_at": 0,
+            "recorded_at": 0
+          },
+          {
+            "id": "syn-p3:src-pharm-d40",
+            "patient_id": "syn-p3",
+            "kind": "pharmacy_record",
+            "label": "Community pharmacy dispensing record (synthetic)",
+            "happened_at": 40,
+            "recorded_at": 40
+          },
+          {
+            "id": "syn-p3:src-cg-d45",
+            "patient_id": "syn-p3",
+            "kind": "caregiver_report",
+            "label": "Caregiver conversation at medication review (synthetic)",
+            "happened_at": 45,
+            "recorded_at": 45
+          },
+          {
+            "id": "syn-p3:src-gp-note-d14",
+            "patient_id": "syn-p3",
+            "kind": "gp_note",
+            "label": "GP visit note, received after the review (synthetic)",
+            "happened_at": 14,
+            "recorded_at": 62
+          }
+        ],
+        "episodes": [
+          {
+            "id": "syn-p3:ep-amlodipine",
+            "patient_id": "syn-p3",
+            "happened_at": 0,
+            "recorded_at": 0,
+            "state": "documented",
+            "source_ids": [
+              "syn-p3:src-cardio-d0"
+            ],
+            "ingredient": {
+              "name": "amlodipine",
+              "rxcui": "17767",
+              "drug_class": "C08CA"
+            },
+            "dose_text": "10 mg once daily",
+            "indication": "high blood pressure",
+            "indication_state": "documented",
+            "stop_day": null,
+            "prescriber_specialty": "cardiology"
+          },
+          {
+            "id": "syn-p3:ep-furosemide",
+            "patient_id": "syn-p3",
+            "happened_at": 40,
+            "recorded_at": 40,
+            "state": "documented",
+            "source_ids": [
+              "syn-p3:src-pharm-d40"
+            ],
+            "ingredient": {
+              "name": "furosemide",
+              "rxcui": "4603",
+              "drug_class": "C03CA"
+            },
+            "dose_text": "20 mg once daily",
+            "indication": "ankle swelling",
+            "indication_state": "reported",
+            "stop_day": null,
+            "prescriber_specialty": "general_practice"
+          }
+        ],
+        "observations": [
+          {
+            "id": "syn-p3:obs-ankle-swelling",
+            "patient_id": "syn-p3",
+            "happened_at": 28,
+            "recorded_at": 45,
+            "state": "reported",
+            "source_ids": [
+              "syn-p3:src-cg-d45"
+            ],
+            "label": "Ankle swelling",
+            "effect": "peripheral_edema"
+          }
+        ],
+        "pending_evidence": [
+          {
+            "event_id": "syn-p3:evt-onset-correction",
+            "case_version": 4,
+            "change": {
+              "fact_id": "syn-p3:obs-ankle-swelling",
+              "field": "happened_at",
+              "value": 14,
+              "state": "documented",
+              "source_id": "syn-p3:src-gp-note-d14"
+            }
+          }
+        ]
+      },
+      "findings": {
+        "patient_id": "syn-p3",
+        "case_version": 4,
+        "findings": [
+          {
+            "id": "syn-p3:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p3",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "reviewed",
+            "revision_n": 1,
+            "index_episode_id": "syn-p3:ep-amlodipine",
+            "marker_episode_id": "syn-p3:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p3:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p3:src-cardio-d0",
+              "syn-p3:src-pharm-d40",
+              "syn-p3:src-cg-d45"
+            ],
+            "requirement_ids": [],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+          }
+        ]
+      },
+      "investigations": {
+        "syn-p3:fnd-ccb-edema-loop-1": {
+          "patient_id": "syn-p3",
+          "case_version": 4,
+          "finding": {
+            "id": "syn-p3:fnd-ccb-edema-loop-1",
+            "patient_id": "syn-p3",
+            "pattern_id": "pat-ccb-edema-loop",
+            "pattern_version": 1,
+            "eval_version": 1,
+            "status": "reviewed",
+            "revision_n": 1,
+            "index_episode_id": "syn-p3:ep-amlodipine",
+            "marker_episode_id": "syn-p3:ep-furosemide",
+            "effect": "peripheral_edema",
+            "observation_ids": [
+              "syn-p3:obs-ankle-swelling"
+            ],
+            "cited_source_ids": [
+              "syn-p3:src-cardio-d0",
+              "syn-p3:src-pharm-d40",
+              "syn-p3:src-cg-d45"
+            ],
+            "requirement_ids": [],
+            "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+          },
+          "pattern": {
+            "id": "pat-ccb-edema-loop",
+            "version": 1,
+            "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+            "index_class": "C08CA",
+            "via_effect": "peripheral_edema",
+            "marker_class": "C03CA",
+            "window_days": 90,
+            "requires": [
+              "start_day",
+              "onset_day",
+              "indication",
+              "order"
+            ],
+            "evidence_refs": [
+              {
+                "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                "doi": "10.1001/jamainternmed.2019.7087",
+                "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+              },
+              {
+                "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                "doi": "10.1001/jamanetworkopen.2019.18425",
+                "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+              }
+            ]
+          },
+          "documented": [
+            {
+              "fact_id": "syn-p3:ep-amlodipine",
+              "field": "happened_at",
+              "label": "amlodipine started",
+              "value": 0,
+              "state": "documented",
+              "happened_at": 0,
+              "source_ids": [
+                "syn-p3:src-cardio-d0"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p3:ep-furosemide",
+              "field": "happened_at",
+              "label": "furosemide started",
+              "value": 40,
+              "state": "documented",
+              "happened_at": 40,
+              "source_ids": [
+                "syn-p3:src-pharm-d40"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p3:ep-furosemide",
+              "field": "indication",
+              "label": "Reason furosemide was started",
+              "value": "ankle swelling",
+              "state": "reported",
+              "happened_at": 40,
+              "source_ids": [
+                "syn-p3:src-pharm-d40"
+              ],
+              "requirement_id": null
+            },
+            {
+              "fact_id": "syn-p3:obs-ankle-swelling",
+              "field": "happened_at",
+              "label": "Ankle swelling began",
+              "value": 28,
+              "state": "reported",
+              "happened_at": 28,
+              "source_ids": [
+                "syn-p3:src-cg-d45"
+              ],
+              "requirement_id": null
+            }
+          ],
+          "conflicts": [],
+          "unknowns": [],
+          "next_question": null,
+          "sources": [
+            {
+              "id": "syn-p3:src-cardio-d0",
+              "patient_id": "syn-p3",
+              "kind": "clinic_letter",
+              "label": "Cardiology clinic letter (synthetic)",
+              "happened_at": 0,
+              "recorded_at": 0
+            },
+            {
+              "id": "syn-p3:src-pharm-d40",
+              "patient_id": "syn-p3",
+              "kind": "pharmacy_record",
+              "label": "Community pharmacy dispensing record (synthetic)",
+              "happened_at": 40,
+              "recorded_at": 40
+            },
+            {
+              "id": "syn-p3:src-cg-d45",
+              "patient_id": "syn-p3",
+              "kind": "caregiver_report",
+              "label": "Caregiver conversation at medication review (synthetic)",
+              "happened_at": 45,
+              "recorded_at": 45
+            }
+          ],
+          "revisions": [
+            {
+              "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "n": 1,
+              "status": "candidate",
+              "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+              "changed_fact_ids": [],
+              "created_at": 45,
+              "previous_n": null,
+              "eval_version": 1
+            }
+          ],
+          "decisions": [
+            {
+              "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1:dec-1",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "revision_n": 1,
+              "by_role": "clinician",
+              "decision": "follow_up",
+              "reason": "Possible pattern noted. Plan to discuss the amlodipine dose and the ongoing need for furosemide with the cardiology team.",
+              "decided_at": 50
+            }
+          ],
+          "query_trace": [
+            {
+              "query": "q4_evidence_pack",
+              "params": {
+                "pid": "syn-p3",
+                "fid": "syn-p3:fnd-ccb-edema-loop-1"
+              },
+              "rows": 4,
+              "mode": "fixture"
+            },
+            {
+              "query": "q2_next_question",
+              "params": {
+                "pid": "syn-p3"
+              },
+              "rows": 0,
+              "mode": "fixture"
+            },
+            {
+              "query": "q5_review_history",
+              "params": {
+                "pid": "syn-p3",
+                "fid": "syn-p3:fnd-ccb-edema-loop-1"
+              },
+              "rows": 1,
+              "mode": "fixture"
+            }
+          ]
+        }
+      },
+      "packet": {
+        "patient": {
+          "id": "syn-p3",
+          "label": "Synthetic patient C",
+          "age_band": "70-74",
+          "case_version": 4,
+          "as_of_day": 62,
+          "synthetic": true
+        },
+        "case_version": 4,
+        "disclaimer": "Synthetic data. These are possible patterns for a clinician to review, not conclusions about what led to what. Any change to a medicine is decided by the prescribing clinician.",
+        "items": [
+          {
+            "finding": {
+              "id": "syn-p3:fnd-ccb-edema-loop-1",
+              "patient_id": "syn-p3",
+              "pattern_id": "pat-ccb-edema-loop",
+              "pattern_version": 1,
+              "eval_version": 1,
+              "status": "reviewed",
+              "revision_n": 1,
+              "index_episode_id": "syn-p3:ep-amlodipine",
+              "marker_episode_id": "syn-p3:ep-furosemide",
+              "effect": "peripheral_edema",
+              "observation_ids": [
+                "syn-p3:obs-ankle-swelling"
+              ],
+              "cited_source_ids": [
+                "syn-p3:src-cardio-d0",
+                "syn-p3:src-pharm-d40",
+                "syn-p3:src-cg-d45"
+              ],
+              "requirement_ids": [],
+              "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+            },
+            "pattern": {
+              "id": "pat-ccb-edema-loop",
+              "version": 1,
+              "title": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+              "index_class": "C08CA",
+              "via_effect": "peripheral_edema",
+              "marker_class": "C03CA",
+              "window_days": 90,
+              "requires": [
+                "start_day",
+                "onset_day",
+                "indication",
+                "order"
+              ],
+              "evidence_refs": [
+                {
+                  "citation": "Savage RD, Visentin JD, Bronskill SE, et al. Evaluation of a Common Prescribing Cascade of Calcium Channel Blockers and Diuretics in Older Adults With Hypertension. JAMA Intern Med. 2020;180(5):643-651.",
+                  "doi": "10.1001/jamainternmed.2019.7087",
+                  "url": "https://doi.org/10.1001/jamainternmed.2019.7087",
+                  "note": "TODO(Dev, Day 1): confirm citation details and the window_days value against the paper before the demo."
+                },
+                {
+                  "citation": "Vouri SM, Jiang X, Manini TM, et al. Magnitude of and Characteristics Associated With the Treatment of Calcium Channel Blocker-Induced Lower-Extremity Edema With Loop Diuretics. JAMA Netw Open. 2019;2(12):e1918425.",
+                  "doi": "10.1001/jamanetworkopen.2019.18425",
+                  "url": "https://doi.org/10.1001/jamanetworkopen.2019.18425",
+                  "note": "TODO(Dev, Day 1): confirm citation details before the demo."
+                }
+              ]
+            },
+            "documented": [
+              {
+                "fact_id": "syn-p3:ep-amlodipine",
+                "field": "happened_at",
+                "label": "amlodipine started",
+                "value": 0,
+                "state": "documented",
+                "happened_at": 0,
+                "source_ids": [
+                  "syn-p3:src-cardio-d0"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p3:ep-furosemide",
+                "field": "happened_at",
+                "label": "furosemide started",
+                "value": 40,
+                "state": "documented",
+                "happened_at": 40,
+                "source_ids": [
+                  "syn-p3:src-pharm-d40"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p3:ep-furosemide",
+                "field": "indication",
+                "label": "Reason furosemide was started",
+                "value": "ankle swelling",
+                "state": "reported",
+                "happened_at": 40,
+                "source_ids": [
+                  "syn-p3:src-pharm-d40"
+                ],
+                "requirement_id": null
+              },
+              {
+                "fact_id": "syn-p3:obs-ankle-swelling",
+                "field": "happened_at",
+                "label": "Ankle swelling began",
+                "value": 28,
+                "state": "reported",
+                "happened_at": 28,
+                "source_ids": [
+                  "syn-p3:src-cg-d45"
+                ],
+                "requirement_id": null
+              }
+            ],
+            "conflicts": [],
+            "unknowns": [],
+            "open_questions": [],
+            "revisions": [
+              {
+                "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1",
+                "patient_id": "syn-p3",
+                "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+                "n": 1,
+                "status": "candidate",
+                "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+                "changed_fact_ids": [],
+                "created_at": 45,
+                "previous_n": null,
+                "eval_version": 1
+              }
+            ],
+            "decisions": [
+              {
+                "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1:dec-1",
+                "patient_id": "syn-p3",
+                "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+                "revision_n": 1,
+                "by_role": "clinician",
+                "decision": "follow_up",
+                "reason": "Possible pattern noted. Plan to discuss the amlodipine dose and the ongoing need for furosemide with the cardiology team.",
+                "decided_at": 50
+              }
+            ]
+          }
+        ]
+      },
+      "evidence": {
+        "syn-p3:evt-onset-correction": {
+          "request": {
+            "event_id": "syn-p3:evt-onset-correction",
+            "case_version": 4,
+            "change": {
+              "fact_id": "syn-p3:obs-ankle-swelling",
+              "field": "happened_at",
+              "value": 14,
+              "state": "documented",
+              "source_id": "syn-p3:src-gp-note-d14"
+            }
+          },
+          "result": {
+            "event_id": "syn-p3:evt-onset-correction",
+            "patient_id": "syn-p3",
+            "case_version_before": 4,
+            "case_version": 5,
+            "before": {
+              "id": "syn-p3:obs-ankle-swelling",
+              "patient_id": "syn-p3",
+              "happened_at": 28,
+              "recorded_at": 45,
+              "state": "reported",
+              "source_ids": [
+                "syn-p3:src-cg-d45"
+              ],
+              "label": "Ankle swelling",
+              "effect": "peripheral_edema"
+            },
+            "after": {
+              "id": "syn-p3:obs-ankle-swelling",
+              "patient_id": "syn-p3",
+              "happened_at": 14,
+              "recorded_at": 62,
+              "state": "documented",
+              "source_ids": [
+                "syn-p3:src-cg-d45",
+                "syn-p3:src-gp-note-d14"
+              ],
+              "label": "Ankle swelling",
+              "effect": "peripheral_edema"
+            },
+            "affected_finding_ids": [
+              "syn-p3:fnd-ccb-edema-loop-1"
+            ],
+            "new_revisions": [
+              {
+                "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2",
+                "patient_id": "syn-p3",
+                "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+                "n": 2,
+                "status": "needs_reassessment",
+                "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Needs a fresh look.",
+                "changed_fact_ids": [
+                  "syn-p3:obs-ankle-swelling"
+                ],
+                "created_at": 62,
+                "previous_n": 1,
+                "eval_version": 1
+              }
+            ],
+            "pending_reevaluation_ids": [],
+            "replayed": false
+          },
+          "findings_after": {
+            "patient_id": "syn-p3",
+            "case_version": 5,
+            "findings": [
+              {
+                "id": "syn-p3:fnd-ccb-edema-loop-1",
+                "patient_id": "syn-p3",
+                "pattern_id": "pat-ccb-edema-loop",
+                "pattern_version": 1,
+                "eval_version": 1,
+                "status": "needs_reassessment",
+                "revision_n": 2,
+                "index_episode_id": "syn-p3:ep-amlodipine",
+                "marker_episode_id": "syn-p3:ep-furosemide",
+                "effect": "peripheral_edema",
+                "observation_ids": [
+                  "syn-p3:obs-ankle-swelling"
+                ],
+                "cited_source_ids": [
+                  "syn-p3:src-cardio-d0",
+                  "syn-p3:src-pharm-d40",
+                  "syn-p3:src-cg-d45"
+                ],
+                "requirement_ids": [],
+                "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

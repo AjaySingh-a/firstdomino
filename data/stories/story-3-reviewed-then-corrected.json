@@ -1,0 +1,165 @@
+{
+  "synthetic": true,
+  "story_id": "story-3",
+  "title": "SYNTHETIC - A clinician reviewed revision 1; a date correction for the swelling is waiting to be confirmed",
+  "notes": [
+    "SYNTHETIC PATIENT. Not a real person. Built for the FirstDomino demo.",
+    "pending_evidence holds a correction that has not been confirmed yet, so case_version has not moved.",
+    "Expected after confirming it: case_version 5, revision 2 with status needs_reassessment, and the clinician decision still attached to revision 1."
+  ],
+  "patient": {
+    "id": "syn-p3",
+    "label": "Synthetic patient C",
+    "age_band": "70-74",
+    "case_version": 4,
+    "as_of_day": 62,
+    "synthetic": true
+  },
+  "sources": [
+    {
+      "id": "syn-p3:src-cardio-d0",
+      "patient_id": "syn-p3",
+      "kind": "clinic_letter",
+      "label": "Cardiology clinic letter (synthetic)",
+      "happened_at": 0,
+      "recorded_at": 0
+    },
+    {
+      "id": "syn-p3:src-pharm-d40",
+      "patient_id": "syn-p3",
+      "kind": "pharmacy_record",
+      "label": "Community pharmacy dispensing record (synthetic)",
+      "happened_at": 40,
+      "recorded_at": 40
+    },
+    {
+      "id": "syn-p3:src-cg-d45",
+      "patient_id": "syn-p3",
+      "kind": "caregiver_report",
+      "label": "Caregiver conversation at medication review (synthetic)",
+      "happened_at": 45,
+      "recorded_at": 45
+    },
+    {
+      "id": "syn-p3:src-gp-note-d14",
+      "patient_id": "syn-p3",
+      "kind": "gp_note",
+      "label": "GP visit note, received after the review (synthetic)",
+      "happened_at": 14,
+      "recorded_at": 62
+    }
+  ],
+  "episodes": [
+    {
+      "id": "syn-p3:ep-amlodipine",
+      "patient_id": "syn-p3",
+      "happened_at": 0,
+      "recorded_at": 0,
+      "state": "documented",
+      "source_ids": ["syn-p3:src-cardio-d0"],
+      "ingredient": { "name": "amlodipine", "rxcui": "17767", "drug_class": "C08CA" },
+      "dose_text": "10 mg once daily",
+      "indication": "high blood pressure",
+      "indication_state": "documented",
+      "stop_day": null,
+      "prescriber_specialty": "cardiology"
+    },
+    {
+      "id": "syn-p3:ep-furosemide",
+      "patient_id": "syn-p3",
+      "happened_at": 40,
+      "recorded_at": 40,
+      "state": "documented",
+      "source_ids": ["syn-p3:src-pharm-d40"],
+      "ingredient": { "name": "furosemide", "rxcui": "4603", "drug_class": "C03CA" },
+      "dose_text": "20 mg once daily",
+      "indication": "ankle swelling",
+      "indication_state": "reported",
+      "stop_day": null,
+      "prescriber_specialty": "general_practice"
+    }
+  ],
+  "observations": [
+    {
+      "id": "syn-p3:obs-ankle-swelling",
+      "patient_id": "syn-p3",
+      "happened_at": 28,
+      "recorded_at": 45,
+      "state": "reported",
+      "source_ids": ["syn-p3:src-cg-d45"],
+      "label": "Ankle swelling",
+      "effect": "peripheral_edema"
+    }
+  ],
+  "findings": [
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1",
+      "patient_id": "syn-p3",
+      "pattern_id": "pat-ccb-edema-loop",
+      "pattern_version": 1,
+      "eval_version": 1,
+      "status": "reviewed",
+      "revision_n": 1,
+      "index_episode_id": "syn-p3:ep-amlodipine",
+      "marker_episode_id": "syn-p3:ep-furosemide",
+      "effect": "peripheral_edema",
+      "observation_ids": ["syn-p3:obs-ankle-swelling"],
+      "cited_source_ids": ["syn-p3:src-cardio-d0", "syn-p3:src-pharm-d40", "syn-p3:src-cg-d45"],
+      "requirement_ids": [],
+      "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+    }
+  ],
+  "requirements": [],
+  "questions": [],
+  "revisions": [
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "n": 1,
+      "status": "candidate",
+      "reason": "First evaluation. All required facts present; the caregiver reports furosemide was started for the swelling.",
+      "changed_fact_ids": [],
+      "created_at": 45,
+      "previous_n": null,
+      "eval_version": 1
+    }
+  ],
+  "decisions": [
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1:dec-1",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "revision_n": 1,
+      "by_role": "clinician",
+      "decision": "follow_up",
+      "reason": "Possible pattern noted. Plan to discuss the amlodipine dose and the ongoing need for furosemide with the cardiology team.",
+      "decided_at": 50
+    }
+  ],
+  "agent_steps": [
+    {
+      "id": "syn-p3:step-1",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "tool": "draft_packet_text",
+      "ok": true,
+      "args": { "pid": "syn-p3", "fid": "syn-p3:fnd-ccb-edema-loop-1" },
+      "result_ids": ["syn-p3:ep-amlodipine", "syn-p3:obs-ankle-swelling", "syn-p3:ep-furosemide"],
+      "at": 46
+    }
+  ],
+  "pending_evidence": [
+    {
+      "event_id": "syn-p3:evt-onset-correction",
+      "case_version": 4,
+      "change": {
+        "fact_id": "syn-p3:obs-ankle-swelling",
+        "field": "happened_at",
+        "value": 14,
+        "state": "documented",
+        "source_id": "syn-p3:src-gp-note-d14"
+      }
+    }
+  ]
+}

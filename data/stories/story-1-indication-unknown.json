@@ -1,0 +1,154 @@
+{
+  "synthetic": true,
+  "story_id": "story-1",
+  "title": "SYNTHETIC - Amlodipine, then ankle swelling, then furosemide; the reason for furosemide is unknown",
+  "notes": [
+    "SYNTHETIC PATIENT. Not a real person. Built for the FirstDomino demo.",
+    "Expected engine result: needs_evidence, with one requirement for the furosemide indication."
+  ],
+  "patient": {
+    "id": "syn-p1",
+    "label": "Synthetic patient A",
+    "age_band": "75-79",
+    "case_version": 2,
+    "as_of_day": 60,
+    "synthetic": true
+  },
+  "sources": [
+    {
+      "id": "syn-p1:src-cardio-d0",
+      "patient_id": "syn-p1",
+      "kind": "clinic_letter",
+      "label": "Cardiology clinic letter (synthetic)",
+      "happened_at": 0,
+      "recorded_at": 0
+    },
+    {
+      "id": "syn-p1:src-pharm-d35",
+      "patient_id": "syn-p1",
+      "kind": "pharmacy_record",
+      "label": "Community pharmacy dispensing record (synthetic)",
+      "happened_at": 35,
+      "recorded_at": 35
+    },
+    {
+      "id": "syn-p1:src-cg-d60",
+      "patient_id": "syn-p1",
+      "kind": "caregiver_report",
+      "label": "Caregiver conversation at medication review (synthetic)",
+      "happened_at": 60,
+      "recorded_at": 60
+    }
+  ],
+  "episodes": [
+    {
+      "id": "syn-p1:ep-amlodipine",
+      "patient_id": "syn-p1",
+      "happened_at": 0,
+      "recorded_at": 0,
+      "state": "documented",
+      "source_ids": ["syn-p1:src-cardio-d0"],
+      "ingredient": { "name": "amlodipine", "rxcui": "17767", "drug_class": "C08CA" },
+      "dose_text": "5 mg once daily",
+      "indication": "high blood pressure",
+      "indication_state": "documented",
+      "stop_day": null,
+      "prescriber_specialty": "cardiology"
+    },
+    {
+      "id": "syn-p1:ep-furosemide",
+      "patient_id": "syn-p1",
+      "happened_at": 35,
+      "recorded_at": 35,
+      "state": "documented",
+      "source_ids": ["syn-p1:src-pharm-d35"],
+      "ingredient": { "name": "furosemide", "rxcui": "4603", "drug_class": "C03CA" },
+      "dose_text": "20 mg once daily",
+      "indication": null,
+      "indication_state": "unknown",
+      "stop_day": null,
+      "prescriber_specialty": "general_practice"
+    }
+  ],
+  "observations": [
+    {
+      "id": "syn-p1:obs-ankle-swelling",
+      "patient_id": "syn-p1",
+      "happened_at": 21,
+      "recorded_at": 60,
+      "state": "reported",
+      "source_ids": ["syn-p1:src-cg-d60"],
+      "label": "Ankle swelling",
+      "effect": "peripheral_edema"
+    }
+  ],
+  "findings": [
+    {
+      "id": "syn-p1:fnd-ccb-edema-loop-1",
+      "patient_id": "syn-p1",
+      "pattern_id": "pat-ccb-edema-loop",
+      "pattern_version": 1,
+      "eval_version": 1,
+      "status": "needs_evidence",
+      "revision_n": 1,
+      "index_episode_id": "syn-p1:ep-amlodipine",
+      "marker_episode_id": "syn-p1:ep-furosemide",
+      "effect": "peripheral_edema",
+      "observation_ids": ["syn-p1:obs-ankle-swelling"],
+      "cited_source_ids": ["syn-p1:src-cardio-d0", "syn-p1:src-pharm-d35", "syn-p1:src-cg-d60"],
+      "requirement_ids": ["syn-p1:req-furosemide-indication"],
+      "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "syn-p1:req-furosemide-indication",
+      "patient_id": "syn-p1",
+      "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "kind": "indication",
+      "about_fact_id": "syn-p1:ep-furosemide",
+      "field": "indication",
+      "state": "missing"
+    }
+  ],
+  "questions": [
+    {
+      "id": "syn-p1:q-furosemide-indication",
+      "patient_id": "syn-p1",
+      "requirement_id": "syn-p1:req-furosemide-indication",
+      "ask_role": "caregiver",
+      "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+      "asked_at": null,
+      "answer": null,
+      "answer_state": null
+    }
+  ],
+  "revisions": [
+    {
+      "id": "syn-p1:fnd-ccb-edema-loop-1:rev-1",
+      "patient_id": "syn-p1",
+      "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "n": 1,
+      "status": "needs_evidence",
+      "reason": "First evaluation. The reason furosemide was started is not recorded.",
+      "changed_fact_ids": [],
+      "created_at": 60,
+      "previous_n": null,
+      "eval_version": 1
+    }
+  ],
+  "decisions": [],
+  "agent_steps": [
+    {
+      "id": "syn-p1:step-1",
+      "patient_id": "syn-p1",
+      "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "tool": "get_next_question",
+      "ok": true,
+      "args": { "pid": "syn-p1" },
+      "result_ids": ["syn-p1:q-furosemide-indication"],
+      "at": 60
+    }
+  ],
+  "pending_evidence": []
+}

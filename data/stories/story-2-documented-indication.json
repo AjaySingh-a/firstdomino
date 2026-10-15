@@ -1,0 +1,133 @@
+{
+  "synthetic": true,
+  "story_id": "story-2",
+  "title": "SYNTHETIC - Same medicines, but furosemide has an independently documented, different reason",
+  "notes": [
+    "SYNTHETIC PATIENT. Not a real person. Built for the FirstDomino demo.",
+    "Expected engine result: competing_explanation. The finding is shown with the documented reason next to it, not dismissed."
+  ],
+  "patient": {
+    "id": "syn-p2",
+    "label": "Synthetic patient B",
+    "age_band": "80-84",
+    "case_version": 2,
+    "as_of_day": 60,
+    "synthetic": true
+  },
+  "sources": [
+    {
+      "id": "syn-p2:src-cardio-d0",
+      "patient_id": "syn-p2",
+      "kind": "clinic_letter",
+      "label": "Cardiology clinic letter (synthetic)",
+      "happened_at": 0,
+      "recorded_at": 0
+    },
+    {
+      "id": "syn-p2:src-discharge-d33",
+      "patient_id": "syn-p2",
+      "kind": "discharge_summary",
+      "label": "Hospital discharge summary (synthetic)",
+      "happened_at": 33,
+      "recorded_at": 34
+    },
+    {
+      "id": "syn-p2:src-cg-d60",
+      "patient_id": "syn-p2",
+      "kind": "caregiver_report",
+      "label": "Caregiver conversation at medication review (synthetic)",
+      "happened_at": 60,
+      "recorded_at": 60
+    }
+  ],
+  "episodes": [
+    {
+      "id": "syn-p2:ep-amlodipine",
+      "patient_id": "syn-p2",
+      "happened_at": 0,
+      "recorded_at": 0,
+      "state": "documented",
+      "source_ids": ["syn-p2:src-cardio-d0"],
+      "ingredient": { "name": "amlodipine", "rxcui": "17767", "drug_class": "C08CA" },
+      "dose_text": "5 mg once daily",
+      "indication": "high blood pressure",
+      "indication_state": "documented",
+      "stop_day": null,
+      "prescriber_specialty": "cardiology"
+    },
+    {
+      "id": "syn-p2:ep-furosemide",
+      "patient_id": "syn-p2",
+      "happened_at": 33,
+      "recorded_at": 34,
+      "state": "documented",
+      "source_ids": ["syn-p2:src-discharge-d33"],
+      "ingredient": { "name": "furosemide", "rxcui": "4603", "drug_class": "C03CA" },
+      "dose_text": "40 mg once daily",
+      "indication": "heart failure, new diagnosis during hospital stay",
+      "indication_state": "documented",
+      "stop_day": null,
+      "prescriber_specialty": "internal_medicine"
+    }
+  ],
+  "observations": [
+    {
+      "id": "syn-p2:obs-ankle-swelling",
+      "patient_id": "syn-p2",
+      "happened_at": 21,
+      "recorded_at": 60,
+      "state": "reported",
+      "source_ids": ["syn-p2:src-cg-d60"],
+      "label": "Ankle swelling",
+      "effect": "peripheral_edema"
+    }
+  ],
+  "findings": [
+    {
+      "id": "syn-p2:fnd-ccb-edema-loop-1",
+      "patient_id": "syn-p2",
+      "pattern_id": "pat-ccb-edema-loop",
+      "pattern_version": 1,
+      "eval_version": 1,
+      "status": "competing_explanation",
+      "revision_n": 1,
+      "index_episode_id": "syn-p2:ep-amlodipine",
+      "marker_episode_id": "syn-p2:ep-furosemide",
+      "effect": "peripheral_edema",
+      "observation_ids": ["syn-p2:obs-ankle-swelling"],
+      "cited_source_ids": ["syn-p2:src-cardio-d0", "syn-p2:src-discharge-d33", "syn-p2:src-cg-d60"],
+      "requirement_ids": [],
+      "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide (furosemide has a different documented reason)"
+    }
+  ],
+  "requirements": [],
+  "questions": [],
+  "revisions": [
+    {
+      "id": "syn-p2:fnd-ccb-edema-loop-1:rev-1",
+      "patient_id": "syn-p2",
+      "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+      "n": 1,
+      "status": "competing_explanation",
+      "reason": "First evaluation. The discharge summary documents a different reason for furosemide.",
+      "changed_fact_ids": [],
+      "created_at": 60,
+      "previous_n": null,
+      "eval_version": 1
+    }
+  ],
+  "decisions": [],
+  "agent_steps": [
+    {
+      "id": "syn-p2:step-1",
+      "patient_id": "syn-p2",
+      "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+      "tool": "get_investigation",
+      "ok": true,
+      "args": { "pid": "syn-p2", "fid": "syn-p2:fnd-ccb-edema-loop-1" },
+      "result_ids": ["syn-p2:ep-furosemide", "syn-p2:src-discharge-d33"],
+      "at": 60
+    }
+  ],
+  "pending_evidence": []
+}
