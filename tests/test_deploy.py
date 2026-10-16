@@ -153,3 +153,38 @@ def test_over_the_limit_the_pass_runs_on_templates(monkeypatch):
     assert {s["args"]["fallback_reason"] for s in second["steps"]} == {"rate_limited"}
     assert len(second["steps"]) == 5  # the pass still runs end to end (the question was asked already)
     api.main.store.reset()
+
+
+# ---------- FD_CORS_ORIGINS ----------
+
+
+def test_cors_origins_is_a_comma_separated_list():
+    from api.main import cors_origins
+
+    assert cors_origins(None) == ["http://localhost:3001"]
+    assert cors_origins("http://localhost:3001, https://firstdomino-web.vercel.app/ ,") == [
+        "http://localhost:3001", "https://firstdomino-web.vercel.app",
+    ]
+
+
+def test_cors_preflight_allows_each_listed_origin(monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
+
+    from api.main import cors_origins
+
+    probe = FastAPI()
+    probe.add_middleware(
+        CORSMiddleware, allow_origins=cors_origins("http://localhost:3001, https://web.example"),
+        allow_methods=["*"], allow_headers=["*"],
+    )
+
+    @probe.get("/x")
+    def x():
+        return {}
+
+    with TestClient(probe) as c:
+        for origin, allowed in [("https://web.example", True), ("http://localhost:3001", True),
+                                ("https://evil.example", False)]:
+            r = c.options("/x", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
+            assert (r.headers.get("access-control-allow-origin") == origin) is allowed

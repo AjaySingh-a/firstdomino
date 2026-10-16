@@ -1,0 +1,13 @@
+# Vercel uploads the repo root (the project's root directory is web/, and the web build reads
+# ../data/snapshots and ../engine/queries). Keep everything else heavy or secret out.
+.venv/
+**/node_modules/
+**/.next/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+**/.env*.local
+tests/
+mcp/

@@ -44,10 +44,17 @@ from api.models import (
 )
 from api.store import Conflict, Invalid, NotFound, default_store, patient_of
 
+
+def cors_origins(raw: str | None) -> list[str]:
+    """FD_CORS_ORIGINS: a comma-separated list ("http://localhost:3001, https://x.vercel.app"). Spaces
+    and a trailing slash are ignored, since the browser's Origin header has neither."""
+    return [o.strip().rstrip("/") for o in (raw or "http://localhost:3001").split(",") if o.strip()]
+
+
 app = FastAPI(title="FirstDomino API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("FD_CORS_ORIGINS", "http://localhost:3001").split(","),
+    allow_origins=cors_origins(os.environ.get("FD_CORS_ORIGINS")),
     allow_methods=["*"],
     allow_headers=["*"],
 )

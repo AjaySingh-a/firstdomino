@@ -148,7 +148,8 @@ tests/      API behaviour and contract guards
 Full request and response examples: [docs/api.md](docs/api.md). Graph labels, relationships and
 queries: [docs/data-model.md](docs/data-model.md).
 
-Live API (Railway): https://api-production-b29f.up.railway.app — how it is deployed: [docs/deploy.md](docs/deploy.md).
+Live: web app https://firstdomino-web.vercel.app (Vercel), API https://api-production-b29f.up.railway.app
+(Railway). How both are deployed: [docs/deploy.md](docs/deploy.md).
 
 ## Status
 
