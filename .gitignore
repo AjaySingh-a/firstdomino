@@ -6,3 +6,7 @@ __pycache__/
 .ruff_cache/
 .code-review-graph/
 .DS_Store
+.vercel/
+# Written by `vercel link` / `vercel env pull` (may hold a short-lived token)
+.env.local
+.env*.local

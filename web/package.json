@@ -8,7 +8,7 @@
     "predev": "npm run sync:fixtures",
     "dev": "next dev -p 3001",
     "prebuild": "npm run sync:fixtures && npm run lint:copy",
-    "build": "next build",
+    "build": "node scripts/build.mjs",
     "start": "next start -p 3001",
     "pretypecheck": "npm run sync:fixtures",
     "typecheck": "tsc --noEmit",
