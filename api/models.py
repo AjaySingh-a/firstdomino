@@ -403,9 +403,13 @@ class PacketResponse(Model):
 
 
 class HealthResponse(Model):
-    status: Literal["ok"]
+    """`falkordb` says whether FalkorDB is reachable; `appendonly` is its AOF setting (CONFIG GET
+    appendonly), "unknown" if CONFIG is not available, None in fixture mode. No secrets."""
+
+    status: Literal["ok", "degraded"]
     mode: Literal["fixtures", "graph"]
     falkordb: Literal["not_used", "up", "down"]
+    appendonly: Literal["yes", "no", "unknown"] | None = None
 
 
 class ResetResponse(Model):

@@ -23,7 +23,7 @@ def build() -> dict:
     out: dict = {
         "_generated_by": "uv run python -m api.snapshots",
         "synthetic": True,
-        "health": {"status": "ok", "mode": "fixtures", "falkordb": "not_used"},
+        "health": {"status": "ok", "mode": "fixtures", "falkordb": "not_used", "appendonly": None},
         "patients": [dump(p) for p in store.patients()],
         "cases": {},
     }

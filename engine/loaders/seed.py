@@ -17,9 +17,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 
 from falkordb import FalkorDB, Graph
+from redis.exceptions import ResponseError
 
 from api.models import AgentStep, MedicationEpisode, Observation, Pattern, StoryFixture
 from api.store import load_patterns, load_stories
@@ -27,6 +29,8 @@ from engine.db import KB_GRAPH, connect, family_graph, props, run
 from engine.evaluate import evaluate_patient
 
 DEFAULT_FAMILY = "demo"
+
+log = logging.getLogger("firstdomino.seed")
 
 
 def _graph_exists(db: FalkorDB, name: str) -> bool:
@@ -123,7 +127,14 @@ def seed(
     if _graph_exists(db, fam_name):
         load_knowledge(db.select_graph(fam_name), patterns, stories)  # keep knowledge in sync
     else:
-        db.select_graph(kb_name).copy(fam_name)
+        try:
+            db.select_graph(kb_name).copy(fam_name)
+        except ResponseError:
+            # GRAPH.COPY forks the server; on a small host that can fail (could not fork, low memory).
+            # The same MERGE queries load the knowledge straight into the family graph instead.
+            log.warning("GRAPH.COPY of %s failed; loading the knowledge into %s directly", kb_name, fam_name)
+            _drop(db, fam_name)  # a half-made copy, if any
+            load_knowledge(db.select_graph(fam_name), patterns, stories)
     fam = db.select_graph(fam_name)
     present = {props(r["p"])["id"] for r in run(fam, "admin/patients_in_graph")}
     for story in stories:

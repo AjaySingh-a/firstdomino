@@ -4,7 +4,8 @@
   "health": {
     "status": "ok",
     "mode": "fixtures",
-    "falkordb": "not_used"
+    "falkordb": "not_used",
+    "appendonly": null
   },
   "patients": [
     {

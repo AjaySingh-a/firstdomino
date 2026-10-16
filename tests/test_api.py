@@ -28,7 +28,7 @@ def client():
 
 def test_health(client):
     body = client.get("/health").json()
-    assert body == {"status": "ok", "mode": "fixtures", "falkordb": "not_used"}
+    assert body == {"status": "ok", "mode": "fixtures", "falkordb": "not_used", "appendonly": None}
 
 
 def test_patients_are_synthetic(client):

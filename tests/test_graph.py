@@ -104,7 +104,8 @@ def test_routes_in_graph_mode(db, family, monkeypatch):
     family(story1())
     monkeypatch.setattr(api.main, "store", store_for(db, family))
     with TestClient(api.main.app) as c:
-        assert c.get("/health").json() == {"status": "ok", "mode": "graph", "falkordb": "up"}
+        health = {"status": "ok", "mode": "graph", "falkordb": "up", "appendonly": "yes"}  # AOF on (compose)
+        assert c.get("/health").json() == health
         f = c.get("/patients/syn-p1/findings").json()
         assert [x["status"] for x in f["findings"]] == ["needs_evidence"]
         inv = c.get(f"/findings/{P1_FINDING}/investigation").json()
@@ -695,3 +696,29 @@ def test_review_agent_pass_matches_the_fixture_store(db, family):
     assert graph.case_version == 3  # only the question moved it
     persisted = [s.id for s in store_for(db, family).agent_steps("syn-p1").steps]
     assert persisted == ["syn-p1:step-1", *(f"syn-p1:run-1-step-{k}" for k in range(1, 7))]
+
+
+# ---------- D-4: seeding on a host where GRAPH.COPY cannot fork ----------
+
+
+def test_seed_loads_knowledge_directly_when_graph_copy_fails(db, family, monkeypatch):
+    from redis.exceptions import ResponseError
+
+    def no_fork(self, clone):
+        raise ResponseError("could not fork")
+
+    monkeypatch.setattr(type(db.select_graph("x")), "copy", no_fork)
+    g = family(story1())
+    store = store_for(db, family)
+    assert [p.id for p in store.patients()] == ["syn-p1"]
+    assert store.findings("syn-p1").findings[0].status == "needs_evidence"  # the rules found the pattern
+    kinds = {r[0] for r in counts(g)}
+    assert kinds  # knowledge and story nodes are in the family graph
+
+
+def test_store_seeds_on_first_request_after_booting_without_falkordb(db, family):
+    fam_id = family.family_id
+    store = GraphStore(db, FixtureStore(STORIES, {p.id: p for p in PATTERNS}), fam_id, [1])
+    assert store._seeded is False  # booted without seeding (as when FalkorDB was unreachable)
+    assert [p.id for p in store.patients()] == ["syn-p1"]  # the first request seeds
+    assert store._seeded is True
