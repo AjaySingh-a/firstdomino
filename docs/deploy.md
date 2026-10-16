@@ -1,14 +1,13 @@
-# Deploy: the API on Railway
+# Deploy: the API on Railway, the web app on Vercel
 
 The FirstDomino API runs on [Railway](https://railway.com) next to a FalkorDB service, in the project
 **firstdomino**, environment **production**.
 
 - **Public API:** https://api-production-b29f.up.railway.app (for example `/health`, `/patients`).
-- **The web app is not deployed here.** Point it at this URL with `NEXT_PUBLIC_DATA_SOURCE=live` and
-  `NEXT_PUBLIC_API_URL`.
+- **Web app (Vercel):** https://firstdomino-web.vercel.app (see "The web app on Vercel" below).
 
 Every value below is a name, a reference or a public setting. **Never put a secret value in this file,
-in a commit or in a terminal log.** Secrets live in Railway's variables only.
+in a commit or in a terminal log.** Secrets live in Railway's (and Vercel's) variables only.
 
 ## Services
 
@@ -64,7 +63,7 @@ The FalkorDB service's variables (names only): `FALKORDB_ARGS`, `FALKORDB_PASSWO
 | `FD_FAMILY` | `demo` |
 | `FD_STORIES` | `1 2 3` |
 | `PORT` | `8000` |
-| `FD_CORS_ORIGINS` | `http://localhost:3001` (add the deployed web app's origin, comma-separated) |
+| `FD_CORS_ORIGINS` | `http://localhost:3001,https://firstdomino-web.vercel.app` (comma-separated) |
 | `LLM_BASE_URL` | `https://api.groq.com/openai/v1` |
 | `FD_AGENT_MODEL` | `openai/gpt-oss-120b` |
 | `FD_AGENT_FALLBACK_MODEL` | `openai/gpt-oss-20b` |
@@ -178,3 +177,118 @@ From then on, a push to `main` deploys the API. Check `/health` again afterwards
 | Agent steps show `fallback_reason: no_key` | `LLM_API_KEY` is not set on `api`, or was added without a redeploy. |
 | `fallback_reason: http_403` | Groq's Cloudflare blocks the request; the client sends its own `User-Agent` for this. |
 | `fallback_reason: rate_limited` | More than 10 agent runs a minute from one address. |
+
+## The web app on Vercel
+
+The web app (`web/`, Next.js 15) runs on [Vercel](https://vercel.com) as the project
+**firstdomino-web** (scope `ajay-singhs-projects-cda96a16`).
+
+- **Production:** https://firstdomino-web.vercel.app
+- **API:** it calls the Railway API above from the browser (`NEXT_PUBLIC_DATA_SOURCE=live`).
+- **Git:** the project is connected to GitHub `AjaySingh-a/firstdomino`. A push to `main` makes a
+  production deploy; other branches get previews.
+
+### Project settings
+
+| Setting | Value | Why |
+|---|---|---|
+| Root directory | `web` | The Next.js app lives there. |
+| Include files outside the root directory in the Build Step (`sourceFilesOutsideRootDirectory`) | **on** | `prebuild` runs `scripts/sync-fixtures.mjs`, which copies `../data/snapshots/fixtures.json` and `../engine/queries/*.cypher` into `web/lib/fixtures/`. That folder is gitignored, so the copies are never committed and cannot drift from the source. |
+| Framework | Next.js | |
+| Node.js | 24.x (Vercel default) | |
+| Deployment Protection | Vercel default (`all_except_custom_domains`) | Previews need a Vercel login. The production URL is public. |
+
+Two safeguards in the code:
+
+- **Missing sources:** if `../data` or `../engine` is missing, `sync-fixtures` fails with a message
+  that names the setting above.
+- **NODE_ENV:** `npm run build` runs `scripts/build.mjs`, which starts `next build` with
+  `NODE_ENV=production` whatever the calling shell has set. A shell with `NODE_ENV=development`
+  would otherwise build React's development bundle.
+
+The root `.vercelignore` keeps `.venv`, `node_modules`, `.next`, tests and every `.env*` file out
+of the upload.
+
+### Environment variables (Production and Preview; not secret)
+
+| Name | Value |
+|---|---|
+| `NEXT_PUBLIC_DATA_SOURCE` | `live` |
+| `NEXT_PUBLIC_API_URL` | `https://api-production-b29f.up.railway.app` |
+
+They are inlined at **build** time, so changing one needs a redeploy.
+
+### Steps
+
+Run all of these from the **repo root**, not from `web/`, so the build can see `../data` and
+`../engine`.
+
+```bash
+npm i -g vercel            # used: Vercel CLI 64.3.1
+vercel login               # interactive: browser / device code
+vercel whoami
+
+vercel project add firstdomino-web            # (newer CLIs: `vercel project create`)
+vercel link --project firstdomino-web --yes   # writes .vercel/ and a .env.local (both gitignored)
+
+# root directory + files outside it, through the REST API
+vercel api /v9/projects/firstdomino-web -X PATCH \
+  -f rootDirectory=web -F sourceFilesOutsideRootDirectory=true -f framework=nextjs
+
+for t in production preview; do
+  vercel env add NEXT_PUBLIC_DATA_SOURCE $t --value live --no-sensitive --yes --force
+  vercel env add NEXT_PUBLIC_API_URL $t --value https://api-production-b29f.up.railway.app --no-sensitive --yes --force
+done
+
+vercel git connect https://github.com/AjaySingh-a/firstdomino.git --yes   # production branch: main
+vercel deploy --prod --yes                     # -> aliased to https://firstdomino-web.vercel.app
+```
+
+The build log shows the sync working on Vercel:
+`fixtures: snapshot + 10 queries -> /vercel/path0/web/lib/fixtures`, then `copy-lint: ok`.
+
+**Windows / PowerShell:** PowerShell drops a bare `--`. Write `vercel env run '--' node …`.
+
+### CORS on the Railway API
+
+The browser calls the API from the web app's origin, so that origin must be listed on the Railway
+`api` service:
+
+```bash
+railway variable set 'FD_CORS_ORIGINS=http://localhost:3001,https://firstdomino-web.vercel.app' --service api
+```
+
+- **Format:** `FD_CORS_ORIGINS` is a comma-separated list. Spaces and a trailing `/` are ignored
+  (`api.main.cors_origins`).
+- **Redeploy:** setting the variable redeploys the api.
+- **Check:** a preflight from `https://firstdomino-web.vercel.app` and from `http://localhost:3001`
+  gets `access-control-allow-origin` back; any other origin gets 400.
+- **Previews:** each preview URL is a new origin and is not on this list. A preview that should
+  call the live API needs its origin added, or a fixtures-mode build.
+
+### Verified on production (2026-10-16)
+
+| Check | Result |
+|---|---|
+| Landing page | 3 story cards from the live API, each labelled with what it shows; statuses Needs evidence / Competing explanation / Reviewed |
+| Story 1 workspace | `data live`, case v2; Medication River, investigation drawer, 3-step hint, next question |
+| Run review agent (drawer) | 6/6 steps ok, "Text phrased by the model", question recorded; case v2 → v3 |
+| Answer the next question ("ankle swelling", reported by the caregiver) | case v3 → v4; finding → revision 2 `candidate` ("Possible pattern"); no open question left |
+| Sandbox edit (ankle swelling onset day 21 → 25) | case v4 → v5, revision 3 |
+| Sandbox "Reset all stories" | back to case v2, revision 1, Needs evidence |
+| `/packet/syn-p1` | timeline, unresolved question, finding, fact states from the record, next conversation, Share link / Print |
+| Preview built with `--build-env NEXT_PUBLIC_API_URL=https://firstdomino-no-such-api.invalid` | landing and story 1 show **Evaluation unavailable**, "This is not a 'no pattern' result", "The evaluation service could not be reached". No empty list. The preview was then removed with `vercel remove`. |
+
+**Opening a protected preview from automation:** don't turn off Deployment Protection. Use
+`vercel curl <preview-url>` for HTTP checks. For a browser, add the header
+`x-vercel-trusted-oidc-idp-token` to requests to the preview's own host only. Get the token with
+`vercel env run '--' <command>`, which provides `VERCEL_OIDC_TOKEN`. Never print or commit it.
+
+### Web troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| Build: `sync-fixtures: data/snapshots/fixtures.json is missing next to web/` | "Include files outside the root directory" is off, or the deploy ran from `web/` instead of the repo root. |
+| Pages show "Evaluation unavailable" in production | The API is down (check `/health`) or `NEXT_PUBLIC_API_URL` is wrong (it is fixed at build time; redeploy after changing it). |
+| Browser console: CORS error | The web app's origin is missing from `FD_CORS_ORIGINS` on Railway. |
+| A preview opens a Vercel login page | Deployment Protection (expected for previews). |

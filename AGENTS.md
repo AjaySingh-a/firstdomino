@@ -14,7 +14,7 @@ needs to review them. Findings are possible patterns, never causes.
 
 - [docs/data-model.md](docs/data-model.md): graph labels, relationships, statuses, named queries
 - [docs/api.md](docs/api.md): endpoints with JSON examples
-- [docs/deploy.md](docs/deploy.md): the API on Railway (commands, variables by name, checks)
+- [docs/deploy.md](docs/deploy.md): the API on Railway and the web app on Vercel (commands, variables by name, checks)
 - Contract types: `api/models.py` (pydantic), mirrored in `web/lib/types.ts`
 - Fixtures: `data/stories/*.json` (3 synthetic stories), `data/patterns/*.json` (cited patterns)
 - API snapshots for the web app: `data/snapshots/fixtures.json` (`make snapshots`)
