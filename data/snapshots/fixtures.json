@@ -528,6 +528,143 @@
           }
         ]
       },
+      "agent_runs": {
+        "syn-p1:fnd-ccb-edema-loop-1": {
+          "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+          "case_version": 3,
+          "steps": [
+            {
+              "id": "syn-p1:run-1-step-1",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "get_evidence_pack",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p1:fnd-ccb-edema-loop-1",
+                "syn-p1:ep-amlodipine",
+                "syn-p1:ep-furosemide",
+                "syn-p1:obs-ankle-swelling",
+                "syn-p1:src-cardio-d0",
+                "syn-p1:src-pharm-d35",
+                "syn-p1:src-cg-d60",
+                "syn-p1:req-furosemide-indication",
+                "syn-p1:fnd-ccb-edema-loop-1:rev-1"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p1:run-1-step-2",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "inspect_episode",
+                "episode_id": "syn-p1:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p1:ep-furosemide",
+                "syn-p1:src-pharm-d35"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p1:run-1-step-3",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "get_next_question",
+              "ok": true,
+              "args": {
+                "agent_tool": "next_missing_fact",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p1:req-furosemide-indication",
+                "syn-p1:q-furosemide-indication",
+                "syn-p1:ep-furosemide"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p1:run-1-step-4",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "draft_question_text",
+              "ok": true,
+              "args": {
+                "agent_tool": "ask_question",
+                "requirement_id": "syn-p1:req-furosemide-indication",
+                "phrasing": "template",
+                "fallback_reason": "no_key",
+                "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help."
+              },
+              "result_ids": [
+                "syn-p1:q-furosemide-indication",
+                "syn-p1:req-furosemide-indication"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p1:run-1-step-5",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "request_reevaluation",
+                "fact_id": "syn-p1:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p1:ep-furosemide",
+                "syn-p1:fnd-ccb-edema-loop-1"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p1:run-1-step-6",
+              "patient_id": "syn-p1",
+              "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+              "tool": "draft_packet_text",
+              "ok": true,
+              "args": {
+                "agent_tool": "prepare_packet",
+                "phrasing": "template",
+                "fallback_reason": "no_key",
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help. Any change to a medicine is the prescribing clinician's decision."
+              },
+              "result_ids": [
+                "syn-p1:ep-amlodipine",
+                "syn-p1:ep-furosemide",
+                "syn-p1:obs-ankle-swelling",
+                "syn-p1:q-furosemide-indication"
+              ],
+              "at": 60
+            }
+          ],
+          "question": {
+            "id": "syn-p1:q-furosemide-indication",
+            "patient_id": "syn-p1",
+            "requirement_id": "syn-p1:req-furosemide-indication",
+            "ask_role": "caregiver",
+            "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+            "asked_at": 60,
+            "answer": null,
+            "answer_state": null
+          },
+          "packet_text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help. Any change to a medicine is the prescribing clinician's decision.",
+          "phrasing": "template"
+        }
+      },
       "evidence": {}
     },
     "syn-p2": {
@@ -996,6 +1133,109 @@
             "at": 60
           }
         ]
+      },
+      "agent_runs": {
+        "syn-p2:fnd-ccb-edema-loop-1": {
+          "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+          "case_version": 2,
+          "steps": [
+            {
+              "id": "syn-p2:run-1-step-1",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "get_evidence_pack",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p2:fnd-ccb-edema-loop-1",
+                "syn-p2:ep-amlodipine",
+                "syn-p2:ep-furosemide",
+                "syn-p2:obs-ankle-swelling",
+                "syn-p2:src-cardio-d0",
+                "syn-p2:src-discharge-d33",
+                "syn-p2:src-cg-d60",
+                "syn-p2:fnd-ccb-edema-loop-1:rev-1"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p2:run-1-step-2",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "inspect_episode",
+                "episode_id": "syn-p2:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p2:ep-furosemide",
+                "syn-p2:src-discharge-d33"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p2:run-1-step-3",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "tool": "get_next_question",
+              "ok": true,
+              "args": {
+                "agent_tool": "next_missing_fact",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [],
+              "at": 60
+            },
+            {
+              "id": "syn-p2:run-1-step-4",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "request_reevaluation",
+                "fact_id": "syn-p2:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p2:ep-furosemide",
+                "syn-p2:fnd-ccb-edema-loop-1"
+              ],
+              "at": 60
+            },
+            {
+              "id": "syn-p2:run-1-step-5",
+              "patient_id": "syn-p2",
+              "finding_id": "syn-p2:fnd-ccb-edema-loop-1",
+              "tool": "draft_packet_text",
+              "ok": true,
+              "args": {
+                "agent_tool": "prepare_packet",
+                "phrasing": "template",
+                "fallback_reason": "no_key",
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern with a competing explanation. Reason furosemide was started: \"heart failure, new diagnosis during hospital stay\" (documented), a competing explanation worth weighing. Any change to a medicine is the prescribing clinician's decision."
+              },
+              "result_ids": [
+                "syn-p2:ep-amlodipine",
+                "syn-p2:ep-furosemide",
+                "syn-p2:obs-ankle-swelling"
+              ],
+              "at": 60
+            }
+          ],
+          "question": null,
+          "packet_text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern with a competing explanation. Reason furosemide was started: \"heart failure, new diagnosis during hospital stay\" (documented), a competing explanation worth weighing. Any change to a medicine is the prescribing clinician's decision.",
+          "phrasing": "template"
+        }
       },
       "evidence": {}
     },
@@ -1528,6 +1768,110 @@
             "at": 46
           }
         ]
+      },
+      "agent_runs": {
+        "syn-p3:fnd-ccb-edema-loop-1": {
+          "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+          "case_version": 4,
+          "steps": [
+            {
+              "id": "syn-p3:run-1-step-1",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "get_evidence_pack",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p3:fnd-ccb-edema-loop-1",
+                "syn-p3:ep-amlodipine",
+                "syn-p3:ep-furosemide",
+                "syn-p3:obs-ankle-swelling",
+                "syn-p3:src-cardio-d0",
+                "syn-p3:src-pharm-d40",
+                "syn-p3:src-cg-d45",
+                "syn-p3:fnd-ccb-edema-loop-1:rev-1",
+                "syn-p3:fnd-ccb-edema-loop-1:rev-1:dec-1"
+              ],
+              "at": 62
+            },
+            {
+              "id": "syn-p3:run-1-step-2",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "inspect_episode",
+                "episode_id": "syn-p3:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p3:ep-furosemide",
+                "syn-p3:src-pharm-d40"
+              ],
+              "at": 62
+            },
+            {
+              "id": "syn-p3:run-1-step-3",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "tool": "get_next_question",
+              "ok": true,
+              "args": {
+                "agent_tool": "next_missing_fact",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [],
+              "at": 62
+            },
+            {
+              "id": "syn-p3:run-1-step-4",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "tool": "get_investigation",
+              "ok": true,
+              "args": {
+                "agent_tool": "request_reevaluation",
+                "fact_id": "syn-p3:ep-furosemide",
+                "phrasing": "template",
+                "fallback_reason": "no_key"
+              },
+              "result_ids": [
+                "syn-p3:ep-furosemide",
+                "syn-p3:fnd-ccb-edema-loop-1"
+              ],
+              "at": 62
+            },
+            {
+              "id": "syn-p3:run-1-step-5",
+              "patient_id": "syn-p3",
+              "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+              "tool": "draft_packet_text",
+              "ok": true,
+              "args": {
+                "agent_tool": "prepare_packet",
+                "phrasing": "template",
+                "fallback_reason": "no_key",
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a reviewed possible pattern. Revision 1 has a clinician decision (follow up); it stays on that revision. Any change to a medicine is the prescribing clinician's decision."
+              },
+              "result_ids": [
+                "syn-p3:ep-amlodipine",
+                "syn-p3:ep-furosemide",
+                "syn-p3:obs-ankle-swelling"
+              ],
+              "at": 62
+            }
+          ],
+          "question": null,
+          "packet_text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a reviewed possible pattern. Revision 1 has a clinician decision (follow up); it stays on that revision. Any change to a medicine is the prescribing clinician's decision.",
+          "phrasing": "template"
+        }
       },
       "evidence": {
         "syn-p3:evt-onset-correction": {

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 
+from agent.review_agent import run_review_agent
 from api.store import DATA_DIR, FixtureStore, load_patterns, load_stories
 
 SNAPSHOT = DATA_DIR / "snapshots" / "fixtures.json"
@@ -47,6 +48,11 @@ def build() -> dict:
             "investigations": {f.id: dump(store.investigation(f.id)) for f in story.findings},
             "packet": dump(store.packet(pid)),
             "agent_steps": dump(store.agent_steps(pid)),
+            # Template phrasing only (no LLM), so the snapshot is the same on every machine.
+            "agent_runs": {
+                f.id: dump(run_review_agent(FixtureStore(stories, patterns), f.id, None))
+                for f in story.findings
+            },
             "evidence": evidence,
         }
     return out

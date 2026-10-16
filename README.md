@@ -162,7 +162,8 @@ queries: [docs/data-model.md](docs/data-model.md).
 | Named Cypher queries, checked against FalkorDB | Done |
 | Web workspace: Medication River, investigation drawer, review history, interface states | Done (fixture and live modes) |
 | Graph loader and finding rules | Done |
-| Review agent | Next |
+| Review agent: six allowlisted tools, `POST /findings/{id}/review-agent`, LLM checks with template fallback | Done |
+| Printable packet (`/packet/{id}`), first-visit guide | Done |
 | MCP server | Planned |
 
 ## Guardrails

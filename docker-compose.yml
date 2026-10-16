@@ -34,6 +34,13 @@ services:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
       FD_CORS_ORIGINS: http://localhost:3001
+      # The review agent's LLM: any OpenAI-compatible chat API with json_object mode (Groq by
+      # default). No key: the agent runs on its templates.
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
+      FD_AGENT_MODEL: ${FD_AGENT_MODEL:-openai/gpt-oss-120b}
+      # Used for the rest of a pass once the main model answers 429 / 5xx or times out.
+      FD_AGENT_FALLBACK_MODEL: ${FD_AGENT_FALLBACK_MODEL:-openai/gpt-oss-20b}
     ports:
       - "8000:8000"
     depends_on:

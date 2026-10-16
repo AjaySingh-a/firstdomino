@@ -321,6 +321,37 @@ export interface AgentStepsResponse {
   steps: AgentStep[];
 }
 
+/** Read-only Q3: the findings that depend on one fact, as they are now. Nothing is re-run by asking. */
+export interface AffectedResponse {
+  patient_id: string;
+  case_version: number;
+  fact_id: string;
+  findings: Finding[];
+}
+
+export interface ReviewAgentRequest {
+  case_version: number;
+}
+
+/** One review-agent pass over one finding. Steps include failures. The agent never writes findings. */
+export interface ReviewAgentResult {
+  finding_id: string;
+  case_version: number;
+  steps: AgentStep[];
+  question: Question | null;
+  packet_text: string | null;
+  phrasing: "llm" | "template" | "mixed";
+}
+
+/** The agent-level tool a step ran; recorded in AgentStep.args.agent_tool (see agent/tools.py). */
+export type AgentToolName =
+  | "inspect_episode"
+  | "get_evidence_pack"
+  | "next_missing_fact"
+  | "ask_question"
+  | "request_reevaluation"
+  | "prepare_packet";
+
 export interface ConflictError {
   error: "stale_case_version" | "stale_revision";
   patient_id: string;
@@ -391,6 +422,8 @@ export type SnapshotFile = {
       investigations: Record<string, InvestigationResponse>;
       packet: PacketResponse;
       agent_steps: AgentStepsResponse;
+      /** One template-phrased review-agent pass per finding, from the pristine story. */
+      agent_runs: Record<string, ReviewAgentResult>;
       evidence: Record<
         string,
         {

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DATA_SOURCE, StaleError, api } from "@/lib/api";
@@ -8,6 +9,7 @@ import { isOpenPattern, litIds, shortHeadline } from "@/lib/present";
 import type { ConflictError, EvidenceRequest, EvidenceResult, Patient, ReviewRequest } from "@/lib/types";
 import { describeError, useInvestigation, useWorkspace } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
+import { GuideHint } from "./guide-hint";
 import { InvestigationDrawer } from "./investigation-drawer";
 import { MedicationRiver } from "./medication-river";
 import type { SubmitOutcome } from "./next-question";
@@ -157,6 +159,18 @@ export function Workspace({ pid }: { pid: string }) {
                 </>
               )}
               <div className="flex gap-1.5"><dt className="text-ink-3">data</dt><dd>{DATA_SOURCE}</dd></div>
+              <div>
+                <dt className="sr-only">packet</dt>
+                <dd>
+                  <Link
+                    href={`/packet/${encodeURIComponent(pid)}`}
+                    className="inline-flex items-center gap-1 text-ink underline decoration-rule-strong underline-offset-2 hover:decoration-ink"
+                  >
+                    <FileText className="size-3" aria-hidden />
+                    packet
+                  </Link>
+                </dd>
+              </div>
             </dl>
           </div>
         </div>
@@ -183,6 +197,8 @@ export function Workspace({ pid }: { pid: string }) {
           )}
         </AnimatePresence>
       </div>
+
+      <GuideHint />
 
       {timeline.kind === "loading" && (
         <div className="mx-auto grid max-w-[1680px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-3">
@@ -271,6 +287,11 @@ export function Workspace({ pid }: { pid: string }) {
                   onSubmitEvidence={submitEvidence}
                   onDismissChange={() => setLastChange(null)}
                   onReview={review}
+                  onAgentRan={async () => {
+                    setStale(null);
+                    await reload();
+                  }}
+                  onError={handleError}
                   onRetry={reloadCase}
                 />
               )}

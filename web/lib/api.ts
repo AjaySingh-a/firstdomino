@@ -6,6 +6,7 @@
 
 import snapshotJson from "./fixtures/fixtures.json";
 import type {
+  AffectedResponse,
   AgentStep,
   AgentStepRequest,
   AgentStepResult,
@@ -21,6 +22,8 @@ import type {
   QuestionRequest,
   QuestionResult,
   ResetResponse,
+  ReviewAgentRequest,
+  ReviewAgentResult,
   ReviewDecision,
   ReviewRequest,
   ReviewResult,
@@ -65,6 +68,10 @@ export interface FirstDominoApi {
   askQuestion(body: QuestionRequest): Promise<QuestionResult>;
   recordAgentStep(body: AgentStepRequest): Promise<AgentStepResult>;
   agentSteps(pid: string): Promise<AgentStepsResponse>;
+  /** One review-agent pass for a finding. Its steps are persisted as they run (poll agentSteps). */
+  runReviewAgent(fid: string, body: ReviewAgentRequest): Promise<ReviewAgentResult>;
+  /** Read-only: which findings depend on a fact. */
+  affected(pid: string, factId: string): Promise<AffectedResponse>;
   packet(pid: string): Promise<PacketResponse>;
   reset(): Promise<ResetResponse>;
 }
@@ -97,6 +104,8 @@ const liveApi: FirstDominoApi = {
   askQuestion: (body) => call("/questions", post(body)),
   recordAgentStep: (body) => call("/agent-steps", post(body)),
   agentSteps: (pid) => call(`/patients/${enc(pid)}/agent-steps`),
+  runReviewAgent: (fid, body) => call(`/findings/${enc(fid)}/review-agent`, post(body)),
+  affected: (pid, factId) => call(`/patients/${enc(pid)}/facts/${enc(factId)}/affected`),
   packet: (pid) => call(`/patients/${enc(pid)}/packet`),
   reset: () => call("/sandbox/reset", post({})),
 };
@@ -152,6 +161,14 @@ function setVersion(c: CaseView, v: number) {
 
 function stale(pid: string, sent: number, current: number): never {
   throw new StaleError({ error: "stale_case_version", patient_id: pid, sent, current });
+}
+
+function findQuestion(c: CaseView, requirementId: string) {
+  const views = [
+    ...Object.values(c.investigations).map((inv) => (inv.next_question ? [inv.next_question] : [])),
+    ...c.packet.items.map((item) => item.open_questions),
+  ].flat();
+  return views.find((q) => q.requirement_id === requirementId) ?? null;
 }
 
 const fixtureApi: FirstDominoApi = {
@@ -261,6 +278,52 @@ const fixtureApi: FirstDominoApi = {
     return { case_version: current, step: clone(step), replayed: false };
   },
   agentSteps: async (pid) => clone(caseOf(pid).agent_steps),
+  runReviewAgent: async (fid, body) => {
+    // Replays the snapshot's template pass for this finding, one step at a time like the live API.
+    const pid = patientOf(fid);
+    const c = caseOf(pid);
+    const run = snapshot.cases[pid]?.agent_runs[fid];
+    if (!run) throw new ApiError(404, { error: "not_found", detail: `finding ${fid}` });
+    const current = c.timeline.patient.case_version;
+    if (body.case_version !== current) stale(pid, body.case_version, current);
+    const runs = c.agent_steps.steps.map((s) => Number(/:run-(\d+)-step-/.exec(s.id)?.[1] ?? 0));
+    const n = 1 + Math.max(0, ...runs);
+    const question = run.question ? findQuestion(c, run.question.requirement_id) : null;
+    const askNow = question !== null && question.asked_at === null;
+    const planned = run.steps.filter((s) => askNow || s.args.agent_tool !== "ask_question");
+    const steps: AgentStep[] = [];
+    for (const [i, s] of planned.entries()) {
+      await new Promise((r) => setTimeout(r, 220));
+      if (s.args.agent_tool === "ask_question" && run.question) {
+        await fixtureApi.askQuestion({
+          case_version: c.timeline.patient.case_version,
+          requirement_id: run.question.requirement_id,
+          text: run.question.text,
+        });
+      }
+      const step = { ...clone(s), id: `${pid}:run-${n}-step-${i + 1}`, at: c.timeline.patient.as_of_day };
+      c.agent_steps.steps = [...c.agent_steps.steps, step];
+      steps.push(step);
+    }
+    return {
+      ...clone(run),
+      case_version: c.timeline.patient.case_version,
+      steps: clone(steps),
+      question: askNow && question ? clone(question) : null,
+    };
+  },
+  affected: async (pid, factId) => {
+    const c = caseOf(pid);
+    const facts = [...c.timeline.episodes, ...c.timeline.observations];
+    if (!facts.some((x) => x.id === factId)) throw new ApiError(404, { error: "not_found", detail: `fact ${factId}` });
+    const needs = (fid: string) =>
+      c.investigations[fid]?.unknowns.some((u) => u.fact_id === factId && u.requirement_id !== null) ?? false;
+    const findings = c.findings.findings.filter(
+      (f) =>
+        f.index_episode_id === factId || f.marker_episode_id === factId || f.observation_ids.includes(factId) || needs(f.id),
+    );
+    return { patient_id: pid, case_version: c.timeline.patient.case_version, fact_id: factId, findings: clone(findings) };
+  },
   packet: async (pid) => clone(caseOf(pid).packet),
   reset: async () => {
     resetSession();

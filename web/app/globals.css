@@ -99,3 +99,31 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Print: the review packet (/packet/[id]) on plain paper. Ink stays ink; amber and teal marks keep
+   their colour so the states still read; nothing interactive is printed. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    font-size: 11pt;
+  }
+  .packet a {
+    text-decoration: none;
+  }
+  .packet section {
+    break-inside: auto;
+  }
+  .packet h2,
+  .packet h3 {
+    break-after: avoid;
+  }
+}

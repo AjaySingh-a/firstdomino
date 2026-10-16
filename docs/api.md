@@ -338,9 +338,117 @@ The agent's steps for one patient, oldest first (`q10_agent_steps` in graph mode
 }
 ```
 
+## POST /findings/{id}/review-agent
+
+Runs one pass of the review agent (`agent/review_agent.py`) over one finding and returns its steps.
+Request: the `case_version` the caller is looking at.
+
+```json
+{ "case_version": 2 }
+```
+
+**200**
+
+```json
+{
+  "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+  "case_version": 3,
+  "steps": [
+    "…",
+    {
+      "id": "syn-p1:run-1-step-3", "patient_id": "syn-p1", "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "tool": "get_next_question", "ok": true,
+      "args": { "agent_tool": "next_missing_fact", "phrasing": "template" },
+      "result_ids": ["syn-p1:req-furosemide-indication", "syn-p1:q-furosemide-indication", "syn-p1:ep-furosemide"],
+      "at": 60
+    },
+    {
+      "id": "syn-p1:run-1-step-4", "patient_id": "syn-p1", "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+      "tool": "draft_question_text", "ok": true,
+      "args": {
+        "agent_tool": "ask_question", "requirement_id": "syn-p1:req-furosemide-indication",
+        "phrasing": "template", "text": "Do you know why the water tablet (furosemide) was started around day 35? …"
+      },
+      "result_ids": ["syn-p1:q-furosemide-indication", "syn-p1:req-furosemide-indication"], "at": 60
+    },
+    "…"
+  ],
+  "question": {
+    "id": "syn-p1:q-furosemide-indication", "requirement_id": "syn-p1:req-furosemide-indication",
+    "ask_role": "caregiver", "text": "Do you know why the water tablet (furosemide) was started around day 35? …",
+    "asked_at": 60, "answer": null, "answer_state": null, "…": "…"
+  },
+  "packet_text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. …",
+  "phrasing": "template"
+}
+```
+
+- **Six tools, at most one call each, at most six steps.** The pass always starts with
+  `get_evidence_pack` and ends with `prepare_packet`:
+
+  | Agent tool (`args.agent_tool`) | Recorded as (`tool`) | What it does |
+  |---|---|---|
+  | `get_evidence_pack` | `get_investigation` | reads the investigation (Q4, Q2, Q5) |
+  | `inspect_episode` | `get_investigation` | reads one of the finding's two medication episodes |
+  | `next_missing_fact` | `get_next_question` | the next open requirement and who to ask |
+  | `ask_question` | `draft_question_text` | `POST /questions` for that requirement: records that it was asked, never an answer |
+  | `request_reevaluation` | `get_investigation` | **read-only** Q3 (`GET /patients/{id}/facts/{fact_id}/affected`) |
+  | `prepare_packet` | `draft_packet_text` | reads the packet and drafts the next conversation with the clinician (`args.text`) |
+
+- **What the agent cannot do.** It never answers a question, writes evidence, changes a fact,
+  creates or changes a finding, or records a decision. Only a person (the pharmacist, the
+  caregiver or the sandbox) sends `POST /patients/{id}/evidence`.
+- **How each step is chosen.** Each step is one structured-output LLM call (OpenAI-compatible, from
+  `LLM_BASE_URL`, `LLM_API_KEY`, `FD_AGENT_MODEL` and `FD_AGENT_FALLBACK_MODEL`; Groq by default).
+  The reply is rejected if:
+  - it is not JSON;
+  - the tool is not allowed at that point;
+  - an arg or a cited ID was not in an earlier tool result;
+  - the text has a day number, calendar date, medicine or reason that the results do not hold;
+  - the text breaks the copy rules;
+  - the text says how certain a fact is ("documented", "confirmed", "reported", "verified", "proven",
+    "established" or "known", in any form). Each fact's state comes from the record, and the drawer and
+    the packet show it next to the agent's text;
+  - a question suggests its own answer.
+- **Retry and fallback.** A rejected reply, or a 429 / 5xx / timeout, gets one retry. After that, the
+  step uses the deterministic plan and templates.
+  - Once the main model answers 429 / 5xx or times out, `FD_AGENT_FALLBACK_MODEL` answers for the
+    rest of the pass.
+  - With no key, after a 401 / 403 / 404, or after two steps in a row lost to 429 / 5xx / timeouts,
+    the rest of the pass uses the templates.
+  - `args.phrasing` records which was used (`llm` or `template`).
+  - `args.fallback_reason` records why a step used the template: `no_key`, `http_401`, `http_403`,
+    `http_404`, `http_429`, `http_503` (or another `http_<status>`), `timeout`, `unreachable`,
+    `invalid_json`, `invalid_tool`, `unknown_id`, `invented_fact`, `copy_rules` or `certainty_words`.
+  - `args.rejected` lists every reply that was not used.
+  - A failed tool call is recorded with `"ok": false` and `args.error`.
+  - Requests send their own `User-Agent`: Cloudflare in front of Groq answers 403 (error 1010) to
+    Python's default one.
+- **Persistence.** Every step is persisted as it runs, under `<patient>:run-<n>-step-<k>`, so
+  `GET /patients/{id}/agent-steps` shows a pass in progress. Asking a question moves `case_version`;
+  the other steps do not.
+- **Errors.** 404: unknown patient or finding. 409: stale `case_version`.
+
+## GET /patients/{id}/facts/{fact_id}/affected
+
+Read-only Q3 (`q3_affected`): the findings that cite, link or need one fact, as they are now.
+Asking re-runs nothing. Findings re-evaluate only when evidence changes.
+
+```json
+{
+  "patient_id": "syn-p3",
+  "case_version": 4,
+  "fact_id": "syn-p3:obs-ankle-swelling",
+  "findings": [{ "id": "syn-p3:fnd-ccb-edema-loop-1", "status": "reviewed", "revision_n": 1, "…": "…" }]
+}
+```
+
+An unrelated fact (story 3's `syn-p3:ep-atorvastatin`) returns `"findings": []`. 404: unknown
+patient or fact.
+
 ## GET /patients/{id}/packet
 
-The review packet for the clinician: one item per finding (except `not_matched`), plus a disclaimer.
+The review packet for the clinician (the web app prints it at `/packet/{id}`): one item per finding (except `not_matched`), plus a disclaimer.
 
 ```json
 {
