@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 
 from api.models import (
+    AffectedResponse,
     AgentStep,
     AgentStepRequest,
     AgentStepResult,
@@ -342,6 +343,16 @@ class FixtureStore:
             q.text = req.text
         c.patient.case_version += 1
         return QuestionResult(case_version=c.patient.case_version, question=q, replayed=False)
+
+    def affected(self, pid: str, fact_id: str) -> AffectedResponse:
+        """Read-only Q3: which findings depend on this fact, and their current status."""
+        c = self.case(pid)
+        if fact_id not in self._facts(c):
+            raise NotFound(f"fact {fact_id}")
+        return AffectedResponse(
+            patient_id=pid, case_version=c.patient.case_version, fact_id=fact_id,
+            findings=[f for f in c.findings if self._touches(c, f, fact_id)],
+        )
 
     def agent_steps(self, pid: str) -> AgentStepsResponse:
         c = self.case(pid)

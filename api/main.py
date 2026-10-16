@@ -12,8 +12,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from agent.llm import llm_from_env
+from agent.review_agent import run_review_agent
 from api.graph_store import graph_store_from_env
 from api.models import (
+    AffectedResponse,
     AgentStepRequest,
     AgentStepResult,
     AgentStepsResponse,
@@ -28,11 +31,13 @@ from api.models import (
     QuestionRequest,
     QuestionResult,
     ResetResponse,
+    ReviewAgentRequest,
+    ReviewAgentResult,
     ReviewRequest,
     ReviewResult,
     TimelineResponse,
 )
-from api.store import Conflict, Invalid, NotFound, default_store
+from api.store import Conflict, Invalid, NotFound, default_store, patient_of
 
 app = FastAPI(title="FirstDomino API", version="0.1.0")
 app.add_middleware(
@@ -119,6 +124,21 @@ def record_agent_step(req: AgentStepRequest) -> AgentStepResult:
 @app.get("/patients/{pid}/agent-steps")
 def agent_steps(pid: str) -> AgentStepsResponse:
     return store.agent_steps(pid)
+
+
+@app.get("/patients/{pid}/facts/{fact_id}/affected")
+def affected(pid: str, fact_id: str) -> AffectedResponse:
+    return store.affected(pid, fact_id)
+
+
+@app.post("/findings/{fid}/review-agent", responses=CONFLICT)
+def review_agent(fid: str, req: ReviewAgentRequest) -> ReviewAgentResult:
+    pid = patient_of(fid)
+    store.investigation(fid)  # 404 for an unknown patient or finding
+    current = store.findings(pid).case_version
+    if req.case_version != current:
+        raise Conflict("stale_case_version", pid, req.case_version, current)
+    return run_review_agent(store, fid, llm_from_env())
 
 
 @app.get("/patients/{pid}/packet")

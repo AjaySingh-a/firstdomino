@@ -350,6 +350,33 @@ class AgentStepsResponse(Model):
     steps: list[AgentStep]
 
 
+class AffectedResponse(Model):
+    """Q3 (q3_affected), read-only: the findings that cite, link or need one fact, as they are now.
+    Nothing is re-evaluated by asking; only an evidence change re-runs the rules."""
+
+    patient_id: str
+    case_version: int
+    fact_id: str
+    findings: list[Finding]
+
+
+class ReviewAgentRequest(Model):
+    case_version: int
+
+
+class ReviewAgentResult(Model):
+    """One pass of the review agent over one finding. `steps` are the AgentSteps it recorded, failures
+    included. `phrasing` says whether the LLM's text was used ("llm"), never used ("template"), or
+    used for some steps only ("mixed")."""
+
+    finding_id: str
+    case_version: int
+    steps: list[AgentStep]
+    question: Question | None
+    packet_text: str | None
+    phrasing: Literal["llm", "template", "mixed"]
+
+
 class ConflictError(Model):
     error: Literal["stale_case_version", "stale_revision"]
     patient_id: str

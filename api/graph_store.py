@@ -32,6 +32,7 @@ from typing import Any
 from falkordb import FalkorDB
 
 from api.models import (
+    AffectedResponse,
     AgentStep,
     AgentStepRequest,
     AgentStepResult,
@@ -444,6 +445,18 @@ class GraphStore:
             return self.ask_question(req)
         return QuestionResult(case_version=out[0]["case_version"], question=_question(props(out[0]["q"])),
                               replayed=False)
+
+    def affected(self, pid: str, fact_id: str) -> AffectedResponse:
+        """Read-only Q3: which findings depend on this fact, and their current status."""
+        timeline = self.timeline(pid)  # also the access check
+        if fact_id not in {x.id for x in [*timeline.episodes, *timeline.observations]}:
+            raise NotFound(f"fact {fact_id}")
+        ids = {r["finding"] for r in run(self._graph(pid), "q3_affected", pid=pid, fact_id=fact_id)}
+        current = self.findings(pid)
+        return AffectedResponse(
+            patient_id=pid, case_version=current.case_version, fact_id=fact_id,
+            findings=[f for f in current.findings if f.id in ids],
+        )
 
     def agent_steps(self, pid: str) -> AgentStepsResponse:
         g = self._graph(pid)

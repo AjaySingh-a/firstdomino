@@ -657,3 +657,41 @@ def test_agent_steps_are_recorded_without_moving_the_case_version(db, family):
         req.model_copy(update={"step_id": "syn-p1:step-3", "finding_id": None})
     )
     assert no_finding.step.finding_id is None
+
+
+# ---------- A-3: the review agent and read-only Q3 on FalkorDB ----------
+
+
+def test_affected_is_read_only_q3(db, family):
+    g = family(STORIES["syn-p3"])
+    store = store_for(db, family)
+    before = counts(g)
+    res = store.affected("syn-p3", P3_OBS)
+    assert [f.id for f in res.findings] == [P3_FINDING] and res.findings[0].status == "reviewed"
+    assert store.affected("syn-p3", "syn-p3:ep-atorvastatin").findings == []  # the unrelated medicine
+    with pytest.raises(NotFound):
+        store.affected("syn-p3", "syn-p3:nothing")
+    assert counts(g) == before and res.case_version == 4
+
+
+def test_review_agent_pass_matches_the_fixture_store(db, family):
+    from agent.review_agent import run_review_agent
+
+    family(story1())
+    graph = run_review_agent(store_for(db, family), P1_FINDING, None)
+    fixture = run_review_agent(FixtureStore(STORIES, {p.id: p for p in PATTERNS}), P1_FINDING, None)
+    # The wording of a question is the one thing that differs: the graph phrases an unasked question
+    # from the template, while the fixture keeps the story's own wording ("the water tablet ...").
+    def shape(r):
+        return [
+            (s.id, s.tool, s.ok, {k: v for k, v in s.args.items() if k != "text"}, sorted(s.result_ids))
+            for s in r.steps
+        ]
+
+    assert shape(graph) == shape(fixture)
+    assert graph.question.model_copy(update={"text": ""}) == fixture.question.model_copy(update={"text": ""})
+    assert graph.question.text.startswith("Do you know why") and "furosemide" in graph.question.text
+    assert graph.packet_text.startswith(fixture.packet_text.split(" Open question")[0])
+    assert graph.case_version == 3  # only the question moved it
+    persisted = [s.id for s in store_for(db, family).agent_steps("syn-p1").steps]
+    assert persisted == ["syn-p1:step-1", *(f"syn-p1:run-1-step-{k}" for k in range(1, 7))]

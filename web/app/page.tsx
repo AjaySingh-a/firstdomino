@@ -15,6 +15,13 @@ import { describeError, type Loadable } from "@/lib/use-workspace";
 
 type Story = { patient: Patient; findings: Finding[] };
 
+/** What each story is there to show a first-time visitor. Keyed by the synthetic patient. */
+const SHOWS: Record<string, string> = {
+  "syn-p1": "A missing reason, so FirstDomino asks a question.",
+  "syn-p2": "A competing explanation.",
+  "syn-p3": "A reviewed finding, a correction, and an unrelated medicine.",
+};
+
 export default function Landing() {
   const [stories, setStories] = useState<Loadable<Story[]>>({ kind: "loading" });
 
@@ -68,6 +75,10 @@ export default function Landing() {
             <h2 id="stories-h" className="font-serif text-[30px]">Three synthetic stories</h2>
             <p className="text-[13px] text-ink-3">For a pharmacist&rsquo;s medication review. The clinician decides.</p>
           </div>
+          <p className="mt-2 max-w-[70ch] text-[13.5px] leading-relaxed text-ink-2">
+            <span className="smallcaps mr-1.5 text-amber-ink">How to try this</span>
+            Pick a story. Each one shows something different; inside, a short guide walks you through it.
+          </p>
 
           {stories.kind === "loading" && <LoadingState className="mt-6 max-w-md" lines={3} />}
           {stories.kind === "unavailable" && <UnavailableState className="mt-6 max-w-xl" message={stories.message} onRetry={load} />}
@@ -88,6 +99,12 @@ export default function Landing() {
                         No. {i + 1} · {patient.id} · age {patient.age_band}
                       </p>
                       <p className="mt-2 font-serif text-[26px] leading-tight">{patient.label}</p>
+                      {SHOWS[patient.id] && (
+                        <p className="mt-2 rounded-[4px] border-l-[3px] border-amber bg-amber-wash/40 px-2.5 py-1.5 text-[13px] leading-snug text-ink">
+                          <span className="smallcaps mr-1 text-[10px] text-amber-ink">Story {i + 1} shows</span>
+                          {SHOWS[patient.id]}
+                        </p>
+                      )}
                       {f ? (
                         <>
                           <p className="mt-2 text-[13.5px] leading-snug text-ink-2">

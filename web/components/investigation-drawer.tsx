@@ -23,6 +23,7 @@ import type {
 } from "@/lib/types";
 import type { Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
+import { AgentPanel } from "./agent-panel";
 import { BeforeAfter, ChangeCard, factName } from "./change-card";
 import { NextQuestion, type SubmitEvidence } from "./next-question";
 import { InsufficientEvidenceState, LoadingState, UnavailableState } from "./state-notice";
@@ -41,6 +42,8 @@ interface Props {
   onSubmitEvidence: SubmitEvidence;
   onDismissChange: () => void;
   onReview: (fid: string, body: ReviewRequest) => Promise<boolean>;
+  onAgentRan: () => Promise<void>;
+  onError: (err: unknown) => void;
   onRetry: () => void;
 }
 
@@ -53,6 +56,8 @@ export function InvestigationDrawer({
   onSubmitEvidence,
   onDismissChange,
   onReview,
+  onAgentRan,
+  onError,
   onRetry,
 }: Props) {
   if (!state) {
@@ -98,12 +103,16 @@ export function InvestigationDrawer({
           <TabsTrigger value="history">
             Review history <span className="ml-1 tabular text-ink-3">{inv.revisions.length}</span>
           </TabsTrigger>
+          <TabsTrigger value="agent">Review agent</TabsTrigger>
         </TabsList>
         <TabsContent value="investigation">
           <Investigation inv={inv} timeline={timeline} stale={stale} onSubmitEvidence={onSubmitEvidence} onReload={onRetry} />
         </TabsContent>
         <TabsContent value="history">
           <History inv={inv} timeline={timeline} evidenceResults={evidenceResults} onReview={onReview} />
+        </TabsContent>
+        <TabsContent value="agent">
+          <AgentPanel inv={inv} timeline={timeline} stale={stale} onRan={onAgentRan} onError={onError} />
         </TabsContent>
       </Tabs>
     </motion.div>
