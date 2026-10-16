@@ -25,11 +25,14 @@ Questions (POST /questions) and agent steps (POST /agent-steps) are compare-and-
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any
 
 from falkordb import FalkorDB
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from api.models import (
     AffectedResponse,
@@ -84,6 +87,8 @@ from engine.evaluate import reevaluate
 from engine.loaders.seed import DEFAULT_FAMILY, agent_step_props, fact_props, seed
 from engine.questions import question_for
 
+log = logging.getLogger("firstdomino.api")
+
 
 class GraphStore:
     mode = "graph"
@@ -94,11 +99,16 @@ class GraphStore:
         self.family_id = family_id
         self.story_numbers = story_numbers
         self._graph_of: dict[str, str] = {}  # patient id -> family graph name
+        self._seeded = False  # seeding waits for the first moment FalkorDB is reachable
 
     # ---------- routing + access ----------
 
     def _refresh(self) -> None:
-        """One store serves one family graph (FD_FAMILY); patient IDs are unique within it."""
+        """One store serves one family graph (FD_FAMILY); patient IDs are unique within it.
+        Seeds first if that has not happened yet. With FalkorDB unreachable this raises redis'
+        ConnectionError, which the API answers with 503, never with an empty list."""
+        if not self._seeded:
+            self._seed()
         self._graph_of = {}
         name = family_graph(self.family_id)
         if name in self.db.list_graphs():
@@ -119,15 +129,27 @@ class GraphStore:
         except Exception:
             return False
 
+    def appendonly(self) -> str:
+        """FalkorDB's AOF setting ("yes" / "no"), or "unknown" when CONFIG is not available."""
+        try:
+            value = self.db.connection.config_get("appendonly").get("appendonly")
+        except Exception:
+            return "unknown"
+        return value if value in ("yes", "no") else "unknown"
+
     def _stories(self):
         by_number = {s.story_id.removeprefix("story-"): s for s in load_stories().values()}
         return [by_number[str(n)] for n in self.story_numbers]
 
+    def _seed(self) -> None:
+        if self.story_numbers:
+            seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()))
+        self._seeded = True
+
     def ensure_seeded(self) -> None:
         """Load any configured story that is not in the graph yet. Patients already there are kept as
         they are, so a restart never overwrites confirmed evidence."""
-        if self.story_numbers:
-            seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()))
+        self._seed()
         self._refresh()
 
     # ---------- reads ----------
@@ -488,6 +510,7 @@ class GraphStore:
         """Drop and re-seed kb_template and the configured family graph from the fixtures."""
         self.fixtures.reset()
         seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()), reset=True)
+        self._seeded = True
         self._refresh()
 
 
@@ -646,18 +669,20 @@ def _history(pid: str, fid: str, rows: list[dict[str, Any]]):
 def graph_store_from_env(fixtures: FixtureStore | None = None) -> GraphStore:
     numbers = [int(n) for n in os.environ.get("FD_STORIES", "1").replace(",", " ").split()]
     db = connect()
-    deadline = time.monotonic() + float(os.environ.get("FD_DB_WAIT_SECONDS", "30"))
-    while True:  # FalkorDB may still be starting (compose restarts both services together)
-        try:
-            db.connection.ping()
-            break
-        except Exception:
-            if time.monotonic() > deadline:
-                raise
-            time.sleep(1)
     store = GraphStore(
         db, fixtures or FixtureStore(load_stories(), load_patterns()),
         os.environ.get("FD_FAMILY", DEFAULT_FAMILY), numbers,
     )
-    store.ensure_seeded()
-    return store
+    deadline = time.monotonic() + float(os.environ.get("FD_DB_WAIT_SECONDS", "30"))
+    while True:  # FalkorDB may still be starting (compose and Railway start both services together)
+        try:
+            db.connection.ping()
+            store.ensure_seeded()
+            return store
+        except (RedisConnectionError, RedisTimeoutError):
+            if time.monotonic() > deadline:
+                # Boot anyway: /health says "degraded", data routes answer 503, and the first request
+                # that reaches FalkorDB seeds it. The error is not logged: it may name the host.
+                log.warning("FalkorDB not reachable at boot; the API will answer 503 until it is")
+                return store
+            time.sleep(1)

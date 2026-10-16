@@ -40,7 +40,8 @@ def review_body(case_version: int, revision_n: int) -> dict:
 
 
 def test_the_api_container_serves_graph_mode(api):
-    assert api.get("/health").json() == {"status": "ok", "mode": "graph", "falkordb": "up"}
+    health = {"status": "ok", "mode": "graph", "falkordb": "up", "appendonly": "yes"}  # AOF on (compose)
+    assert api.get("/health").json() == health
     assert [p["id"] for p in api.get("/patients").json()] == ["syn-p1", "syn-p2", "syn-p3"]
     statuses = {pid: api.get(f"/patients/{pid}/findings").json()["findings"][0]["status"] for pid in STORIES}
     assert statuses == {"syn-p1": "needs_evidence", "syn-p2": "competing_explanation", "syn-p3": "reviewed"}

@@ -377,10 +377,12 @@ export interface PacketResponse {
   items: PacketItem[];
 }
 
+/** falkordb = reachable or not; appendonly = FalkorDB's AOF setting, null in fixture mode. */
 export interface HealthResponse {
-  status: "ok";
+  status: "ok" | "degraded";
   mode: "fixtures" | "graph";
   falkordb: "not_used" | "up" | "down";
+  appendonly?: "yes" | "no" | "unknown" | null;
 }
 
 export interface ResetResponse {

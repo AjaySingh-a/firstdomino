@@ -192,12 +192,14 @@ Reply with the JSON object only."""
 
 
 class ReviewPass:
-    def __init__(self, store, fid: str, llm: LLM | None):
+    def __init__(self, store, fid: str, llm: LLM | None, llm_off: str | None = None):
         self.store = store
         self.fid = fid
         self.pid = patient_of(fid)
-        self.llm = llm
-        self.llm_down: str | None = None  # the reason code once the model is given up on for this pass
+        self.llm = None if llm_off else llm
+        # The reason code once the model is given up on for this pass, or why it is off from the start
+        # (e.g. "rate_limited", set by the API).
+        self.llm_down: str | None = llm_off
         self.transient_steps = 0  # steps in a row lost to 429 / 5xx / timeouts
         self.used: list[str] = []
         self.results: list[dict[str, Any]] = []  # the transcript the model sees
@@ -556,9 +558,10 @@ def packet_template(item: PacketItem) -> str:
     return " ".join(parts)
 
 
-def run_review_agent(store, fid: str, llm: LLM | None) -> ReviewAgentResult:
-    """One agent pass for one finding. The caller has checked the finding exists and the version."""
-    return ReviewPass(store, fid, llm).run()
+def run_review_agent(store, fid: str, llm: LLM | None, llm_off: str | None = None) -> ReviewAgentResult:
+    """One agent pass for one finding. The caller has checked the finding exists and the version.
+    `llm_off` runs the whole pass on templates and records it as every step's fallback_reason."""
+    return ReviewPass(store, fid, llm, llm_off).run()
 
 
 assert set(PLAN) == set(AGENT_TOOLS)

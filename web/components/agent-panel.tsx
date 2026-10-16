@@ -24,6 +24,7 @@ const strings = (x: unknown) => (Array.isArray(x) ? x.filter((v): v is string =>
 /** args.fallback_reason (agent/review_agent.py): why a step used the template instead of the model. */
 const FALLBACK: Record<string, string> = {
   no_key: "no LLM key set",
+  rate_limited: "too many agent runs from this address; try again in a minute",
   http_400: "request refused (HTTP 400)",
   http_401: "LLM key rejected (HTTP 401)",
   http_403: "LLM key not allowed (HTTP 403)",
