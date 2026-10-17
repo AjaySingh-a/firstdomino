@@ -2,6 +2,7 @@
 Each test uses its own throwaway kb + family graphs and deletes them afterwards."""
 
 import json
+import os
 import threading
 import uuid
 
@@ -104,8 +105,11 @@ def test_routes_in_graph_mode(db, family, monkeypatch):
     family(story1())
     monkeypatch.setattr(api.main, "store", store_for(db, family))
     with TestClient(api.main.app) as c:
-        health = {"status": "ok", "mode": "graph", "falkordb": "up", "appendonly": "yes"}  # AOF on (compose)
-        assert c.get("/health").json() == health
+        health = c.get("/health").json()
+        aof = health.pop("appendonly")
+        assert health == {"status": "ok", "mode": "graph", "falkordb": "up"}
+        # Compose runs FalkorDB with AOF on and sets FD_EXPECT_AOF=1; a plain `docker run` one has it off.
+        assert aof in (("yes",) if os.environ.get("FD_EXPECT_AOF") == "1" else ("yes", "no"))
         f = c.get("/patients/syn-p1/findings").json()
         assert [x["status"] for x in f["findings"]] == ["needs_evidence"]
         inv = c.get(f"/findings/{P1_FINDING}/investigation").json()

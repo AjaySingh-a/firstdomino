@@ -21,8 +21,11 @@ around evidence IDs it was given. Types: `api/models.py` (mirrored in `web/lib/t
 - **Every fact has a state**: `documented`, `reported` (by the caregiver), `conflicting` or `unknown`.
   An answer can also be `not_available`, which is **never treated as "no"**: the value stays empty,
   and the requirement is marked `not_available` rather than `provided`.
-- **Versioning**: `Patient.case_version` goes up with every accepted write. A write that carries an old
-  version gets HTTP 409. Each evidence change has an `event_id`, so re-sending it is idempotent.
+- **Versioning**: `Patient.case_version` goes up with every accepted write: an evidence change
+  (`write/evidence_apply`), a review decision (`write/review` sets the finding to `reviewed` and raises
+  `case_version` by 1 in the same query) and a question recorded as asked (`write/question`). Agent
+  steps check it but do not raise it. A write that carries an old version gets HTTP 409. Each evidence
+  change has an `event_id`, so re-sending it is idempotent.
   The check is a compare-and-set inside one FalkorDB query (`write/evidence_apply`, `write/review`).
 - **Fact versions**: a confirmed change never overwrites history. The fact node keeps its ID and
   edges and holds the current values plus `version`. Each version is a `FactVersion`
@@ -104,7 +107,14 @@ Q3–Q6 traverse it from `Patient {id: $pid}`, so a finding is reachable only th
 Rules on Q1 rows (`engine/rules.py`, tested in `tests/test_rules.py`), in precedence order:
 
 - Two **documented** facts in the reverse of index start → onset → marker start → `not_matched`.
-  If either side is only `reported`, the order is not settled: an `order` requirement instead.
+  The finding is still written (on first evaluation: revision 1, no requirements), so the record shows
+  the pattern was checked and did not fit; it is not deleted or hidden.
+  If either side is only `reported`, the order is not settled: an `order` requirement instead
+  (`field: happened_at`). It is ABOUT the side that is not documented; when neither side is
+  documented, the later step of the pattern (e.g. the observation, not the index episode). Two facts on
+  the same day also get an `order` requirement (about the earlier step if both are documented). Like any open requirement it makes the finding
+  `needs_evidence`, unless a different reason for the second medicine makes it
+  `competing_explanation` (that rule comes first).
 - The second medicine has a known indication that is not the pattern's effect → `competing_explanation`,
   shown and not dismissed, whether that reason is `documented` or `reported` (the headline and reason
   say which: "has a different reported reason", "is reported by the caregiver as …"). A reported

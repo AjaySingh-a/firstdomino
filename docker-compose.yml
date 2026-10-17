@@ -80,6 +80,7 @@ services:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
       FD_API_URL: http://api:8000
+      FD_EXPECT_AOF: "1" # the falkordb service runs with appendonly yes
     depends_on:
       api:
         condition: service_healthy
