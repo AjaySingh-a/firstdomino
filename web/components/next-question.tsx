@@ -12,6 +12,7 @@ import { MessageCircleQuestion, RefreshCw } from "lucide-react";
 import { useRef, useState } from "react";
 import { DATA_SOURCE } from "@/lib/api";
 import { STATE_LABEL, day } from "@/lib/present";
+import { useTech } from "@/lib/tech";
 import type { AnswerState, EvidenceRequest, InvestigationResponse, TimelineResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -81,15 +82,19 @@ export function NextQuestion({
   inv,
   timeline,
   stale,
+  suggestions,
   onSubmit,
   onReload,
 }: {
   inv: InvestigationResponse;
   timeline: TimelineResponse;
   stale: boolean;
+  /** Ready-made answers to tap (the guided tour offers two). */
+  suggestions?: string[];
   onSubmit: SubmitEvidence;
   onReload: () => void;
 }) {
+  const tech = useTech();
   const q = inv.next_question;
   const [choice, setChoice] = useState<Choice>("value");
   const [text, setText] = useState("");
@@ -142,14 +147,14 @@ export function NextQuestion({
   }
 
   return (
-    <form onSubmit={submit} className="rounded-[6px] border border-ink bg-paper p-3.5">
+    <form onSubmit={submit} data-tour="next-question" className="rounded-[6px] border border-ink bg-paper p-3.5">
       <p className="smallcaps flex items-center gap-1.5 text-ink-3">
         <MessageCircleQuestion className="size-3.5" aria-hidden /> For the {q.ask_role}
       </p>
       <p className="mt-1.5 font-serif text-[19px] leading-snug text-ink">{q.text}</p>
-      <p className="mt-2 font-mono text-[11px] text-ink-3">
-        {q.asked_at === null ? "not asked yet" : `asked ${day(q.asked_at)}`}
-        {target && ` · answers ${target.label.toLowerCase()}`}
+      <p className="mt-2 text-[11.5px] text-ink-3">
+        {q.asked_at === null ? "Not asked yet" : `Asked on ${day(q.asked_at)}`}
+        {target && ` · answers: ${target.label.toLowerCase()}`}
       </p>
 
       <fieldset className="mt-3.5" disabled={busy}>
@@ -182,14 +187,35 @@ export function NextQuestion({
               (isDay ? (
                 <DayInput value={dayValue} onChange={setDayValue} max={asOf} />
               ) : (
-                <input
-                  type="text"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="e.g. what the letter or the doctor said"
-                  aria-label="Reason"
-                  className={field}
-                />
+                <>
+                  {suggestions && suggestions.length > 0 && (
+                    <div data-tour="suggestions" className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] text-ink-3">Try:</span>
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setText(s)}
+                          aria-pressed={text.trim() === s}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-[12.5px] transition-colors",
+                            text.trim() === s ? "border-amber-ink bg-amber-wash text-ink" : "border-amber bg-paper text-ink hover:bg-amber-wash/60",
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="e.g. what the letter or the doctor said"
+                    aria-label="Reason"
+                    className={field}
+                  />
+                </>
               ))}
             {choice === "value" && (
               <p className="mt-1.5 text-[11.5px] text-ink-3">Recorded as: {STATE_LABEL[state].toLowerCase()}.</p>
@@ -213,8 +239,8 @@ export function NextQuestion({
         </div>
       ) : (
         <div className="mt-3.5 flex flex-wrap items-center gap-3">
-          <Button type="submit" size="sm" disabled={busy || !ready || (!live && choice !== "skip")}>
-            {busy ? "Recording…" : choice === "skip" ? "Skip for now" : `Record answer on case v${inv.case_version}`}
+          <Button type="submit" size="sm" data-tour="answer-submit" disabled={busy || !ready || (!live && choice !== "skip")}>
+            {busy ? "Recording…" : choice === "skip" ? "Skip for now" : tech ? `Record answer on case v${inv.case_version}` : "Record answer"}
           </Button>
           {!live && choice !== "skip" && <span className="text-[11.5px] text-ink-3">Answers need the live API.</span>}
         </div>

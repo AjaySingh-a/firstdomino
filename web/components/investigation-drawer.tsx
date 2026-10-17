@@ -8,9 +8,12 @@ import {
   DECISION_LABEL,
   STATUS,
   day,
+  querySentence,
   sourceById,
   stripSynthetic,
 } from "@/lib/present";
+import { Tech, useTech } from "@/lib/tech";
+import type { DrawerTab } from "@/lib/tour";
 import type {
   EvidenceResult,
   FactRef,
@@ -25,9 +28,11 @@ import type { Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
 import { AgentPanel } from "./agent-panel";
 import { BeforeAfter, ChangeCard, factName } from "./change-card";
+import { Help } from "./help";
 import { NextQuestion, type SubmitEvidence } from "./next-question";
 import { InsufficientEvidenceState, LoadingState, UnavailableState } from "./state-notice";
 import { StateTag, StatusChip } from "./status";
+import { useTour } from "./tour";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -39,6 +44,10 @@ interface Props {
   evidenceResults: EvidenceResult[];
   lastChange: EvidenceResult | null;
   stale: boolean;
+  tab: DrawerTab;
+  onTabChange: (tab: DrawerTab) => void;
+  /** Answers the guided tour offers for the next question. */
+  suggestions?: string[];
   onSubmitEvidence: SubmitEvidence;
   onDismissChange: () => void;
   onReview: (fid: string, body: ReviewRequest) => Promise<boolean>;
@@ -53,6 +62,9 @@ export function InvestigationDrawer({
   evidenceResults,
   lastChange,
   stale,
+  tab,
+  onTabChange,
+  suggestions,
   onSubmitEvidence,
   onDismissChange,
   onReview,
@@ -65,7 +77,7 @@ export function InvestigationDrawer({
       <div className="py-10 text-center">
         <p className="font-serif text-2xl text-ink-2">No finding selected</p>
         <p className="mx-auto mt-2 max-w-[28ch] text-[13px] text-ink-3">
-          Select an arc in the Medication River to open its investigation.
+          Click an amber arc on the timeline to see what is on record and what is missing.
         </p>
       </div>
     );
@@ -78,13 +90,19 @@ export function InvestigationDrawer({
   return (
     <motion.div key={f.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
       <header className="border-b border-ink pb-4">
-        <p className="smallcaps text-ink-3">Investigation</p>
+        <p className="smallcaps flex items-center gap-1 text-ink-3">
+          Investigation
+          <Help text="One possible pattern: what is on record, what is not known yet, and the one fact that would settle it." />
+        </p>
         <h2 className="mt-1 font-serif text-[26px] leading-[1.1] text-ink">{f.headline}</h2>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <StatusChip status={f.status} />
-          <span className="font-mono text-[11px] text-ink-3">
-            rev {f.revision_n} · pattern v{f.pattern_version} · case v{inv.case_version}
-          </span>
+          <span className="text-[11.5px] text-ink-3">version {f.revision_n}</span>
+          <Tech>
+            <span className="font-mono text-[11px] text-ink-3">
+              {f.status} · rev {f.revision_n} · pattern v{f.pattern_version} · case v{inv.case_version} · {f.id}
+            </span>
+          </Tech>
         </div>
         <p className="mt-2 text-[13px] leading-relaxed text-ink-2">{STATUS[f.status].blurb}</p>
       </header>
@@ -97,16 +115,23 @@ export function InvestigationDrawer({
         )}
       </AnimatePresence>
 
-      <Tabs defaultValue="investigation" className="mt-4">
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => onTabChange(v as DrawerTab)} className="mt-4">
+        <TabsList className="flex-wrap gap-x-6 gap-y-1">
           <TabsTrigger value="investigation">Evidence</TabsTrigger>
           <TabsTrigger value="history">
             Review history <span className="ml-1 tabular text-ink-3">{inv.revisions.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="agent">Review agent</TabsTrigger>
+          <TabsTrigger value="agent">Review assistant</TabsTrigger>
         </TabsList>
         <TabsContent value="investigation">
-          <Investigation inv={inv} timeline={timeline} stale={stale} onSubmitEvidence={onSubmitEvidence} onReload={onRetry} />
+          <Investigation
+            inv={inv}
+            timeline={timeline}
+            stale={stale}
+            suggestions={suggestions}
+            onSubmitEvidence={onSubmitEvidence}
+            onReload={onRetry}
+          />
         </TabsContent>
         <TabsContent value="history">
           <History inv={inv} timeline={timeline} evidenceResults={evidenceResults} onReview={onReview} />
@@ -121,12 +146,25 @@ export function InvestigationDrawer({
 
 // ---------- Evidence: five fixed parts ----------
 
-function Part({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+function Part({
+  n,
+  title,
+  help,
+  tour,
+  children,
+}: {
+  n: number;
+  title: string;
+  help: string;
+  tour?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="border-b border-rule py-4 first:pt-0 last:border-0">
-      <h3 className="mb-2.5 flex items-baseline gap-2">
+    <section data-tour={tour} className="border-b border-rule py-4 first:pt-0 last:border-0">
+      <h3 className="mb-2.5 flex items-center gap-2">
         <span className="font-mono text-[11px] text-ink-3">§{n}</span>
         <span className="font-serif text-[20px] leading-none text-ink">{title}</span>
+        <Help text={help} />
       </h3>
       {children}
     </section>
@@ -167,12 +205,14 @@ function Investigation({
   inv,
   timeline,
   stale,
+  suggestions,
   onSubmitEvidence,
   onReload,
 }: {
   inv: InvestigationResponse;
   timeline: TimelineResponse;
   stale: boolean;
+  suggestions?: string[];
   onSubmitEvidence: SubmitEvidence;
   onReload: () => void;
 }) {
@@ -191,11 +231,11 @@ function Investigation({
         <InsufficientEvidenceState className="mb-4" missing={inv.unknowns.map((u) => u.label.toLowerCase())} />
       )}
 
-      <Part n={1} title="Documented">
-        {inv.documented.length ? <FactList facts={inv.documented} timeline={timeline} /> : <Empty>No documented facts yet.</Empty>}
+      <Part n={1} title="On record" help="Facts a document or the caregiver gives, with where each one came from.">
+        {inv.documented.length ? <FactList facts={inv.documented} timeline={timeline} /> : <Empty>Nothing on record yet.</Empty>}
       </Part>
 
-      <Part n={2} title="Why worth reviewing">
+      <Part n={2} title="Why worth reviewing" help="The published pattern this order of events fits, and how many days apart the events were.">
         <p className="text-[13.5px] leading-relaxed text-ink">{inv.pattern.title}.</p>
         {a && b && o && (
           <ol className="relative mt-3 space-y-2 border-l border-rule-strong pl-4 text-[13px] text-ink-2">
@@ -236,11 +276,11 @@ function Investigation({
         </ul>
       </Part>
 
-      <Part n={3} title="Conflicts">
-        {inv.conflicts.length ? <FactList facts={inv.conflicts} timeline={timeline} /> : <Empty>No conflicting facts recorded.</Empty>}
+      <Part n={3} title="Records disagree" help="Facts where two records give different answers. Both are kept.">
+        {inv.conflicts.length ? <FactList facts={inv.conflicts} timeline={timeline} /> : <Empty>No records disagree.</Empty>}
       </Part>
 
-      <Part n={4} title="Unknowns">
+      <Part n={4} title="Not known yet" tour="unknowns" help="Facts the pattern depends on that no record gives yet. Unknown never counts as “no”.">
         {inv.unknowns.length ? (
           <>
             <FactList facts={inv.unknowns} timeline={timeline} />
@@ -253,12 +293,13 @@ function Investigation({
         )}
       </Part>
 
-      <Part n={5} title="Next question">
+      <Part n={5} title="The one missing fact" help="The question that would settle the most. Answer it here as the caregiver would.">
         <NextQuestion
           key={`${inv.next_question?.id}:${inv.case_version}`}
           inv={inv}
           timeline={timeline}
           stale={stale}
+          suggestions={suggestions}
           onSubmit={onSubmitEvidence}
           onReload={onReload}
         />
@@ -270,30 +311,44 @@ function Investigation({
 }
 
 function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: TimelineResponse }) {
+  const tech = useTech();
+  const tour = useTour();
   const name = (id: string) => {
     const label = factName(id, timeline);
     return label === id ? id.slice(id.indexOf(":") + 1) : label;
   };
   return (
-    <details className="group mt-2 border-t border-ink pt-3">
-      <summary className="smallcaps flex cursor-pointer list-none items-center gap-1 text-ink-3 hover:text-ink">
+    <details
+      data-tour="query-trace"
+      className="group mt-2 border-t border-ink pt-3"
+      onToggle={(e) => {
+        if ((e.currentTarget as HTMLDetailsElement).open) tour.emit("trace-opened");
+      }}
+    >
+      <summary data-tour="query-trace-toggle" className="smallcaps flex cursor-pointer list-none items-center gap-1 text-ink-3 hover:text-ink">
         <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" aria-hidden />
-        How we found this
+        How the graph found this
       </summary>
-      <p className="mt-2 text-[12px] text-ink-3">
-        The named graph queries behind this view, each starting from the patient, and the IDs each one returned.
+      <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+        FalkorDB keeps the medicines, symptoms, records and findings as one connected graph. Each step below is one
+        walk through it, starting from this patient.
       </p>
       <ol className="mt-3 space-y-3.5">
         {inv.query_trace.map((q, i) => (
           <li key={`${q.query}:${i}`}>
-            <p className="font-mono text-[11.5px] text-ink">
-              <span className="text-ink-3">{i + 1}.</span> {q.query}
-              <span className="text-ink-3">
-                {" "}
-                · {q.rows} row{q.rows === 1 ? "" : "s"} · {q.mode}
-              </span>
+            <p className="text-[13px] leading-snug text-ink">
+              <span className="font-mono text-[11px] text-ink-3">{i + 1}.</span> {querySentence(q.query, q.result_ids)}
             </p>
-            {q.result_ids.length ? (
+            {tech && (
+              <p className="mt-0.5 font-mono text-[11px] text-ink-2">
+                {q.query}
+                <span className="text-ink-3">
+                  {" "}
+                  · {q.rows} row{q.rows === 1 ? "" : "s"} · {q.mode}
+                </span>
+              </p>
+            )}
+            {!tech ? null : q.result_ids.length ? (
               <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label={`IDs returned by ${q.query}`}>
                 {q.result_ids.map((id) => (
                   <li
@@ -308,7 +363,7 @@ function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: T
             ) : (
               <p className="mt-1 font-mono text-[10.5px] italic text-ink-3">returned no IDs</p>
             )}
-            {QUERIES[q.query] && (
+            {tech && QUERIES[q.query] && (
               <details className="group/q mt-1.5">
                 <summary className="flex cursor-pointer list-none items-center gap-1 font-mono text-[10.5px] text-ink-3 hover:text-ink">
                   <ChevronRight className="size-3 transition-transform group-open/q:rotate-90" aria-hidden />
@@ -322,6 +377,11 @@ function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: T
           </li>
         ))}
       </ol>
+      {!tech && (
+        <p className="mt-3 text-[11.5px] text-ink-3">
+          Turn on “Show technical details” to see each query&rsquo;s name, the IDs it returned and its Cypher.
+        </p>
+      )}
     </details>
   );
 }
@@ -348,7 +408,7 @@ function History({
   return (
     <div>
       <p className="mb-4 text-[12.5px] text-ink-3">
-        Each change of evidence creates a new revision. Decisions stay attached to the revision they were made on.
+        Each change of evidence makes a new version of the finding. A clinician's decision stays attached to the version they saw.
       </p>
       <ol className="space-y-5">
         {revisions.map((rev) => {
@@ -378,10 +438,14 @@ function History({
               )}
               {result && <BeforeAfter result={result} />}
               {decisions.map((d) => (
-                <div key={d.id} className="mt-3 rounded-[4px] border border-teal/60 border-l-[3px] border-l-teal bg-teal-wash/50 px-3 py-2">
+                <div
+                  key={d.id}
+                  data-tour={current ? undefined : "kept-decision"}
+                  className="mt-3 rounded-[4px] border border-teal/60 border-l-[3px] border-l-teal bg-teal-wash/50 px-3 py-2"
+                >
                   <p className="smallcaps text-[10px] text-teal">
                     {d.by_role} · {DECISION_LABEL[d.decision]} · {day(d.decided_at)}
-                    {!current && " · kept on this revision"}
+                    {!current && " · kept on the version they saw"}
                   </p>
                   <p className="mt-1 font-serif text-[16px] leading-snug text-ink">&ldquo;{d.reason}&rdquo;</p>
                 </div>

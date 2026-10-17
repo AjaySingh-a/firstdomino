@@ -412,6 +412,12 @@ class HealthResponse(Model):
     appendonly: Literal["yes", "no", "unknown"] | None = None
 
 
+class ResetRequest(Model):
+    """POST /sandbox/reset. `patient_id` restores that one synthetic story; without it, every story."""
+
+    patient_id: str | None = None
+
+
 class ResetResponse(Model):
     reset: Literal[True]
     patients: list[Patient]

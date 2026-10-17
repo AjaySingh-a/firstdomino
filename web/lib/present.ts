@@ -15,43 +15,52 @@ import type {
 
 export type Tone = "amber" | "teal" | "muted";
 
+// Status names in plain words for a first-time visitor; the API's status codes stay behind
+// "Show technical details".
 export const STATUS: Record<FindingStatus, { label: string; tone: Tone; blurb: string }> = {
   candidate: {
     label: "Possible pattern",
     tone: "amber",
-    blurb: "The timing fits a known pattern. Worth a clinician's review.",
+    blurb: "The order of events fits a published pattern. Worth a clinician's review.",
   },
   needs_evidence: {
-    label: "Needs evidence",
+    label: "Needs one more fact",
     tone: "amber",
-    blurb: "The timing fits, but a fact the review depends on is not known yet.",
+    blurb: "The timing fits, but one fact the review depends on is not known yet.",
   },
   competing_explanation: {
-    label: "Competing explanation",
+    label: "Another explanation found",
     tone: "amber",
-    blurb: "Another reason is documented. Both are shown side by side for the clinician.",
+    blurb: "The record gives another reason for the second medicine. Both are shown side by side for the clinician.",
   },
   needs_reassessment: {
-    label: "Needs reassessment",
+    label: "Needs a fresh look",
     tone: "amber",
-    blurb: "Evidence changed after a review. The earlier decision is kept on its revision.",
+    blurb: "The evidence changed after a clinician reviewed it. Their earlier decision is kept on the revision they saw.",
   },
   reviewed: {
-    label: "Reviewed",
+    label: "Reviewed by a clinician",
     tone: "teal",
-    blurb: "A clinician or pharmacist has recorded a decision on this revision.",
+    blurb: "A clinician or pharmacist has recorded a decision on this version of the finding.",
   },
   not_matched: {
-    label: "Not matched",
+    label: "Doesn't fit the pattern",
     tone: "muted",
-    blurb: "The documented order of events does not fit the pattern.",
+    blurb: "The recorded order of events does not fit the pattern.",
   },
 };
 
+/** Human titles for the three synthetic stories. */
+export const STORY_TITLES: Record<string, string> = {
+  "syn-p1": "The missing reason",
+  "syn-p2": "Another explanation",
+  "syn-p3": "When the record changes",
+};
+
 export const STATE_LABEL: Record<AnswerState, string> = {
-  documented: "Documented",
-  reported: "Reported by caregiver",
-  conflicting: "Conflicting",
+  documented: "On record",
+  reported: "Reported by the caregiver",
+  conflicting: "Records disagree",
   unknown: "Not known yet",
   not_available: "Not available",
 };
@@ -131,9 +140,9 @@ export function findingLinks(f: Finding, t: TimelineResponse): FindingLink[] {
 
 export const LINK_LABEL: Record<LinkState, string | null> = {
   documented: null,
-  unknown: "unknown",
-  conflicting: "conflicting",
-  other_reason: "other reason documented",
+  unknown: "not known yet",
+  conflicting: "records disagree",
+  other_reason: "another reason on record",
 };
 
 /** Everything a selected finding touches: its episodes, observations and sources. */
@@ -147,4 +156,51 @@ export function litIds(f: Finding, t: TimelineResponse): Set<string> {
 
 export function sourceById(t: TimelineResponse): Map<string, Source> {
   return new Map(t.sources.map((s) => [s.id, s]));
+}
+
+// ---------- plain sentences for technical records ----------
+
+/** Fact fields as a person would name them. Raw field names show under "Show technical details". */
+export const FIELD_LABEL: Record<string, string> = {
+  happened_at: "Date",
+  indication: "Reason started",
+  indication_state: "How the reason is known",
+  state: "How the date is known",
+  stop_day: "Stop date",
+  dose_text: "Dose",
+  recorded_at: "Recorded on day",
+  source_ids: "Sources",
+};
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** One sentence for a named graph query in the "How the graph found this" trace. */
+export function querySentence(query: string, ids: string[]): string {
+  switch (query) {
+    case "q4_evidence_pack":
+      return `Gathered the facts this finding links (${plural(ids.length, "fact")}), with their records.`;
+    case "q2_next_question":
+      return ids.length
+        ? "Found the missing fact that the most open findings are waiting on."
+        : "Looked for a missing fact still waiting to be asked: none.";
+    case "q5_history":
+      return `Read this finding's history (${plural(ids.length, "version")}).`;
+    case "q9_requirements":
+      return "Looked up the question that was already asked and is still unanswered.";
+    case "q3_affected":
+      return `Checked which findings depend on this fact (${ids.length}).`;
+    default:
+      return `Ran a named graph query (${plural(ids.length, "result")}).`;
+  }
+}
+
+/** "Reason furosemide was started" -> "why furosemide was started", for agent step sentences. */
+export function askedAbout(label: string): string {
+  const reason = /^Reason (.+) was started$/i.exec(label);
+  if (reason) return `why ${reason[1]} was started`;
+  const start = /^(.+) started$/i.exec(label);
+  if (start) return `when ${start[1]} was started`;
+  const began = /^(.+) began$/i.exec(label);
+  if (began) return `when the ${began[1].toLowerCase()} began`;
+  return label.charAt(0).toLowerCase() + label.slice(1);
 }

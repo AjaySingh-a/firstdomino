@@ -5,10 +5,13 @@ import { ArrowRight, Bot, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { askedAbout } from "@/lib/present";
+import { useTech } from "@/lib/tech";
 import type { AgentStep, InvestigationResponse, ReviewAgentResult, TimelineResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { factName } from "./change-card";
 import { FactStates } from "./fact-states";
+import { useTour } from "./tour";
 import { Button } from "./ui/button";
 
 const PHRASING: Record<ReviewAgentResult["phrasing"], string> = {
@@ -45,6 +48,39 @@ const FALLBACK: Record<string, string> = {
 };
 const fallbackLabel = (code: string) => FALLBACK[code] ?? code;
 
+const ROLE: Record<string, string> = { caregiver: "the caregiver", prescriber: "the prescriber", pharmacist: "the pharmacist" };
+
+/** One agent step as a sentence: what it did, in plain words. Tool names stay behind technical details. */
+export function stepSentence(step: AgentStep, inv: InvestigationResponse, timeline: TimelineResponse): string {
+  const tool = toolOf(step);
+  const name = (id: unknown) => (typeof id === "string" ? factName(id, timeline) : "a medicine");
+  const ask = (rid: unknown) => {
+    const ref = inv.unknowns.find((u) => u.requirement_id === rid) ?? inv.unknowns.find((u) => u.requirement_id);
+    return ref ? askedAbout(ref.label) : "the missing fact";
+  };
+  const facts = step.result_ids.filter((id) => !/:(fnd|req|q|step|run)-/.test(id) || /:fnd-[^:]+$/.test(id)).length;
+  const role = ROLE[inv.next_question?.ask_role ?? "caregiver"] ?? "the caregiver";
+  if (!step.ok) return `Tried a step that did not work (${tool.replace(/_/g, " ")}).`;
+  switch (tool) {
+    case "get_evidence_pack":
+      return `Read the evidence (${step.result_ids.length} facts).`;
+    case "inspect_episode":
+      return `Looked at when ${name(step.args.episode_id)} was started, and why.`;
+    case "next_missing_fact":
+      return step.result_ids.length ? `Found the missing fact: ${ask(step.result_ids.find((id) => id.includes(":req-")))}.` : "Looked for a missing fact: nothing is missing.";
+    case "ask_question":
+      return `Asked ${role} ${ask(step.args.requirement_id)}.`;
+    case "request_reevaluation": {
+      const n = step.result_ids.filter((id) => /:fnd-[^:]+$/.test(id)).length;
+      return `Checked which findings depend on ${name(step.args.fact_id)} (${n}). Nothing was changed.`;
+    }
+    case "prepare_packet":
+      return "Drafted the next conversation to have with the clinician.";
+    default:
+      return `Ran ${tool.replace(/_/g, " ")} (${facts} results).`;
+  }
+}
+
 /** Steps grouped by pass (":run-<n>-step-"), newest first. Seeded steps without a run go last. */
 function byRun(steps: AgentStep[]) {
   const groups = new Map<string, AgentStep[]>();
@@ -70,6 +106,7 @@ export function AgentPanel({
 }) {
   const fid = inv.finding.id;
   const pid = inv.patient_id;
+  const tour = useTour();
   const [history, setHistory] = useState<AgentStep[] | null>(null);
   const [live, setLive] = useState<AgentStep[]>([]);
   const [result, setResult] = useState<ReviewAgentResult | null>(null);
@@ -119,6 +156,7 @@ export function AgentPanel({
         setResult(res);
       }
       await onRan();
+      tour.emit("agent-done", { steps: res.steps.length, asked: res.question !== null, failed: res.steps.filter((s) => !s.ok).length });
     } catch (err) {
       onError(err);
     } finally {
@@ -131,14 +169,17 @@ export function AgentPanel({
   const all = history ?? [];
 
   return (
-    <div>
-      <p className="text-[12.5px] leading-relaxed text-ink-3">
-        One bounded pass over six allowlisted tools. It reads the evidence, finds the next missing fact, records the
-        question, checks which findings depend on that fact (read-only) and drafts the next conversation with the
-        clinician. It cannot answer questions, change facts, or write findings or decisions.
+    <div data-tour="agent">
+      <p className="text-[13px] leading-relaxed text-ink-2">
+        The review assistant reads the evidence, finds the missing fact, asks for it, checks which findings depend on
+        it and drafts the next conversation with the clinician.{" "}
+        <strong className="font-medium text-ink">It can read and ask. It never decides and never changes a fact.</strong>
+      </p>
+      <p className="mt-1.5 text-[11.5px] text-ink-3">
+        At most six steps, each from a fixed list of allowed tools, each one recorded below.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button size="sm" onClick={run} disabled={running || stale}>
+        <Button size="sm" data-tour="agent-run" onClick={run} disabled={running || stale}>
           <Bot className="size-3.5" aria-hidden />
           {running ? "Running…" : "Run review agent"}
         </Button>
@@ -151,7 +192,7 @@ export function AgentPanel({
           <ol className="mt-2 space-y-3">
             <AnimatePresence initial={false}>
               {live.map((s, i) => (
-                <StepRow key={s.id} n={i + 1} step={s} timeline={timeline} />
+                <StepRow key={s.id} n={i + 1} step={s} inv={inv} timeline={timeline} />
               ))}
             </AnimatePresence>
             {running && (
@@ -218,7 +259,7 @@ export function AgentPanel({
                 </h5>
                 <ol className="mt-2 space-y-3">
                   {steps.map((s, i) => (
-                    <StepRow key={s.id} n={i + 1} step={s} timeline={timeline} showId />
+                    <StepRow key={s.id} n={i + 1} step={s} inv={inv} timeline={timeline} showId />
                   ))}
                 </ol>
               </section>
@@ -230,7 +271,20 @@ export function AgentPanel({
   );
 }
 
-function StepRow({ n, step, timeline, showId }: { n: number; step: AgentStep; timeline: TimelineResponse; showId?: boolean }) {
+function StepRow({
+  n,
+  step,
+  inv,
+  timeline,
+  showId,
+}: {
+  n: number;
+  step: AgentStep;
+  inv: InvestigationResponse;
+  timeline: TimelineResponse;
+  showId?: boolean;
+}) {
+  const tech = useTech();
   const name = (id: string) => {
     const label = factName(id, timeline);
     return label === id ? id.slice(id.indexOf(":") + 1) : label;
@@ -250,8 +304,13 @@ function StepRow({ n, step, timeline, showId }: { n: number; step: AgentStep; ti
         className={cn("absolute -left-[5px] top-1 size-[9px] rounded-full border", step.ok ? "border-ink bg-ink" : "border-coral bg-coral")}
         aria-hidden
       />
-      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className="font-mono text-[11px] text-ink-3">{n}.</span>
+      <p className="flex items-baseline gap-x-2">
+        <span className="shrink-0 font-mono text-[11px] text-ink-3">{n}.</span>
+        <span className="min-w-0 text-[13px] leading-snug text-ink">{stepSentence(step, inv, timeline)}</span>
+        {!step.ok && <span className="smallcaps text-[10px] text-coral">failed</span>}
+      </p>
+      {tech && (
+      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="font-mono text-[12px] text-ink">{toolOf(step)}</span>
         <span className="font-mono text-[10.5px] text-ink-3">{step.tool}</span>
         <span className={cn("smallcaps text-[10px]", step.ok ? "text-teal" : "text-coral")}>{step.ok ? "ok" : "failed"}</span>
@@ -265,9 +324,10 @@ function StepRow({ n, step, timeline, showId }: { n: number; step: AgentStep; ti
           </span>
         )}
       </p>
-      {fallback && <p className="text-[11px] text-ink-3">Template used: {fallbackLabel(fallback)}.</p>}
-      {showId && <p className="font-mono text-[10px] text-ink-3">{step.id}</p>}
-      {step.result_ids.length ? (
+      )}
+      {tech && fallback && <p className="text-[11px] text-ink-3">Template used: {fallbackLabel(fallback)}.</p>}
+      {tech && showId && <p className="font-mono text-[10px] text-ink-3">{step.id}</p>}
+      {!tech ? null : step.result_ids.length ? (
         <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label={`IDs returned by step ${n}`}>
           {step.result_ids.map((id) => (
             <li
@@ -283,7 +343,7 @@ function StepRow({ n, step, timeline, showId }: { n: number; step: AgentStep; ti
         <p className="mt-1 font-mono text-[10.5px] italic text-ink-3">returned no IDs</p>
       )}
       {error && <p className="mt-1 text-[12px] text-coral">{error}</p>}
-      {rejected.length > 0 && (
+      {tech && rejected.length > 0 && (
         <p className="mt-1 text-[11.5px] leading-snug text-ink-3">
           {phrasing === "template" ? "Attempts" : "First reply not used"}: {rejected.join("; ")}.
         </p>
