@@ -181,6 +181,10 @@ export default function HowItWorks() {
           traceable. In any review, open &ldquo;How the graph found this&rdquo; and turn on &ldquo;Show technical
           details&rdquo; to see the named queries and their Cypher.
         </p>
+        <p className="mt-2 text-[12.5px] text-ink-3">
+          AI assistants such as Claude Desktop can use the same review through FirstDomino&rsquo;s MCP server:
+          read-only tools that go through this API and return the evidence IDs behind every answer.
+        </p>
       </section>
 
       <div className="mt-12 flex flex-wrap gap-3">

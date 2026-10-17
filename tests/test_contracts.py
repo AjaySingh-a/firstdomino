@@ -75,7 +75,7 @@ def test_every_query_is_named_and_starts_from_patient():
 
 BANNED = re.compile(r"\bsafe\b|stop taking|\bcleared\b|caused by", re.I)
 COPY_ROOTS = [
-    "data/stories", "data/patterns", "data/snapshots", "api", "agent", "engine",
+    "data/stories", "data/patterns", "data/snapshots", "api", "agent", "engine", "mcp_server",
     "web/app", "web/lib", "web/components",
 ]
 
