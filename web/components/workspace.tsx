@@ -11,7 +11,6 @@ import { TOUR_FINDINGS, type DrawerTab } from "@/lib/tour";
 import type { ConflictError, EvidenceRequest, EvidenceResult, Patient, ReviewRequest } from "@/lib/types";
 import { describeError, useInvestigation, useWorkspace } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
-import { GuideHint } from "./guide-hint";
 import { Help } from "./help";
 import { InvestigationDrawer } from "./investigation-drawer";
 import { MedicationRiver } from "./medication-river";
@@ -22,6 +21,7 @@ import { SourceList } from "./source-list";
 import { LoadingState, NoMatchState, StaleState, UnavailableState } from "./state-notice";
 import { StatusChip } from "./status";
 import { TourProvider, useTour } from "./tour";
+import { TourButton, TourOffer } from "./tour-offer";
 
 export function Workspace({ pid }: { pid: string }) {
   return (
@@ -176,6 +176,7 @@ function WorkspaceView({ pid }: { pid: string }) {
         <div className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Wordmark />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <TourButton onRestart={tour.active ? tour.restart : undefined} />
             <Link href="/how-it-works" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
               How it works
             </Link>
@@ -261,7 +262,7 @@ function WorkspaceView({ pid }: { pid: string }) {
         </AnimatePresence>
       </div>
 
-      {!tour.active && <GuideHint />}
+      <TourOffer tourActive={tour.active} />
 
       {timeline.kind === "loading" && (
         <div className="mx-auto grid max-w-[1680px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-3">

@@ -11,6 +11,7 @@ import { describeError, type Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
 import { FactStates } from "./fact-states";
 import { Wordmark } from "./site-header";
+import { TourButton } from "./tour-offer";
 import { LoadingState, UnavailableState } from "./state-notice";
 import { StateTag, StatusChip } from "./status";
 import { Button } from "./ui/button";
@@ -35,7 +36,10 @@ export function Packet({ pid }: { pid: string }) {
     <div className="packet mx-auto min-h-dvh max-w-4xl px-4 pb-16 sm:px-8 print:max-w-none print:px-0 print:pb-0">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink py-4 print:py-2">
         <Wordmark />
-        <Toolbar pid={pid} />
+        <div className="flex flex-wrap items-center gap-3">
+          <TourButton className="print:hidden" />
+          <Toolbar pid={pid} />
+        </div>
       </header>
 
       {state.kind === "loading" && <LoadingState className="mt-8" label="Assembling the packet" lines={6} />}

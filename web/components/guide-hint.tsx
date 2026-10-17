@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Compass, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { clearTourRun, tourHref } from "@/lib/tour";
+import { startTour, tourHref } from "@/lib/tour";
 
 const KEY = "fd.guide.dismissed";
 
@@ -50,7 +50,7 @@ export function GuideHint() {
               <p className="smallcaps text-amber-ink">How to try this</p>
               <Link
                 href={tourHref(1)}
-                onClick={clearTourRun}
+                onClick={startTour}
                 className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[12px] font-medium text-ivory hover:bg-ink-2"
               >
                 <Compass className="size-3.5" aria-hidden /> Take the 2-minute guided tour

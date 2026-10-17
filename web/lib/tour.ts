@@ -268,3 +268,44 @@ export function clearTourRun() {
     // nothing to clear
   }
 }
+
+// Whether this browser has been offered the tour: "started" or "skipped" once the visitor chooses, so the
+// welcome card and the pulse do not come back. The story-page banner is shown at most once (BANNER_KEY).
+const OFFER_KEY = "fd.tour.offer";
+const BANNER_KEY = "fd.tour.banner";
+
+export type TourChoice = "started" | "skipped";
+
+export function tourChoice(): TourChoice | null {
+  try {
+    const v = localStorage.getItem(OFFER_KEY);
+    return v === "started" || v === "skipped" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberTourChoice(choice: TourChoice) {
+  try {
+    localStorage.setItem(OFFER_KEY, choice);
+  } catch {
+    // storage blocked: the offer comes back next visit
+  }
+}
+
+/** True the first time it is called in this browser, then false. */
+export function takeBannerTurn(): boolean {
+  try {
+    if (localStorage.getItem(BANNER_KEY) === "1") return false;
+    localStorage.setItem(BANNER_KEY, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** What every "start the tour" control does on click: a fresh run, and the choice remembered. */
+export function startTour() {
+  clearTourRun();
+  rememberTourChoice("started");
+}
