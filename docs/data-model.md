@@ -158,7 +158,8 @@ Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always
 | `q10_agent_steps` | the review agent's steps, oldest first (`GET /patients/{id}/agent-steps`) | `$pid` |
 
 Loader and engine writes live in `engine/queries/write/` (MERGE, parameterised), admin reads in
-`engine/queries/admin/`. Neither starts from a patient, so `test_contracts` checks only the top level.
+`engine/queries/admin/` (plus `admin/drop_patient`, which deletes one patient's subgraph for the per-story sandbox
+reset; the shared knowledge stays). Neither starts from a patient, so `test_contracts` checks only the top level.
 
 **Checked on FalkorDB 4.22 (D-1):** comma-separated multi-patterns, pattern predicates in `WHERE`,
 `[:A|B]`, `UNION`, `SET n += $map` (null removes the property), `MERGE … ON CREATE SET`, empty-list

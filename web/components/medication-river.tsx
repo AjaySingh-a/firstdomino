@@ -6,9 +6,10 @@
 //   dashed          a fact the link depends on is unknown
 //   amber hatch     conflicting
 // Lanes are ordered so a finding reads top to bottom: first medicine, symptom, second medicine.
+// On first load the lanes draw in one by one, then the arcs (instant under reduced motion).
 
 import { scaleLinear } from "d3-scale";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LINK_LABEL,
@@ -42,7 +43,13 @@ interface Props {
   /** Findings re-evaluated by the last evidence change. Only their arcs re-draw; token = event_id. */
   changed: { ids: Set<string>; token: string } | null;
   onSelect: (id: string | null) => void;
+  /** The finding the guided tour points at: its arcs carry the tour's spotlight targets. */
+  tourFindingId?: string;
+  /** Arcs fade back while the tour introduces the timeline itself. */
+  quietArcs?: boolean;
 }
+
+const LANE_STAGGER = 0.14; // seconds between lanes on the first draw
 
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -72,8 +79,11 @@ function markerStyle(state: AnswerState) {
   }
 }
 
-export function MedicationRiver({ timeline, findings, selectedId, lit, changed, onSelect }: Props) {
+export function MedicationRiver({ timeline, findings, selectedId, lit, changed, onSelect, tourFindingId, quietArcs }: Props) {
   const [wrapRef, measured] = useWidth<HTMLDivElement>();
+  const reduced = useReducedMotion();
+  // The draw-in plays once per mount; later changes (selection, evidence) animate without delay.
+  const [drawn, setDrawn] = useState(!!reduced);
   const W = Math.max(MIN_W, measured);
   const { episodes, observations, sources, patient, pending_evidence } = timeline;
 
@@ -138,6 +148,14 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, changed, 
   const arcs = findings.flatMap((f) =>
     findingLinks(f, timeline).map((link) => ({ f, link, tone: STATUS[f.status].tone })),
   );
+
+  const laneDelay = (i: number) => (drawn ? 0 : 0.15 + i * LANE_STAGGER);
+  const arcDelay = drawn ? 0 : 0.35 + rows.length * LANE_STAGGER;
+  useEffect(() => {
+    if (drawn) return;
+    const t = setTimeout(() => setDrawn(true), (arcDelay + 1) * 1000);
+    return () => clearTimeout(t);
+  }, [drawn, arcDelay]);
 
   return (
     <div ref={wrapRef} className="w-full">
@@ -210,7 +228,12 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, changed, 
           const y = laneY(i);
           if (r.type === "symptoms") {
             return (
-              <g key="symptoms">
+              <motion.g
+                key="symptoms"
+                initial={drawn ? false : { opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.45, delay: laneDelay(i) }}
+              >
                 <text x={12} y={y + 4} className="fill-[var(--ink-3)] text-[10.5px] font-medium uppercase tracking-[0.12em]">
                   Symptoms
                 </text>
@@ -229,7 +252,7 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, changed, 
                     </motion.g>
                   );
                 })}
-              </g>
+              </motion.g>
             );
           }
           const e = r.e;
@@ -243,14 +266,32 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, changed, 
                 ? "reason not available"
                 : `for ${e.indication}`;
           return (
-            <motion.g key={e.id} animate={{ opacity: fade(lit, e.id) }} transition={{ duration: 0.3 }}>
+            <motion.g
+              key={e.id}
+              initial={drawn ? false : { opacity: 0, x: -10 }}
+              animate={{ opacity: fade(lit, e.id), x: 0 }}
+              transition={{ duration: drawn ? 0.3 : 0.45, delay: laneDelay(i) }}
+            >
               <text x={12} y={y + 1} className="fill-[var(--ink)] font-serif text-[19px]">
                 {e.ingredient.name}
               </text>
               <text x={12} y={y + 16} className="fill-[var(--ink-3)] text-[10.5px]">
                 {e.prescriber_specialty?.replace(/_/g, " ") ?? "prescriber not known"}
               </text>
-              <rect x={start} y={y - 5} width={Math.max(0, end - start)} height={10} rx={5} fill="var(--ink)" fillOpacity={0.07} stroke="var(--ink-2)" strokeWidth={1} strokeDasharray={e.state === "documented" ? undefined : "3 3"} />
+              <motion.rect
+                x={start}
+                y={y - 5}
+                height={10}
+                rx={5}
+                fill="var(--ink)"
+                fillOpacity={0.07}
+                stroke="var(--ink-2)"
+                strokeWidth={1}
+                strokeDasharray={e.state === "documented" ? undefined : "3 3"}
+                initial={drawn ? false : { width: 0 }}
+                animate={{ width: Math.max(0, end - start) }}
+                transition={{ duration: drawn ? 0.3 : 0.6, delay: laneDelay(i) + (drawn ? 0 : 0.1), ease: "easeOut" }}
+              />
               {e.stop_day === null && (
                 <path d={`M${end - 1} ${y - 5} l6 5 l-6 5`} fill="none" stroke="var(--ink-2)" strokeWidth={1} />
               )}
@@ -294,8 +335,13 @@ export function MedicationRiver({ timeline, findings, selectedId, lit, changed, 
         {/* Findings as arcs */}
         {arcs.map(({ f, link, tone }) => {
           const pulse = changed?.ids.has(f.id) ?? false;
+          const tour = f.id === tourFindingId;
           return (
             <Arc
+              tourTarget={tour}
+              tourHotspot={tour && link.key.endsWith(":1")}
+              delay={arcDelay}
+              quiet={!!quietArcs}
               // Remounting re-draws an arc, so only the arcs an evidence change touched get a new key.
               key={pulse ? `${link.key}:${changed?.token}` : link.key}
               pulse={pulse}
@@ -325,7 +371,15 @@ function Arc({
   title,
   pulse,
   onSelect,
+  delay,
+  quiet,
+  tourTarget,
+  tourHotspot,
 }: {
+  delay: number;
+  quiet: boolean;
+  tourTarget: boolean;
+  tourHotspot: boolean;
   link: FindingLink;
   pulse: boolean;
   from?: Pt;
@@ -352,7 +406,7 @@ function Arc({
   const days = link.fromDay !== null && link.toDay !== null ? `${link.toDay - link.fromDay} d` : "? d";
   const stateLabel = LINK_LABEL[link.state];
   const width = selected ? 2.6 : 2;
-  const opacity = dimmed ? 0.15 : 1;
+  const opacity = dimmed || quiet ? 0.15 : 1;
 
   return (
     <motion.g
@@ -372,7 +426,8 @@ function Arc({
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity }}
-      transition={{ duration: 0.35 }}
+      transition={{ duration: 0.35, delay }}
+      data-tour={tourTarget ? "arc" : undefined}
       className="cursor-pointer outline-none [&:focus-visible_.focus-ring]:opacity-100"
     >
       <path d={d} fill="none" stroke="transparent" strokeWidth={18} />
@@ -400,7 +455,7 @@ function Arc({
           markerEnd={`url(#arrow-${tone})`}
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: 0.7, ease: [0.55, 0, 0.85, 0.35] }}
+          transition={{ duration: 0.7, delay, ease: [0.55, 0, 0.85, 0.35] }}
         />
       ) : (
         <path
@@ -413,6 +468,8 @@ function Arc({
           markerEnd={`url(#arrow-${tone})`}
         />
       )}
+      {/* A point on the curve itself, where the tour's hotspot sits. */}
+      {tourHotspot && <circle data-tour="arc-hotspot" cx={lx - 10} cy={ly - 4} r={2} fill="transparent" />}
       <text
         x={lx}
         y={ly}

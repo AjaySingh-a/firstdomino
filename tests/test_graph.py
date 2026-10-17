@@ -722,3 +722,26 @@ def test_store_seeds_on_first_request_after_booting_without_falkordb(db, family)
     assert store._seeded is False  # booted without seeding (as when FalkorDB was unreachable)
     assert [p.id for p in store.patients()] == ["syn-p1"]  # the first request seeds
     assert store._seeded is True
+
+
+def test_reset_one_story_restores_only_its_subgraph(db, family):
+    store = GraphStore(db, FixtureStore(STORIES, {p.id: p for p in PATTERNS}), family.family_id, [1, 3])
+    store.ensure_seeded()
+    g = db.select_graph(family_graph(family.family_id))
+    fresh = counts(g)
+    store.submit_evidence("syn-p3", P3_EVENT)
+    assert store.findings("syn-p3").findings[0].status == "needs_reassessment"
+    store.reset("syn-p3")
+    assert counts(g) == fresh  # nothing of the old syn-p3 is left behind, nothing is doubled
+    assert store.findings("syn-p3").findings[0].status == "reviewed"
+    assert store.timeline("syn-p3").pending_evidence[0].event_id == P3_EVENT.event_id
+
+    store.submit_evidence("syn-p1", evidence("syn-p1", 1, 2, "syn-p1:ep-furosemide", "indication",
+                                             state="not_available"))
+    store.submit_evidence("syn-p3", P3_EVENT)
+    store.reset("syn-p3")
+    assert store.findings("syn-p1").case_version == 3  # the other story keeps its changes
+    assert store.findings("syn-p3").case_version == 4
+    assert store.submit_evidence("syn-p3", P3_EVENT).replayed is False  # its event log went with it
+    with pytest.raises(NotFound):
+        store.reset("syn-p2")  # not configured for this store

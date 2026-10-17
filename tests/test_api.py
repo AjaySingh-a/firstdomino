@@ -181,3 +181,21 @@ def test_agent_steps_routes(client):
     assert client.post("/agent-steps", json={**other, "tool": "create_finding"}).status_code == 422
     assert client.post("/agent-steps", json={**other, "finding_id": "syn-p1:fnd-x"}).status_code == 404
     assert client.get("/patients/nobody/agent-steps").status_code == 404
+
+
+def test_reset_one_story_keeps_the_others(client):
+    client.post("/patients/syn-p3/evidence", json=P3_EVENT)
+    p1 = {"event_id": "syn-p1:evt-na", "case_version": 2, "change": {
+        "fact_id": "syn-p1:ep-furosemide", "field": "indication", "state": "not_available"}}
+    assert client.post("/patients/syn-p1/evidence", json=p1).status_code == 200
+    res = client.post("/sandbox/reset", json={"patient_id": "syn-p3"})
+    assert res.status_code == 200 and res.json()["reset"] is True
+    assert client.get("/patients/syn-p3/findings").json()["case_version"] == 4
+    assert client.get("/patients/syn-p1/findings").json()["case_version"] == 3  # untouched
+    replay = client.post("/patients/syn-p1/evidence", json=p1).json()
+    assert replay["replayed"] is True  # syn-p1's events are kept too
+    again = client.post("/patients/syn-p3/evidence", json=P3_EVENT).json()
+    assert again["replayed"] is False  # syn-p3's events were forgotten with its story
+    assert client.post("/sandbox/reset", json={"patient_id": "nobody"}).status_code == 404
+    client.post("/sandbox/reset", json={})
+    assert client.get("/patients/syn-p1/findings").json()["case_version"] == 2

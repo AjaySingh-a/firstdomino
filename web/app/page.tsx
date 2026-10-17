@@ -1,25 +1,26 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Dominoes } from "@/components/dominoes";
+import { ChainAnimation, HowItWorksStrip } from "@/components/chain";
 import { Wordmark } from "@/components/site-header";
 import { LoadingState, UnavailableState } from "@/components/state-notice";
 import { StatusChip } from "@/components/status";
 import { api } from "@/lib/api";
-import { STATUS, shortHeadline } from "@/lib/present";
+import { STATUS, STORY_TITLES } from "@/lib/present";
+import { clearTourRun, tourHref } from "@/lib/tour";
 import type { Finding, Patient } from "@/lib/types";
 import { describeError, type Loadable } from "@/lib/use-workspace";
 
 type Story = { patient: Patient; findings: Finding[] };
 
-/** What each story is there to show a first-time visitor. Keyed by the synthetic patient. */
+/** One plain sentence per story, for a first-time visitor. Keyed by the synthetic patient. */
 const SHOWS: Record<string, string> = {
-  "syn-p1": "A missing reason, so FirstDomino asks a question.",
-  "syn-p2": "A competing explanation.",
-  "syn-p3": "A reviewed finding, a correction, and an unrelated medicine.",
+  "syn-p1": "Furosemide was started after ankle swelling, but nobody wrote down why. FirstDomino asks.",
+  "syn-p2": "Same medicines, but the hospital recorded another reason for furosemide. Both are shown side by side.",
+  "syn-p3": "A clinician already reviewed it, then a late GP note changed a date. The review needs a fresh look.",
 };
 
 export default function Landing() {
@@ -39,46 +40,73 @@ export default function Landing() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-8">
-      <header className="flex items-center justify-between border-b border-ink py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink py-4">
         <Wordmark />
-        <span className="smallcaps text-ink-3">Synthetic data · Graph Hacks 2026</span>
+        <nav className="flex items-center gap-4 text-[12.5px]">
+          <Link href="/how-it-works" className="text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
+            How it works
+          </Link>
+          <span className="smallcaps hidden text-ink-3 sm:inline">Synthetic data · Graph Hacks 2026</span>
+        </nav>
       </header>
 
       <main className="flex-1">
-        <section className="grid gap-10 py-12 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:items-end">
+        <section className="grid gap-8 py-10 sm:py-16 lg:grid-cols-[1.15fr_1fr] lg:items-center">
           <div>
+            <p className="smallcaps text-amber-ink">Find the first domino</p>
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="font-serif text-[clamp(52px,10vw,112px)] leading-[0.92] tracking-[-0.01em]"
+              className="mt-3 font-serif text-[clamp(32px,5.2vw,56px)] leading-[1.04] tracking-[-0.01em]"
             >
-              Find the first <em className="text-amber-ink">domino.</em>
+              Sometimes a <em className="text-amber-ink">side effect</em> of one medicine is mistaken for a new illness and
+              treated with <em className="text-amber-ink">another medicine</em>.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.25, duration: 0.6 }}
-              className="mt-6 max-w-[52ch] text-[16px] leading-relaxed text-ink-2"
+              className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-ink-2"
             >
-              Sometimes a side effect of one medicine is read as a new condition and treated with another.
-              FirstDomino reconstructs a medication story across visits, finds <em>possible</em> prescribing
-              cascades from a few curated, cited patterns, and asks for the evidence a clinician needs to
-              review them.
+              FirstDomino finds these possible chains and asks for the one missing fact a clinician needs.
             </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="mt-7 flex flex-wrap items-center gap-3"
+            >
+              <Link
+                href={tourHref(1)}
+                onClick={clearTourRun}
+                className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink bg-ink px-5 text-[15px] font-medium text-ivory transition-colors hover:bg-ink-2"
+              >
+                <Compass className="size-4" aria-hidden /> Take the 2-minute guided tour
+              </Link>
+              <a
+                href="#stories"
+                className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink px-5 text-[15px] font-medium text-ink transition-colors hover:bg-paper"
+              >
+                Explore on your own <ArrowRight className="size-4" aria-hidden />
+              </a>
+            </motion.div>
           </div>
-          <Dominoes className="pb-2 lg:pb-6" />
+          <ChainAnimation className="mx-auto w-full max-w-[460px] rounded-[10px] border border-rule-strong bg-paper p-4" />
         </section>
 
-        <section aria-labelledby="stories-h" className="border-t border-ink pb-16 pt-6">
+        <section aria-labelledby="how-h" className="border-t border-ink py-8">
+          <h2 id="how-h" className="font-serif text-[30px]">How a chain happens</h2>
+          <div className="mt-4">
+            <HowItWorksStrip />
+          </div>
+        </section>
+
+        <section id="stories" aria-labelledby="stories-h" className="scroll-mt-6 border-t border-ink pb-16 pt-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="stories-h" className="font-serif text-[30px]">Three synthetic stories</h2>
             <p className="text-[13px] text-ink-3">For a pharmacist&rsquo;s medication review. The clinician decides.</p>
           </div>
-          <p className="mt-2 max-w-[70ch] text-[13.5px] leading-relaxed text-ink-2">
-            <span className="smallcaps mr-1.5 text-amber-ink">How to try this</span>
-            Pick a story. Each one shows something different; inside, a short guide walks you through it.
-          </p>
 
           {stories.kind === "loading" && <LoadingState className="mt-6 max-w-md" lines={3} />}
           {stories.kind === "unavailable" && <UnavailableState className="mt-6 max-w-xl" message={stories.message} onRetry={load} />}
@@ -95,21 +123,11 @@ export default function Landing() {
                     className="bg-ivory"
                   >
                     <Link href={`/patients/${patient.id}`} className="group flex h-full flex-col p-5 transition-colors hover:bg-paper">
-                      <p className="font-mono text-[11px] text-ink-3">
-                        No. {i + 1} · {patient.id} · age {patient.age_band}
-                      </p>
-                      <p className="mt-2 font-serif text-[26px] leading-tight">{patient.label}</p>
-                      {SHOWS[patient.id] && (
-                        <p className="mt-2 rounded-[4px] border-l-[3px] border-amber bg-amber-wash/40 px-2.5 py-1.5 text-[13px] leading-snug text-ink">
-                          <span className="smallcaps mr-1 text-[10px] text-amber-ink">Story {i + 1} shows</span>
-                          {SHOWS[patient.id]}
-                        </p>
-                      )}
+                      <p className="smallcaps text-ink-3">Story {i + 1}</p>
+                      <p className="mt-1 font-serif text-[26px] leading-tight">{STORY_TITLES[patient.id] ?? patient.label}</p>
+                      {SHOWS[patient.id] && <p className="mt-2 text-[14px] leading-snug text-ink">{SHOWS[patient.id]}</p>}
                       {f ? (
                         <>
-                          <p className="mt-2 text-[13.5px] leading-snug text-ink-2">
-                            {shortHeadline(f.headline)}
-                          </p>
                           <div className="mt-4">
                             <StatusChip status={f.status} />
                           </div>
@@ -133,9 +151,14 @@ export default function Landing() {
 
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-rule py-5 text-[12px] text-ink-3">
         <p>All patients are synthetic. Findings are possible patterns for a clinician to review, never conclusions.</p>
-        <Link href="/states" className="underline decoration-rule-strong underline-offset-2 hover:text-ink">
-          Interface states
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/how-it-works" className="underline decoration-rule-strong underline-offset-2 hover:text-ink">
+            How it works
+          </Link>
+          <Link href="/states" className="underline decoration-rule-strong underline-offset-2 hover:text-ink">
+            Interface states
+          </Link>
+        </div>
       </footer>
     </div>
   );

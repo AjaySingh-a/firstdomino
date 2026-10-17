@@ -97,9 +97,16 @@ class FixtureStore:
         self.patterns = patterns
         self.reset()
 
-    def reset(self) -> None:
-        self.cases = {pid: s.model_copy(deep=True) for pid, s in self._pristine.items()}
-        self.events: dict[str, EvidenceResult] = {}
+    def reset(self, pid: str | None = None) -> None:
+        """Restore every story, or only `pid`'s (its events are forgotten; other stories are kept)."""
+        if pid is None:
+            self.cases = {p: s.model_copy(deep=True) for p, s in self._pristine.items()}
+            self.events: dict[str, EvidenceResult] = {}
+            return
+        if pid not in self._pristine:
+            raise NotFound(f"patient {pid}")
+        self.cases[pid] = self._pristine[pid].model_copy(deep=True)
+        self.events = {k: v for k, v in self.events.items() if patient_of(k) != pid}
 
     # ---------- reads ----------
 

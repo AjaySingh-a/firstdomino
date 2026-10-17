@@ -5,9 +5,11 @@
 // every synthetic story to its fixture.
 
 import { FlaskConical, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DATA_SOURCE } from "@/lib/api";
 import { stripSynthetic } from "@/lib/present";
+import { useTech } from "@/lib/tech";
+import type { SandboxPreset } from "@/lib/tour";
 import type { EvidenceRequest, TimelineResponse } from "@/lib/types";
 import { DayInput, field, pill, useEventId, type SubmitEvidence } from "./next-question";
 import { Button } from "./ui/button";
@@ -19,11 +21,15 @@ export function SandboxPanel({
   timeline,
   onSubmit,
   onReset,
+  preset,
 }: {
   timeline: TimelineResponse;
   onSubmit: SubmitEvidence;
   onReset: () => Promise<void>;
+  /** A change the guided tour fills in for the visitor to apply. */
+  preset?: SandboxPreset;
 }) {
+  const tech = useTech();
   const { patient, observations, episodes, sources } = timeline;
   const [kind, setKind] = useState<Kind>(observations.length ? "onset" : "indication");
   const [factId, setFactId] = useState("");
@@ -34,6 +40,13 @@ export function SandboxPanel({
   const [busy, setBusy] = useState<"edit" | "reset" | null>(null);
   const eventId = useEventId(patient.id);
   const live = DATA_SOURCE === "live";
+
+  useEffect(() => {
+    if (!preset) return;
+    setKind(preset.kind);
+    setFactId(preset.factId);
+    setDayValue(preset.day);
+  }, [preset]);
 
   // Every medicine is listed, including ones no pattern involves: editing those re-evaluates nothing.
   const options =
@@ -81,6 +94,7 @@ export function SandboxPanel({
   return (
     <section
       aria-labelledby="sandbox-h"
+      data-tour="sandbox"
       className="mt-6 rounded-[8px] border-2 border-dashed border-amber bg-amber-wash/30 p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -193,8 +207,8 @@ export function SandboxPanel({
         </label>
 
         <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-          <Button type="submit" size="sm" disabled={busy !== null || !live || !chosen || value === null}>
-            {busy === "edit" ? "Applying…" : `Apply to synthetic case v${patient.case_version}`}
+          <Button type="submit" size="sm" data-tour="sandbox-apply" disabled={busy !== null || !live || !chosen || value === null}>
+            {busy === "edit" ? "Applying…" : tech ? `Apply to synthetic case v${patient.case_version}` : "Apply this change"}
           </Button>
           {!live && <span className="text-[11.5px] text-ink-3">The sandbox needs the live API (NEXT_PUBLIC_DATA_SOURCE=live).</span>}
         </div>

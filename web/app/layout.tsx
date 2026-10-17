@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const serif = Instrument_Serif({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mo
 export const metadata: Metadata = {
   title: "FirstDomino",
   description:
-    "Possible prescribing cascades from a synthetic medication story, with the evidence a clinician needs to review them.",
+    "Sometimes a side effect of one medicine is mistaken for a new illness and treated with another medicine. FirstDomino finds these possible chains and asks for the one missing fact a clinician needs.",
 };
 
 export const viewport: Viewport = {
@@ -26,7 +27,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
-      <body className="min-h-dvh bg-ivory text-ink antialiased">{children}</body>
+      <body className="min-h-dvh bg-ivory text-ink antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

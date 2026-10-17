@@ -127,3 +127,27 @@ body {
     break-after: avoid;
   }
 }
+
+/* Guided tour hotspot: a ring that grows and fades around the thing to click. Under reduced motion
+   the ring holds still (the dot inside it always shows). */
+@keyframes fd-hotspot {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.fd-hotspot {
+  animation: fd-hotspot 1.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-hotspot {
+    animation: none;
+    opacity: 0.9;
+  }
+}

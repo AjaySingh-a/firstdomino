@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { DECISION_LABEL, STATUS, day, sourceById, stripSynthetic } from "@/lib/present";
+import { Tech } from "@/lib/tech";
 import type { AgentStep, FactRef, PacketItem, PacketResponse, TimelineResponse } from "@/lib/types";
 import { describeError, type Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
@@ -89,10 +90,10 @@ function Body({ packet, timeline, steps }: Data) {
         <p className="smallcaps text-ink-3">Medication review packet · synthetic patient</p>
         <h1 className="mt-1 font-serif text-[40px] leading-none sm:text-[52px] print:text-[34px]">{p.label}</h1>
         <dl className="tabular mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[11.5px] text-ink-2">
-          <div className="flex gap-1.5"><dt className="text-ink-3">patient</dt><dd>{p.id}</dd></div>
+          <Tech><div className="flex gap-1.5"><dt className="text-ink-3">patient</dt><dd>{p.id}</dd></div></Tech>
           <div className="flex gap-1.5"><dt className="text-ink-3">age</dt><dd>{p.age_band}</dd></div>
           <div className="flex gap-1.5"><dt className="text-ink-3">as of</dt><dd>day {p.as_of_day}</dd></div>
-          <div className="flex gap-1.5"><dt className="text-ink-3">case</dt><dd>v{packet.case_version}</dd></div>
+          <Tech><div className="flex gap-1.5"><dt className="text-ink-3">case</dt><dd>v{packet.case_version}</dd></div></Tech>
         </dl>
         <p className="mt-4 rounded-[4px] border border-l-[3px] border-rule-strong border-l-ink bg-paper px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
           {packet.disclaimer}
@@ -263,14 +264,17 @@ function FindingSection({ n, item, timeline, steps }: { n: number; item: PacketI
     <Section n={n} title={f.headline}>
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip status={f.status} />
-        <span className="font-mono text-[11px] text-ink-3">
-          rev {f.revision_n} · pattern v{f.pattern_version}
-        </span>
+        <span className="text-[11.5px] text-ink-3">version {f.revision_n}</span>
+        <Tech>
+          <span className="font-mono text-[11px] text-ink-3">
+            {f.status} · rev {f.revision_n} · pattern v{f.pattern_version}
+          </span>
+        </Tech>
       </div>
       <p className="mt-1.5 text-[13px] text-ink-2">{STATUS[f.status].blurb}</p>
 
       <div className="mt-4 grid gap-5 md:grid-cols-2 print:grid-cols-2">
-        <div className="break-inside-avoid">
+        <div className="min-w-0 break-inside-avoid">
           <h3 className="smallcaps mb-2 text-ink-3">Cited observations</h3>
           {observations.length ? (
             <ul className="space-y-2">
@@ -290,7 +294,7 @@ function FindingSection({ n, item, timeline, steps }: { n: number; item: PacketI
             <Empty>No observation cited.</Empty>
           )}
         </div>
-        <div className="break-inside-avoid">
+        <div className="min-w-0 break-inside-avoid">
           <h3 className="smallcaps mb-2 text-ink-3">Facts the pattern depends on</h3>
           <Refs refs={[...item.documented, ...item.conflicts, ...item.unknowns]} srcLabel={srcLabel} />
         </div>

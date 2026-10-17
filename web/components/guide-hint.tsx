@@ -1,18 +1,20 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Compass, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { clearTourRun, tourHref } from "@/lib/tour";
 
 const KEY = "fd.guide.dismissed";
 
 const STEPS = [
-  "Click the amber arc to open the investigation.",
-  "Answer the next question.",
-  "Edit a fact in the sandbox and watch only the affected finding change.",
+  "Click the amber arc to see what is on record and what is missing.",
+  "Answer the one missing fact.",
+  "Edit a fact in the sandbox and watch only the findings that depend on it change.",
 ];
 
-/** A first-visit hint for the workspace. Dismissal is remembered in this browser only. */
+/** A first-visit hint for the workspace, with the way into the guided tour. Dismissal is remembered in this browser only. */
 export function GuideHint() {
   const [open, setOpen] = useState(false);
 
@@ -44,7 +46,16 @@ export function GuideHint() {
           className="mx-auto max-w-[1680px] overflow-hidden px-4 pt-4 sm:px-6"
         >
           <div className="relative rounded-[6px] border border-l-[3px] border-amber bg-amber-wash/40 py-3 pl-4 pr-10">
-            <p className="smallcaps text-amber-ink">How to try this</p>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <p className="smallcaps text-amber-ink">How to try this</p>
+              <Link
+                href={tourHref(1)}
+                onClick={clearTourRun}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink bg-ink px-3 py-1 text-[12px] font-medium text-ivory hover:bg-ink-2"
+              >
+                <Compass className="size-3.5" aria-hidden /> Take the 2-minute guided tour
+              </Link>
+            </div>
             <ol className="mt-1.5 grid gap-x-6 gap-y-1.5 text-[13px] text-ink md:grid-cols-3">
               {STEPS.map((s, i) => (
                 <li key={s} className="flex gap-2">

@@ -73,7 +73,8 @@ export interface FirstDominoApi {
   /** Read-only: which findings depend on a fact. */
   affected(pid: string, factId: string): Promise<AffectedResponse>;
   packet(pid: string): Promise<PacketResponse>;
-  reset(): Promise<ResetResponse>;
+  /** Restore one synthetic story (`pid`), or every story. */
+  reset(pid?: string): Promise<ResetResponse>;
 }
 
 // ---------- live ----------
@@ -107,7 +108,7 @@ const liveApi: FirstDominoApi = {
   runReviewAgent: (fid, body) => call(`/findings/${enc(fid)}/review-agent`, post(body)),
   affected: (pid, factId) => call(`/patients/${enc(pid)}/facts/${enc(factId)}/affected`),
   packet: (pid) => call(`/patients/${enc(pid)}/packet`),
-  reset: () => call("/sandbox/reset", post({})),
+  reset: (pid) => call("/sandbox/reset", post(pid ? { patient_id: pid } : {})),
 };
 
 // ---------- fixtures ----------
@@ -125,19 +126,24 @@ const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 let session: Record<string, CaseView> = {};
 let applied: Record<string, EvidenceResult> = {};
 
-function resetSession() {
-  session = Object.fromEntries(
-    Object.entries(snapshot.cases).map(([pid, c]) => [
-      pid,
-      clone({
-        timeline: c.timeline,
-        findings: c.findings,
-        investigations: c.investigations,
-        packet: c.packet,
-        agent_steps: c.agent_steps,
-      }),
-    ]),
-  );
+const pristine = (c: SnapshotFile["cases"][string]): CaseView =>
+  clone({
+    timeline: c.timeline,
+    findings: c.findings,
+    investigations: c.investigations,
+    packet: c.packet,
+    agent_steps: c.agent_steps,
+  });
+
+function resetSession(pid?: string) {
+  if (pid) {
+    const c = snapshot.cases[pid];
+    if (!c) throw new ApiError(404, { error: "not_found", detail: `patient ${pid}` });
+    session[pid] = pristine(c);
+    applied = Object.fromEntries(Object.entries(applied).filter(([id]) => patientOf(id) !== pid));
+    return;
+  }
+  session = Object.fromEntries(Object.entries(snapshot.cases).map(([p, c]) => [p, pristine(c)]));
   applied = {};
 }
 resetSession();
@@ -325,8 +331,8 @@ const fixtureApi: FirstDominoApi = {
     return { patient_id: pid, case_version: c.timeline.patient.case_version, fact_id: factId, findings: clone(findings) };
   },
   packet: async (pid) => clone(caseOf(pid).packet),
-  reset: async () => {
-    resetSession();
+  reset: async (pid) => {
+    resetSession(pid);
     return { reset: true, patients: Object.values(session).map((c) => clone(c.timeline.patient)) };
   },
 };

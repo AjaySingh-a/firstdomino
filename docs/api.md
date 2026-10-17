@@ -469,7 +469,16 @@ The review packet for the clinician (the web app prints it at `/packet/{id}`): o
 
 ## POST /sandbox/reset
 
-Restores every patient to the fixtures and clears the event log.
+Restores every patient to the fixtures and clears the event log. With a body
+`{ "patient_id": "syn-p1" }`, restores only that synthetic story (graph mode deletes that patient's
+subgraph with `admin/drop_patient` and seeds the story again); the other stories and their events are
+kept. An unknown `patient_id` gets 404. The guided tour uses this before it starts.
+
+```json
+{ "patient_id": "syn-p1" }
+```
+
+Response:
 
 ```json
 { "reset": true, "patients": [{ "id": "syn-p1", "case_version": 2, "…": "…" }, "…"] }

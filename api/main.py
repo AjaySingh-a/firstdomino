@@ -35,6 +35,7 @@ from api.models import (
     Patient,
     QuestionRequest,
     QuestionResult,
+    ResetRequest,
     ResetResponse,
     ReviewAgentRequest,
     ReviewAgentResult,
@@ -213,6 +214,7 @@ def packet(pid: str) -> PacketResponse:
 
 
 @app.post("/sandbox/reset")
-def reset() -> ResetResponse:
-    store.reset()
+def reset(req: ResetRequest | None = None) -> ResetResponse:
+    """Restore one synthetic story (`patient_id`), or every story when none is named."""
+    store.reset(req.patient_id if req else None)
     return ResetResponse(reset=True, patients=store.patients())

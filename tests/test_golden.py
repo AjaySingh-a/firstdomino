@@ -206,7 +206,7 @@ def test_story3_unrelated_medicine_is_in_the_timeline_and_no_finding(graph):
 
 def test_the_change_card_says_nothing_was_re_evaluated():
     card = (REPO / "web" / "components" / "change-card.tsx").read_text(encoding="utf-8")
-    assert '"No finding depends on this fact; nothing was re-evaluated."' in card
+    assert '"Nothing depends on this fact, so nothing changed: no finding was re-checked."' in card
 
 
 def test_story3_fixture_mode_unrelated_change_affects_nothing():

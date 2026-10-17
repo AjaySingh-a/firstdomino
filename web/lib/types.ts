@@ -385,6 +385,11 @@ export interface HealthResponse {
   appendonly?: "yes" | "no" | "unknown" | null;
 }
 
+/** POST /sandbox/reset. patient_id restores that one synthetic story; without it, every story. */
+export interface ResetRequest {
+  patient_id?: string | null;
+}
+
 export interface ResetResponse {
   reset: true;
   patients: Patient[];

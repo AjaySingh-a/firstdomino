@@ -506,11 +506,22 @@ class GraphStore:
             raise Conflict("stale_case_version", pid, req.case_version, self._patient(pid).case_version)
         return AgentStepResult(case_version=patient.case_version, step=step, replayed=False)
 
-    def reset(self) -> None:
-        """Drop and re-seed kb_template and the configured family graph from the fixtures."""
-        self.fixtures.reset()
-        seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()), reset=True)
-        self._seeded = True
+    def reset(self, pid: str | None = None) -> None:
+        """Drop and re-seed kb_template and the configured family graph from the fixtures. With `pid`,
+        delete only that patient's subgraph (admin/drop_patient) and seed its story again; the other
+        patients and the shared knowledge are left as they are."""
+        if pid is None:
+            self.fixtures.reset()
+            seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()), reset=True)
+            self._seeded = True
+            self._refresh()
+            return
+        story = next((s for s in self._stories() if s.patient.id == pid), None)
+        if story is None:
+            raise NotFound(f"patient {pid}")
+        run(self._graph(pid), "admin/drop_patient", pid=pid)
+        self.fixtures.reset(pid)
+        seed(self.db, self.family_id, [story], list(self.fixtures.patterns.values()))
         self._refresh()
 
 
