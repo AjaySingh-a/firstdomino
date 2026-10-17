@@ -1,0 +1,159 @@
+{
+  "synthetic": true,
+  "case_id": "case11",
+  "title": "SYNTHETIC - Asked why furosemide was started, the caregiver says the answer is not available",
+  "covers": "not_available answer (never read as 'no')",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > Time, state and versions: not_available",
+    "docs/data-model.md > When evidence changes, steps 2 and 4"
+  ],
+  "reasoning": "Starts as case03 (needs_evidence, indication missing). The answer not_available 'is never treated as no: the value stays empty, and the requirement is marked not_available rather than provided ... it stays that way while the gap is open: never read as no, never asked again.' The gap is still open, so the status stays needs_evidence (not competing_explanation, not not_matched). The finding needs the changed fact, so it is affected and gets revision 2. No next question.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c11",
+        "label": "Synthetic case 11",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c11:src-cardio-d0",
+          "patient_id": "syn-c11",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c11:src-gp-d14",
+          "patient_id": "syn-c11",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c11:src-pharm-d30",
+          "patient_id": "syn-c11",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c11:src-cg-d45",
+          "patient_id": "syn-c11",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c11:ep-amlodipine",
+          "patient_id": "syn-c11",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c11:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c11:ep-furosemide",
+          "patient_id": "syn-c11",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c11:src-pharm-d30"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": null,
+          "indication_state": "unknown",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c11:obs-ankle-swelling",
+          "patient_id": "syn-c11",
+          "happened_at": 14,
+          "recorded_at": 14,
+          "state": "documented",
+          "source_ids": [
+            "syn-c11:src-gp-d14"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "do": "change",
+      "patient_id": "syn-c11",
+      "event_id": "syn-c11:evt-indication-not-available",
+      "change": {
+        "fact_id": "syn-c11:ep-furosemide",
+        "field": "indication",
+        "value": null,
+        "state": "not_available",
+        "source_id": "syn-c11:src-cg-d45"
+      }
+    }
+  ],
+  "expected": {
+    "syn-c11": {
+      "case_version": 2,
+      "findings": [
+        {
+          "id": "syn-c11:fnd-ccb-edema-loop-1",
+          "status": "needs_evidence",
+          "revision_n": 2,
+          "revision_statuses": [
+            "needs_evidence",
+            "needs_evidence"
+          ],
+          "requirements": [
+            {
+              "kind": "indication",
+              "about": "syn-c11:ep-furosemide",
+              "state": "not_available"
+            }
+          ],
+          "next_question": null
+        }
+      ]
+    },
+    "affected_finding_ids": [
+      "syn-c11:fnd-ccb-edema-loop-1"
+    ]
+  }
+}

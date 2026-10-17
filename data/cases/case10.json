@@ -1,0 +1,169 @@
+{
+  "synthetic": true,
+  "case_id": "case10",
+  "title": "SYNTHETIC - Atorvastatin's start day is corrected; it is in no curated pattern",
+  "covers": "unrelated medicine change (no revision)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > When evidence changes, step 1",
+    "data/stories/story-3 notes: editing atorvastatin creates no revision"
+  ],
+  "reasoning": "Q3 finds the findings that cite, link or need the changed fact; 'a change to any other fact reopens nothing.' Atorvastatin is in no pattern, so no finding is affected and no revision is written. The write itself is accepted, so case_version 1 -> 2.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c10",
+        "label": "Synthetic case 10",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c10:src-cardio-d0",
+          "patient_id": "syn-c10",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c10:src-gp-d14",
+          "patient_id": "syn-c10",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c10:src-pharm-d30",
+          "patient_id": "syn-c10",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c10:src-cg-d45",
+          "patient_id": "syn-c10",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c10:ep-amlodipine",
+          "patient_id": "syn-c10",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c10:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c10:ep-furosemide",
+          "patient_id": "syn-c10",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c10:src-pharm-d30"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "ankle swelling",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        },
+        {
+          "id": "syn-c10:ep-atorvastatin",
+          "patient_id": "syn-c10",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c10:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "atorvastatin",
+            "rxcui": "83367",
+            "drug_class": "C10AA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "high cholesterol",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c10:obs-ankle-swelling",
+          "patient_id": "syn-c10",
+          "happened_at": 14,
+          "recorded_at": 14,
+          "state": "documented",
+          "source_ids": [
+            "syn-c10:src-gp-d14"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "do": "change",
+      "patient_id": "syn-c10",
+      "event_id": "syn-c10:evt-atorvastatin-start",
+      "change": {
+        "fact_id": "syn-c10:ep-atorvastatin",
+        "field": "happened_at",
+        "value": 2,
+        "state": "documented",
+        "source_id": "syn-c10:src-cardio-d0"
+      }
+    }
+  ],
+  "expected": {
+    "syn-c10": {
+      "case_version": 2,
+      "findings": [
+        {
+          "id": "syn-c10:fnd-ccb-edema-loop-1",
+          "status": "candidate",
+          "revision_n": 1,
+          "revision_statuses": [
+            "candidate"
+          ],
+          "requirements": []
+        }
+      ]
+    },
+    "affected_finding_ids": []
+  }
+}

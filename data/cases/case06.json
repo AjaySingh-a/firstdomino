@@ -1,0 +1,134 @@
+{
+  "synthetic": true,
+  "case_id": "case06",
+  "title": "SYNTHETIC - Furosemide (day 10, documented) started before the swelling (day 20, documented)",
+  "covers": "reversed documented chronology (not_matched)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > Finding statuses: first rule, two documented facts in reverse order -> not_matched"
+  ],
+  "reasoning": "'Two documented facts in the reverse of index start -> onset -> marker start -> not_matched.' The marker start (day 10) is before the onset (day 20), both documented. This rule is first in precedence.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c06",
+        "label": "Synthetic case 06",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c06:src-cardio-d0",
+          "patient_id": "syn-c06",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c06:src-gp-d20",
+          "patient_id": "syn-c06",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 20,
+          "recorded_at": 20
+        },
+        {
+          "id": "syn-c06:src-pharm-d10",
+          "patient_id": "syn-c06",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 10,
+          "recorded_at": 10
+        },
+        {
+          "id": "syn-c06:src-cg-d45",
+          "patient_id": "syn-c06",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c06:ep-amlodipine",
+          "patient_id": "syn-c06",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c06:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c06:ep-furosemide",
+          "patient_id": "syn-c06",
+          "happened_at": 10,
+          "recorded_at": 10,
+          "state": "documented",
+          "source_ids": [
+            "syn-c06:src-pharm-d10"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "ankle swelling",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c06:obs-ankle-swelling",
+          "patient_id": "syn-c06",
+          "happened_at": 20,
+          "recorded_at": 20,
+          "state": "documented",
+          "source_ids": [
+            "syn-c06:src-gp-d20"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [],
+  "expected": {
+    "syn-c06": {
+      "case_version": 1,
+      "findings": [
+        {
+          "id": "syn-c06:fnd-ccb-edema-loop-1",
+          "status": "not_matched",
+          "revision_n": 1,
+          "revision_statuses": [
+            "not_matched"
+          ],
+          "requirements": []
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-.PHONY: up down seed reseed test test-stack test-restart lint snapshots dev-api dev-web
+.PHONY: up down seed reseed test test-stack test-restart lint snapshots bench dev-api dev-web
 
 up:
 	docker compose up -d --build
@@ -28,6 +28,10 @@ test-stack:
 test-restart:
 	docker compose up -d --build --wait api
 	FD_API_URL=http://localhost:8000 FD_STACK_RESTART=1 uv run pytest -q tests/test_stack.py
+
+# P2 proof suite: data/cases/*.json against the graph-mode engine on local FalkorDB -> bench/results.md
+bench:
+	uv run python -m bench.run
 
 lint:
 	uv run ruff check .

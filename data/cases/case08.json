@@ -1,0 +1,138 @@
+{
+  "synthetic": true,
+  "case_id": "case08",
+  "title": "SYNTHETIC - The GP note and the caregiver disagree on when the swelling began",
+  "covers": "conflicting dates (stays candidate, conflict listed)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > Finding statuses: 'Conflicting facts -> stays candidate'"
+  ],
+  "reasoning": "'Conflicting facts -> stays candidate, with the conflict listed in the revision reason and conflicts.' The onset is conflicting, not unknown, so no requirement; the investigation lists it under conflicts.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c08",
+        "label": "Synthetic case 08",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c08:src-cardio-d0",
+          "patient_id": "syn-c08",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c08:src-gp-d14",
+          "patient_id": "syn-c08",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c08:src-pharm-d30",
+          "patient_id": "syn-c08",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c08:src-cg-d45",
+          "patient_id": "syn-c08",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c08:ep-amlodipine",
+          "patient_id": "syn-c08",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c08:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c08:ep-furosemide",
+          "patient_id": "syn-c08",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c08:src-pharm-d30"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "ankle swelling",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c08:obs-ankle-swelling",
+          "patient_id": "syn-c08",
+          "happened_at": 14,
+          "recorded_at": 14,
+          "state": "conflicting",
+          "source_ids": [
+            "syn-c08:src-gp-d14",
+            "syn-c08:src-cg-d45"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [],
+  "expected": {
+    "syn-c08": {
+      "case_version": 1,
+      "findings": [
+        {
+          "id": "syn-c08:fnd-ccb-edema-loop-1",
+          "status": "candidate",
+          "revision_n": 1,
+          "revision_statuses": [
+            "candidate"
+          ],
+          "requirements": [],
+          "conflicts": [
+            "syn-c08:obs-ankle-swelling"
+          ]
+        }
+      ]
+    }
+  }
+}
