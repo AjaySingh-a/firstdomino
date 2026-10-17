@@ -117,6 +117,53 @@ on the `falkordb_data` volume). `uv run uvicorn …` without `FD_STORE` serves t
 > has `NODE_ENV=development` set. Build with `NODE_ENV=production npm run build`
 > (PowerShell: `$env:NODE_ENV="production"; npm run build`).
 
+## Use FirstDomino from Claude Desktop
+
+`mcp_server/` is an MCP server (Python MCP SDK, FastMCP, stdio). An AI client such as Claude Desktop can
+use FirstDomino's tools through it. Every tool calls the FirstDomino HTTP API, never the graph directly.
+By default that is the live API (`https://api-production-b29f.up.railway.app`), so no local backend is
+needed. Set `FD_API_URL` to use another one, for example `http://localhost:8000`.
+
+| Tool | What it returns |
+|---|---|
+| `list_stories` | The synthetic stories, their findings and statuses |
+| `get_evidence_pack(finding_id)` | What is on record, what conflicts, what is not known yet, the cited pattern, the sources |
+| `next_missing_fact(patient_id)` | The next question to ask, who to ask, and the fact it fills |
+| `inspect_episode(episode_id)` | One medication episode and the findings that use it |
+| `which_findings_depend_on(patient_id, fact_id)` | The findings evaluated again if that fact changes (read-only) |
+| `prepare_packet(patient_id)` | The clinician's review packet as text |
+
+Each result is plain text that ends with the evidence IDs it rests on. These tools are read-only. Two
+write tools, `ask_question` and `run_review_agent`, are added only when `FD_MCP_ALLOW_WRITES=1`, and
+they act on the synthetic stories only.
+
+You need [uv](https://docs.astral.sh/uv/) and a clone of this repo. Then add this entry to
+`%APPDATA%\Claude\claude_desktop_config.json` on Windows, with your repo path, and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "firstdomino": {
+      "command": "uv",
+      "args": ["run", "--directory", "C:\\Users\\you\\firstdomino", "python", "-m", "mcp_server"]
+    }
+  }
+}
+```
+
+On macOS the file is `~/Library/Application Support/Claude/claude_desktop_config.json`, and the path
+looks like `/Users/you/firstdomino`. If Claude Desktop cannot find `uv`, put its full path in
+`command` (`where uv` on Windows, `which uv` on macOS). To allow the write tools, add
+`"env": { "FD_MCP_ALLOW_WRITES": "1" }` next to `args`.
+
+Demo prompt:
+
+> Using FirstDomino, review story 1 and tell me the next question a pharmacist should ask, and which
+> findings depend on that fact.
+
+Tests: `uv run pytest tests/test_mcp.py` runs over a fake HTTP layer. `FD_MCP_LIVE=1 uv run pytest
+tests/test_mcp_live.py` calls every read tool against the live API.
+
 ## Repository layout
 
 ```
@@ -127,7 +174,7 @@ agent/      the bounded review agent and its tool allowlist
 web/        Next.js 15, TypeScript, Tailwind, shadcn/ui, framer-motion
 data/       patterns/ (cited), stories/ (synthetic fixtures), snapshots/, cases/
 docs/       data-model.md, api.md
-mcp/        reserved for an MCP server over the same graph
+mcp_server/ MCP server (stdio): read-only tools over the HTTP API, for Claude Desktop
 tests/      API behaviour and contract guards
 ```
 
@@ -167,7 +214,7 @@ Live: web app https://firstdomino-web.vercel.app (Vercel), API https://api-produ
 | Graph loader and finding rules | Done |
 | Review agent: six allowlisted tools, `POST /findings/{id}/review-agent`, LLM checks with template fallback | Done |
 | Printable packet (`/packet/{id}`), first-visit guide | Done |
-| MCP server | Planned |
+| MCP server (`mcp_server/`): six read-only tools over the API, writes behind `FD_MCP_ALLOW_WRITES=1` | Done |
 
 ## Guardrails
 

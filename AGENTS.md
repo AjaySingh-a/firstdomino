@@ -24,7 +24,7 @@ needs to review them. Findings are possible patterns, never causes.
 | Area | Owner |
 |---|---|
 | `engine/` (queries, rules, loaders), `api/` | Dev |
-| `web/`, `agent/` | Ajay |
+| `web/`, `agent/`, `mcp_server/` | Ajay |
 | `data/`, `docs/`, contract types | shared: change them in one PR with both sides updated |
 
 ## Layout
@@ -36,7 +36,7 @@ agent/      one bounded review agent; tools.py holds the allowlist
 web/        Next.js 15 + TypeScript + Tailwind + shadcn/ui + framer-motion. lib/api.ts is the ONE adapter
 data/       patterns/, stories/ (synthetic fixtures), cases/, snapshots/
 docs/       data-model.md, api.md
-mcp/        reserved for the MCP server
+mcp_server/ MCP server (FastMCP, stdio): tools over the HTTP API, never Cypher. Not `mcp/`: that shadows the SDK
 tests/      pytest: API behaviour + contract guards
 ```
 

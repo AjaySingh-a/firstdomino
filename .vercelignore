@@ -10,4 +10,4 @@
 .env.*
 **/.env*.local
 tests/
-mcp/
+mcp_server/
