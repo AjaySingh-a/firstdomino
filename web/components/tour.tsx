@@ -42,6 +42,8 @@ interface TourApi {
   /** Goes up after each reset, so the workspace reloads. */
   resetToken: number;
   emit: (event: TourEvent, payload?: unknown) => void;
+  /** Back to step 1 with a fresh run. */
+  restart: () => void;
 }
 
 const INACTIVE: TourApi = {
@@ -54,6 +56,7 @@ const INACTIVE: TourApi = {
   ready: true,
   resetToken: 0,
   emit: () => {},
+  restart: () => {},
 };
 
 const TourContext = createContext<TourApi>(INACTIVE);
@@ -144,9 +147,9 @@ export function TourProvider({ pid, children }: { pid: string; children: React.R
   const value = useMemo<TourApi>(
     () =>
       active
-        ? { active, n, step, done, beat, memory, ready, resetToken, emit }
+        ? { active, n, step, done, beat, memory, ready, resetToken, emit, restart }
         : { ...INACTIVE, resetToken },
-    [active, n, step, done, beat, memory, ready, resetToken, emit],
+    [active, n, step, done, beat, memory, ready, resetToken, emit, restart],
   );
 
   return (

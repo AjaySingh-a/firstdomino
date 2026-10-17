@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, MessageCircleQuestion, Network } from "lucide-react";
 import { Wordmark } from "@/components/site-header";
+import { TourButton } from "@/components/tour-offer";
 
 export const metadata: Metadata = {
   title: "How it works · FirstDomino",
@@ -124,9 +125,12 @@ export default function HowItWorks() {
     <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-8">
       <header className="flex items-center justify-between border-b border-ink py-4">
         <Wordmark />
-        <Link href="/" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
-          Home
-        </Link>
+        <nav className="flex items-center gap-4">
+          <TourButton />
+          <Link href="/" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
+            Home
+          </Link>
+        </nav>
       </header>
 
       <h1 className="mt-10 font-serif text-[clamp(36px,6vw,56px)] leading-[1.02]">How it works</h1>

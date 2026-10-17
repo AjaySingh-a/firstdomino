@@ -6,12 +6,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChainAnimation, HowItWorksStrip } from "@/components/chain";
 import { Wordmark } from "@/components/site-header";
+import { TourButton, useTourOffer, WelcomeCard } from "@/components/tour-offer";
 import { LoadingState, UnavailableState } from "@/components/state-notice";
 import { StatusChip } from "@/components/status";
 import { api } from "@/lib/api";
 import { STATUS, STORY_TITLES } from "@/lib/present";
-import { clearTourRun, tourHref } from "@/lib/tour";
+import { startTour, tourHref } from "@/lib/tour";
 import type { Finding, Patient } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { describeError, type Loadable } from "@/lib/use-workspace";
 
 type Story = { patient: Patient; findings: Finding[] };
@@ -25,6 +27,7 @@ const SHOWS: Record<string, string> = {
 
 export default function Landing() {
   const [stories, setStories] = useState<Loadable<Story[]>>({ kind: "loading" });
+  const offer = useTourOffer();
 
   const load = () => {
     setStories({ kind: "loading" });
@@ -43,6 +46,7 @@ export default function Landing() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink py-4">
         <Wordmark />
         <nav className="flex items-center gap-4 text-[12.5px]">
+          <TourButton />
           <Link href="/how-it-works" className="text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
             How it works
           </Link>
@@ -51,6 +55,7 @@ export default function Landing() {
       </header>
 
       <main className="flex-1">
+        <WelcomeCard open={offer.pending} onSkip={() => offer.choose("skipped")} />
         <section className="grid gap-8 py-10 sm:py-16 lg:grid-cols-[1.15fr_1fr] lg:items-center">
           <div>
             <p className="smallcaps text-amber-ink">Find the first domino</p>
@@ -79,13 +84,17 @@ export default function Landing() {
             >
               <Link
                 href={tourHref(1)}
-                onClick={clearTourRun}
-                className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink bg-ink px-5 text-[15px] font-medium text-ivory transition-colors hover:bg-ink-2"
+                onClick={startTour}
+                className={cn(
+                  "inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink bg-ink px-5 text-[15px] font-medium text-ivory transition-colors hover:bg-ink-2",
+                  offer.pending && "fd-tour-pulse",
+                )}
               >
                 <Compass className="size-4" aria-hidden /> Take the 2-minute guided tour
               </Link>
               <a
                 href="#stories"
+                onClick={() => offer.pending && offer.choose("skipped")}
                 className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink px-5 text-[15px] font-medium text-ink transition-colors hover:bg-paper"
               >
                 Explore on your own <ArrowRight className="size-4" aria-hidden />

@@ -2,6 +2,7 @@
 
 // Reference sheet of the workspace's distinct states, for review and QA.
 import { Wordmark } from "@/components/site-header";
+import { TourButton } from "@/components/tour-offer";
 import {
   InsufficientEvidenceState,
   LoadingState,
@@ -37,8 +38,9 @@ const STATES = [
 export default function StatesPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
-      <header className="border-b border-ink pb-4">
+      <header className="flex items-center justify-between border-b border-ink pb-4">
         <Wordmark />
+        <TourButton />
       </header>
       <h1 className="mt-8 font-serif text-[40px] leading-none">Interface states</h1>
       <p className="mt-2 text-[14px] text-ink-2">

@@ -151,3 +151,26 @@ body {
     opacity: 0.9;
   }
 }
+
+/* The landing page's tour button, until the visitor starts or skips the tour: a soft amber ring that
+   breathes. Under reduced motion the ring holds still. */
+@keyframes fd-tour-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.9), 0 0 0 3px rgba(232, 163, 61, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.9), 0 0 0 11px rgba(232, 163, 61, 0);
+  }
+}
+
+.fd-tour-pulse {
+  animation: fd-tour-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-tour-pulse {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--amber);
+  }
+}
