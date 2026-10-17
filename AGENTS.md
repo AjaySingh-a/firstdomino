@@ -34,7 +34,8 @@ api/        FastAPI (Python 3.11, uv). models.py = contracts, store.py = fixture
 engine/     queries/*.cypher (named, parameterised; write/ + admin/ for loads), cypher.py, db.py, rules.py, evaluate.py, loaders/
 agent/      one bounded review agent; tools.py holds the allowlist
 web/        Next.js 15 + TypeScript + Tailwind + shadcn/ui + framer-motion. lib/api.ts is the ONE adapter
-data/       patterns/, stories/ (synthetic fixtures), cases/, snapshots/
+data/       patterns/, stories/ (synthetic fixtures), cases/ (P2 proof cases), snapshots/
+bench/      run.py: data/cases against the graph-mode engine -> results.md (`make bench`, needs FalkorDB)
 docs/       data-model.md, api.md
 mcp_server/ MCP server (FastMCP, stdio): tools over the HTTP API, never Cypher. Not `mcp/`: that shadows the SDK
 tests/      pytest: API behaviour + contract guards
@@ -42,7 +43,7 @@ tests/      pytest: API behaviour + contract guards
 
 ## Commands
 
-`make up | down | seed | reseed | test | test-stack | test-restart | lint | snapshots | dev-api | dev-web`.
+`make up | down | seed | reseed | test | test-stack | test-restart | lint | snapshots | bench | dev-api | dev-web`.
 Without `make` (e.g. on Windows): `uv run pytest`, `uv run ruff check .`, `uv run uvicorn api.main:app --reload`,
 `cd web && npm run dev`, `docker compose --profile test run --rm --build api-test`.
 

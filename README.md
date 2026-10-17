@@ -101,6 +101,7 @@ curl localhost:8000/patients/syn-p1/timeline
 | Lint | `make lint` | `uv run ruff check .` and `cd web && npm run lint` |
 | Seed the graph | `make seed` / `make reseed` | `uv run python -m engine.loaders.seed [--reset]` |
 | Regenerate web fixtures | `make snapshots` | `uv run python -m api.snapshots` |
+| P2 proof suite (FalkorDB on `localhost:6379`) | `make bench` | `uv run python -m bench.run` |
 
 The web app reads data through one adapter, `web/lib/api.ts`:
 
@@ -172,7 +173,8 @@ api/        FastAPI (Python 3.11, uv). models.py = contract types, graph_store.p
 engine/     queries/*.cypher (named, parameterised), cypher.py, rules.py, loaders/
 agent/      the bounded review agent and its tool allowlist
 web/        Next.js 15, TypeScript, Tailwind, shadcn/ui, framer-motion
-data/       patterns/ (cited), stories/ (synthetic fixtures), snapshots/, cases/
+data/       patterns/ (cited), stories/ (synthetic fixtures), snapshots/, cases/ (P2 proof cases)
+bench/      P2 proof suite runner and results.md
 docs/       data-model.md, api.md
 mcp_server/ MCP server (stdio): read-only tools over the HTTP API, for Claude Desktop
 tests/      API behaviour and contract guards
@@ -214,6 +216,7 @@ Live: web app https://firstdomino-web.vercel.app (Vercel), API https://api-produ
 | Graph loader and finding rules | Done |
 | Review agent: six allowlisted tools, `POST /findings/{id}/review-agent`, LLM checks with template fallback | Done |
 | Printable packet (`/packet/{id}`), first-visit guide | Done |
+| P2 proof suite: 12 synthetic cases from the documented rules, run on the graph engine ([bench/results.md](bench/results.md)). Agreement with the docs, not clinical accuracy | Done |
 | MCP server (`mcp_server/`): six read-only tools over the API, writes behind `FD_MCP_ALLOW_WRITES=1` | Done |
 
 ## Guardrails

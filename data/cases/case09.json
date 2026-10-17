@@ -1,0 +1,164 @@
+{
+  "synthetic": true,
+  "case_id": "case09",
+  "title": "SYNTHETIC - A clinician reviews revision 1, then a GP note corrects the swelling onset",
+  "covers": "reviewed then corrected (needs_reassessment, decision kept)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > When evidence changes, steps 1-3",
+    "docs/data-model.md > Versioning: case_version goes up with every accepted write",
+    "data/stories/story-3 notes: confirming the correction -> revision 2 needs_reassessment, decision on revision 1"
+  ],
+  "reasoning": "Start: in order, reason = effect -> candidate (revision 1). A clinician decision on revision 1 is an accepted write (case_version 1 -> 2). The onset correction (day 28 reported -> day 14 documented) is a fact the finding cites, so it is affected and gets revision 2. 'If the finding has a review decision, the new revision is needs_reassessment and the decision stays on the revision it was made on.' Second accepted write -> case_version 3.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c09",
+        "label": "Synthetic case 09",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c09:src-cardio-d0",
+          "patient_id": "syn-c09",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c09:src-gp-d14",
+          "patient_id": "syn-c09",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c09:src-pharm-d30",
+          "patient_id": "syn-c09",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c09:src-cg-d45",
+          "patient_id": "syn-c09",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c09:ep-amlodipine",
+          "patient_id": "syn-c09",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c09:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c09:ep-furosemide",
+          "patient_id": "syn-c09",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c09:src-pharm-d30"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "ankle swelling",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c09:obs-ankle-swelling",
+          "patient_id": "syn-c09",
+          "happened_at": 28,
+          "recorded_at": 45,
+          "state": "reported",
+          "source_ids": [
+            "syn-c09:src-cg-d45"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "do": "review",
+      "finding_id": "syn-c09:fnd-ccb-edema-loop-1",
+      "revision_n": 1,
+      "by_role": "clinician",
+      "decision": "follow_up",
+      "reason": "Possible pattern noted; worth reviewing at the next clinic visit."
+    },
+    {
+      "do": "change",
+      "patient_id": "syn-c09",
+      "event_id": "syn-c09:evt-onset-correction",
+      "change": {
+        "fact_id": "syn-c09:obs-ankle-swelling",
+        "field": "happened_at",
+        "value": 14,
+        "state": "documented",
+        "source_id": "syn-c09:src-gp-d14"
+      }
+    }
+  ],
+  "expected": {
+    "syn-c09": {
+      "case_version": 3,
+      "findings": [
+        {
+          "id": "syn-c09:fnd-ccb-edema-loop-1",
+          "status": "needs_reassessment",
+          "revision_n": 2,
+          "revision_statuses": [
+            "candidate",
+            "needs_reassessment"
+          ],
+          "requirements": [],
+          "decisions_on_revisions": [
+            1
+          ]
+        }
+      ]
+    },
+    "affected_finding_ids": [
+      "syn-c09:fnd-ccb-edema-loop-1"
+    ]
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "synthetic": true,
+  "case_id": "case03",
+  "title": "SYNTHETIC - Furosemide's reason was never recorded",
+  "covers": "unknown indication (needs_evidence)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > Finding statuses: 'Any required fact unknown -> needs_evidence'",
+    "data/stories/story-1: indication unknown -> needs_evidence, one requirement for the furosemide indication"
+  ],
+  "reasoning": "Same as story 1 with every day documented: the only gap is the reason furosemide was started, so needs_evidence with one indication requirement about the furosemide episode, missing.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c03",
+        "label": "Synthetic case 03",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c03:src-cardio-d0",
+          "patient_id": "syn-c03",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c03:src-gp-d14",
+          "patient_id": "syn-c03",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c03:src-pharm-d30",
+          "patient_id": "syn-c03",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c03:src-cg-d45",
+          "patient_id": "syn-c03",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c03:ep-amlodipine",
+          "patient_id": "syn-c03",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c03:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c03:ep-furosemide",
+          "patient_id": "syn-c03",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c03:src-pharm-d30"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": null,
+          "indication_state": "unknown",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c03:obs-ankle-swelling",
+          "patient_id": "syn-c03",
+          "happened_at": 14,
+          "recorded_at": 14,
+          "state": "documented",
+          "source_ids": [
+            "syn-c03:src-gp-d14"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [],
+  "expected": {
+    "syn-c03": {
+      "case_version": 1,
+      "findings": [
+        {
+          "id": "syn-c03:fnd-ccb-edema-loop-1",
+          "status": "needs_evidence",
+          "revision_n": 1,
+          "revision_statuses": [
+            "needs_evidence"
+          ],
+          "requirements": [
+            {
+              "kind": "indication",
+              "about": "syn-c03:ep-furosemide",
+              "state": "missing"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "synthetic": true,
+  "case_id": "case05",
+  "title": "SYNTHETIC - The caregiver reports a different reason for furosemide",
+  "covers": "reported different reason (competing_explanation)",
+  "notes": [
+    "SYNTHETIC PATIENTS. Not real people. Written for the P2 proof suite.",
+    "Expected results are derived from docs/data-model.md and the story fixtures, written by the team that built the engine. They test agreement with the documented rules, not clinical accuracy."
+  ],
+  "pattern": "pat-ccb-edema-loop (amlodipine C08CA -> peripheral_edema -> furosemide C03CA)",
+  "derived_from": [
+    "docs/data-model.md > Finding statuses: competing_explanation 'whether that reason is documented or reported'"
+  ],
+  "reasoning": "'whether that reason is documented or reported ... A reported different reason never leaves the finding candidate.' So competing_explanation, labelled as reported. The reason is known (reported), so no indication requirement.",
+  "patients": [
+    {
+      "patient": {
+        "id": "syn-c05",
+        "label": "Synthetic case 05",
+        "age_band": "75-79",
+        "case_version": 1,
+        "as_of_day": 45,
+        "synthetic": true
+      },
+      "sources": [
+        {
+          "id": "syn-c05:src-cardio-d0",
+          "patient_id": "syn-c05",
+          "kind": "clinic_letter",
+          "label": "Cardiology clinic letter (synthetic)",
+          "happened_at": 0,
+          "recorded_at": 0
+        },
+        {
+          "id": "syn-c05:src-gp-d14",
+          "patient_id": "syn-c05",
+          "kind": "gp_note",
+          "label": "GP note (synthetic)",
+          "happened_at": 14,
+          "recorded_at": 14
+        },
+        {
+          "id": "syn-c05:src-pharm-d30",
+          "patient_id": "syn-c05",
+          "kind": "pharmacy_record",
+          "label": "Community pharmacy dispensing record (synthetic)",
+          "happened_at": 30,
+          "recorded_at": 30
+        },
+        {
+          "id": "syn-c05:src-cg-d45",
+          "patient_id": "syn-c05",
+          "kind": "caregiver_report",
+          "label": "Caregiver conversation at medication review (synthetic)",
+          "happened_at": 45,
+          "recorded_at": 45
+        }
+      ],
+      "episodes": [
+        {
+          "id": "syn-c05:ep-amlodipine",
+          "patient_id": "syn-c05",
+          "happened_at": 0,
+          "recorded_at": 0,
+          "state": "documented",
+          "source_ids": [
+            "syn-c05:src-cardio-d0"
+          ],
+          "ingredient": {
+            "name": "amlodipine",
+            "rxcui": "17767",
+            "drug_class": "C08CA"
+          },
+          "dose_text": "5 mg once daily",
+          "indication": "high blood pressure",
+          "indication_state": "documented",
+          "stop_day": null,
+          "prescriber_specialty": "cardiology"
+        },
+        {
+          "id": "syn-c05:ep-furosemide",
+          "patient_id": "syn-c05",
+          "happened_at": 30,
+          "recorded_at": 30,
+          "state": "documented",
+          "source_ids": [
+            "syn-c05:src-pharm-d30",
+            "syn-c05:src-cg-d45"
+          ],
+          "ingredient": {
+            "name": "furosemide",
+            "rxcui": "4603",
+            "drug_class": "C03CA"
+          },
+          "dose_text": "20 mg once daily",
+          "indication": "kidney problems",
+          "indication_state": "reported",
+          "stop_day": null,
+          "prescriber_specialty": "general_practice"
+        }
+      ],
+      "observations": [
+        {
+          "id": "syn-c05:obs-ankle-swelling",
+          "patient_id": "syn-c05",
+          "happened_at": 14,
+          "recorded_at": 14,
+          "state": "documented",
+          "source_ids": [
+            "syn-c05:src-gp-d14"
+          ],
+          "label": "Ankle swelling",
+          "effect": "peripheral_edema"
+        }
+      ]
+    }
+  ],
+  "steps": [],
+  "expected": {
+    "syn-c05": {
+      "case_version": 1,
+      "findings": [
+        {
+          "id": "syn-c05:fnd-ccb-edema-loop-1",
+          "status": "competing_explanation",
+          "revision_n": 1,
+          "revision_statuses": [
+            "competing_explanation"
+          ],
+          "requirements": []
+        }
+      ]
+    }
+  }
+}
