@@ -80,8 +80,8 @@ recommend changing any medicine.
 - **Repository:** https://github.com/AjaySingh-a/firstdomino
 - **Live app:** https://firstdomino-web.vercel.app
 - **API health:** https://api-production-b29f.up.railway.app/health
-- **Demo video:** VIDEO_LINK
-- **Blog:** BLOG_LINK
+- **Demo video:** https://youtu.be/2DeOnoqJeyY
+- **Blog:** https://dev.to/devgr72/every-prescription-looked-reasonable-the-chain-didnt-13i7
 
 ## Tech stack
 
@@ -107,6 +107,6 @@ templates take over when it fails. Details: [AI_USAGE.md](../AI_USAGE.md).
 | README with setup instructions | README.md → "Run locally" (Docker Compose, make / non-make commands) | ✅ |
 | README with the graph data model | README.md → "Architecture and graph model" (labels, relationships, two Mermaid diagrams); full detail in docs/data-model.md | ✅ |
 | The Cypher queries | `engine/queries/` (12 read queries, `write/`, `admin/`), every one listed in README.md → "Every Cypher query" | ✅ |
-| Demo video | README.md "Video" line and this page | ⏳ add the YouTube link after upload |
+| Demo video | https://youtu.be/2DeOnoqJeyY (README.md "Video" line and this page) | ✅ |
 | Live deployment | https://firstdomino-web.vercel.app and https://api-production-b29f.up.railway.app/health (`falkordb: up`, `appendonly: yes`) | ✅ |
 | Tracks named | README.md → "Tracks entered"; this page | ✅ |

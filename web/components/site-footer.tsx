@@ -6,9 +6,9 @@ import { startTour, tourHref } from "@/lib/tour";
 import { cn } from "@/lib/utils";
 
 const REPO = "https://github.com/AjaySingh-a/firstdomino";
-// Not published yet: shown as "soon" until a link is set here.
-const DEMO_VIDEO_URL: string | null = null;
-const BLOG_URL: string | null = null;
+// A null link is shown as "soon".
+const DEMO_VIDEO_URL: string | null = "https://youtu.be/2DeOnoqJeyY";
+const BLOG_URL: string | null = "https://dev.to/devgr72/every-prescription-looked-reasonable-the-chain-didnt-13i7";
 
 type Item = { label: string; href: string | null; external?: boolean; onClick?: () => void };
 

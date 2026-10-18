@@ -16,8 +16,8 @@ and clinician decision with its history.
 | **Patient lab** (build your own patient) | https://firstdomino-web.vercel.app/lab |
 | **API health** | https://api-production-b29f.up.railway.app/health |
 | **Repository** | https://github.com/AjaySingh-a/firstdomino |
-| **Video** | TODO |
-| **Blog** | TODO |
+| **Video** | https://youtu.be/2DeOnoqJeyY |
+| **Blog** | https://dev.to/devgr72/every-prescription-looked-reasonable-the-chain-didnt-13i7 |
 | **Tracks** | Agents That Act on Connected Data · Agent Memory and Coordination |
 
 Built for **Graph Hacks** (WeMakeDevs x FalkorDB, 15-18 Oct 2026) by team **Kodeline** (Ajay Singh, Dev Grover).
