@@ -148,6 +148,37 @@ requirement or revision IDs each query returned. `mode` is `live` in graph mode.
 }
 ```
 
+## GET /findings/{id}/path
+
+The walk behind one finding, as FalkorDB's own path (`q11_finding_path` returns `walk` and the symptom
+paths; the API passes on `nodes(path)` and `relationships(path)` in order, it does not rebuild them).
+`forward` says the stored relationship points from node i to node i+1. In fixture mode the same shape is
+built from the story file and `mode` is `"fixture"`. The path explains a finding; the rules decide it.
+
+```json
+{
+  "patient_id": "syn-p1", "finding_id": "syn-p1:fnd-ccb-edema-loop-1", "mode": "live",
+  "walk": {
+    "nodes": [
+      { "label": "MedicationEpisode", "id": "syn-p1:ep-amlodipine", "name": "amlodipine", "happened_at": 0, "state": "documented" },
+      { "label": "Ingredient", "name": "amlodipine" }, { "label": "DrugClass", "name": "C08CA" },
+      { "label": "Pattern", "id": "pat-ccb-edema-loop", "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic" },
+      { "label": "DrugClass", "name": "C03CA" }, { "label": "Ingredient", "name": "furosemide" },
+      { "label": "MedicationEpisode", "id": "syn-p1:ep-furosemide", "name": "furosemide", "happened_at": 35, "state": "documented" }
+    ],
+    "edges": [
+      { "type": "OF", "forward": true }, { "type": "IN_CLASS", "forward": true }, { "type": "INDEX", "forward": false },
+      { "type": "MARKER", "forward": true }, { "type": "IN_CLASS", "forward": false }, { "type": "OF", "forward": false }
+    ]
+  },
+  "sides": [ { "nodes": ["Pattern", "Effect peripheral_edema", "Observation syn-p1:obs-ankle-swelling"], "edges": ["VIA", "OF_EFFECT (backward)"] } ],
+  "query_trace": [ { "query": "q11_finding_path", "params": { "pid": "syn-p1", "fid": "syn-p1:fnd-ccb-edema-loop-1" }, "rows": 1, "mode": "live", "result_ids": ["..."], "ms": 2.1 } ]
+}
+```
+
+(`sides` abbreviated above; each side has the same `nodes`/`edges` shape as `walk`.) **404** for an
+unknown finding.
+
 ## POST /patients/{id}/evidence
 
 Request (story 3's pending date correction):
@@ -513,8 +544,17 @@ above: timeline, investigation, evidence, review agent, packet.
   means `unknown`. A reason needs a state (`documented` or `reported`).
 - The oldest lab patients beyond `FD_LAB_KEEP` (40) are deleted. "Reset all stories" deletes all of them.
 
-**201**: `{ "patient": Patient, "findings": [Finding], "steps": [{ "name", "detail", "ms" }] }`. `steps`
-times each stage against FalkorDB (knowledge, facts, `q1_candidate_match` + rules, `q6_patient_findings`).
+**201**: `{ "patient": Patient, "findings": [Finding], "steps": [{ "name", "detail", "ms" }], "paths":
+[FindingPath], "links": [MedicineLink] }`. `steps` times each stage against FalkorDB (knowledge, facts,
+`q1_candidate_match` + rules, `q11_finding_path`, `q12_medicine_link`, `q6_patient_findings`). `paths` holds
+q11's path for each finding (see `GET /findings/{id}/path`). `links` holds q12 for every pair of medicines:
+`algo.SPpaths` over `OF | IN_CLASS | INDEX | MARKER` only, so `path` is `null` when the graph holds no
+connection through a cited pattern (diltiazem, C08DB, and furosemide: no path).
+
+```json
+{ "a_id": "lab-1a2b3c:ep-diltiazem", "b_id": "lab-1a2b3c:ep-furosemide", "a_name": "diltiazem",
+  "b_name": "furosemide", "a_class": "C08DB", "b_class": "C03CA", "path": null, "ms": 0.8 }
+```
 
 **422** `invalid` (unknown medicine, repeated medicine, day out of range). **503**
 `{"error": "graph_required"}` when the API runs without FalkorDB (`FD_STORE=fixtures`): there is no

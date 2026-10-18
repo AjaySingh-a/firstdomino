@@ -244,6 +244,7 @@ export interface QueryTraceEntry {
   rows: number;
   mode: "fixture" | "live";
   result_ids: string[]; // IDs the query returned (facts, requirements, revisions)
+  ms?: number | null; // time the query took against FalkorDB (live mode, where measured)
 }
 
 export interface TimelineResponse {
@@ -440,10 +441,54 @@ export interface LabStep {
   ms: number;
 }
 
+/** One node of a path as FalkorDB returned it. Knowledge nodes are named by `name`, patient nodes have `id`. */
+export interface PathNode {
+  label: string;
+  id?: string | null;
+  name: string;
+  happened_at?: Day | null;
+  state?: FactState | null;
+}
+
+/** The relationship between node i and node i+1. `forward`: it points from i to i+1. */
+export interface PathEdge {
+  type: string;
+  forward: boolean;
+}
+
+export interface GraphPath {
+  nodes: PathNode[];
+  edges: PathEdge[];
+}
+
+/** GET /findings/{fid}/path: q11's own path (live) or built from the story file (fixture). */
+export interface FindingPath {
+  patient_id: string;
+  finding_id: string;
+  mode: "fixture" | "live";
+  walk: GraphPath;
+  sides: GraphPath[];
+  query_trace: QueryTraceEntry[];
+}
+
+/** q12 (algo.SPpaths) for two of a patient's medicines: the knowledge-layer path, or none. */
+export interface MedicineLink {
+  a_id: string;
+  b_id: string;
+  a_name: string;
+  b_name: string;
+  a_class: string;
+  b_class: string;
+  path: GraphPath | null;
+  ms: number;
+}
+
 export interface LabResult {
   patient: Patient;
   findings: Finding[];
   steps: LabStep[];
+  paths: FindingPath[];
+  links: MedicineLink[];
 }
 
 // ---------- fixture file (data/stories/*.json) ----------
@@ -478,6 +523,7 @@ export type SnapshotFile = {
       timeline: TimelineResponse;
       findings: FindingsResponse;
       investigations: Record<string, InvestigationResponse>;
+      paths: Record<string, FindingPath>;
       packet: PacketResponse;
       agent_steps: AgentStepsResponse;
       /** One template-phrased review-agent pass per finding, from the pristine story. */

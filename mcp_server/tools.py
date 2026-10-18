@@ -128,6 +128,27 @@ def get_evidence_pack(api: FirstDominoAPI, finding_id: str) -> str:
     return reply([f"Evidence pack, case version {inv['case_version']}", *lines], ids)
 
 
+def _hop(nodes: list[dict[str, Any]], edges: list[dict[str, Any]]) -> str:
+    """A path as text in path order, each relationship written in its stored direction."""
+    out = [nodes[0]["name"]]
+    for e, n in zip(edges, nodes[1:], strict=True):
+        out.append(f"-[:{e['type']}]->" if e["forward"] else f"<-[:{e['type']}]-")
+        out.append(n["name"])
+    return " ".join(out)
+
+
+def explain_path(api: FirstDominoAPI, finding_id: str) -> str:
+    p = api.get(f"/findings/{finding_id}/path")
+    walk = p["walk"]
+    how = "FalkorDB returned it (q11)" if p["mode"] == "live" else "built from the story file (fixture mode)"
+    lines = [f"The path behind {finding_id}, as {how}:", _hop(walk["nodes"], walk["edges"])]
+    for side in p["sides"]:
+        lines.append("Symptom: " + _hop(side["nodes"], side["edges"]))
+    lines.append("The path shows how these facts are linked. The rules set the status: a possible pattern.")
+    ids = [finding_id] + [n["id"] for path in [walk, *p["sides"]] for n in path["nodes"]]
+    return reply(lines, ids)
+
+
 def next_missing_fact(api: FirstDominoAPI, patient_id: str) -> str:
     found = api.get(f"/patients/{patient_id}/findings")
     lines, ids = [f"Next missing fact for {patient_id} (case version {found['case_version']}):"], [patient_id]

@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import time
+from itertools import combinations
 from typing import Any
 
 from falkordb import FalkorDB
@@ -47,16 +48,21 @@ from api.models import (
     FactRef,
     Finding,
     FindingChange,
+    FindingPath,
     FindingRevision,
     FindingsResponse,
+    GraphPath,
     Ingredient,
     InvestigationResponse,
     LabResult,
     LabStep,
     MedicationEpisode,
+    MedicineLink,
     Observation,
     PacketItem,
     PacketResponse,
+    PathEdge,
+    PathNode,
     Patient,
     Pattern,
     QueryTraceEntry,
@@ -277,6 +283,40 @@ class GraphStore:
                 result_ids=[r["requirement_id"] for r in asked],
             ))
         return pid, pack, next_q, revisions, decisions, trace
+
+    def finding_path(self, fid: str) -> FindingPath:
+        """q11: the walk behind one finding, passed on exactly as FalkorDB returned it (nodes(path) and
+        relationships(path) in walk order), plus pattern -> effect <- symptom for each symptom."""
+        pid = patient_of(fid)
+        params = {"pid": pid, "fid": fid}
+        t = time.perf_counter()
+        rows = run(self._graph(pid), "q11_finding_path", **params)
+        ms = round((time.perf_counter() - t) * 1000, 1)
+        if not rows:
+            raise NotFound(f"finding {fid}")
+        walk = _graph_path(rows[0]["walk"])
+        return FindingPath(
+            patient_id=pid, finding_id=fid, mode="live", walk=walk,
+            sides=[_graph_path(p) for p in rows[0]["sides"]],
+            query_trace=[QueryTraceEntry(
+                query="q11_finding_path", params=params, rows=len(rows), mode="live",
+                result_ids=[n.id for n in walk.nodes if n.id], ms=ms,
+            )],
+        )
+
+    def medicine_link(self, pid: str, a: str, b: str) -> MedicineLink:
+        """q12: algo.SPpaths between two of the patient's medicines over OF | IN_CLASS | INDEX | MARKER
+        only. `path` is None when the graph holds no such connection."""
+        t = time.perf_counter()
+        rows = run(self._graph(pid), "q12_medicine_link", pid=pid, a=a, b=b)
+        ms = round((time.perf_counter() - t) * 1000, 1)
+        if not rows:
+            raise NotFound(f"medicines {a}, {b}")
+        r = rows[0]
+        return MedicineLink(
+            a_id=a, b_id=b, a_name=r["a_name"], b_name=r["b_name"], a_class=r["a_class"],
+            b_class=r["b_class"], path=_graph_path(r["paths"][0]) if r["paths"] else None, ms=ms,
+        )
 
     def investigation(self, fid: str) -> InvestigationResponse:
         pid, pack, next_q, revisions, decisions, trace = self._parts(fid)
@@ -546,16 +586,29 @@ class GraphStore:
 
         timed("knowledge", knowledge)
         timed("write/patient + episodes + observations", facts)
-        timed("q1_candidate_match + engine/rules.py", evaluate)
+        evs = timed("q1_candidate_match + engine/rules.py", evaluate)
         self._lab_order = [p for p in getattr(self, "_lab_order", []) if p != pid] + [pid]
         while len(self._lab_order) > self.LAB_KEEP:
             run(g, "admin/drop_patient", pid=self._lab_order.pop(0))
         self._refresh()
+        paths = timed(
+            "q11_finding_path",
+            lambda: (ps := [self.finding_path(ev.finding_id) for ev in evs],
+                     f"{len(ps)} path(s) returned as nodes(path), relationships(path)"),
+        )
+        links = timed(
+            "q12_medicine_link (algo.SPpaths)",
+            lambda: (ls := [self.medicine_link(pid, a.id, b.id) for a, b in combinations(story.episodes, 2)],
+                     f"{sum(lk.path is not None for lk in ls)} of {len(ls)} medicine pair(s) connected "
+                     "through classes and a pattern"),
+        )
         found = timed(
             "q6_patient_findings",
             lambda: (f := self.findings(pid), f"{len(f.findings)} finding(s) read back"),
         )
-        return LabResult(patient=self._patient(pid), findings=found.findings, steps=steps)
+        return LabResult(
+            patient=self._patient(pid), findings=found.findings, steps=steps, paths=paths, links=links,
+        )
 
     def reset(self, pid: str | None = None) -> None:
         """Drop and re-seed kb_template and the configured family graph from the fixtures. With `pid`,
@@ -578,6 +631,30 @@ class GraphStore:
 
 
 # ---------- row -> contract ----------
+
+
+def _path_node(n: Any) -> PathNode:
+    p, label = props(n), n.labels[0]
+    if label in ("MedicationEpisode", "Observation"):
+        # An episode is named by its ingredient (the id's local part), a symptom by its label.
+        name = p.get("label") or p["id"].split(":", 1)[1].removeprefix("ep-")
+        return PathNode(
+            label=label, id=p["id"], name=name, happened_at=p.get("happened_at"), state=p["state"],
+        )
+    if label == "Pattern":
+        return PathNode(label=label, id=p["id"], name=p["title"])
+    return PathNode(label=label, name=p.get("name") or p.get("code"))
+
+
+def _graph_path(path: Any) -> GraphPath:
+    """A FalkorDB Path as the contract: its nodes and relationships in path order."""
+    nodes = path.nodes()
+    return GraphPath(
+        nodes=[_path_node(n) for n in nodes],
+        edges=[
+            PathEdge(type=e.relation, forward=e.src_node == nodes[i].id) for i, e in enumerate(path.edges())
+        ],
+    )
 
 
 def _patient(p: dict) -> Patient:

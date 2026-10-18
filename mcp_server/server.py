@@ -53,6 +53,13 @@ def build_server(api: FirstDominoAPI | None = None, allow_writes: bool | None = 
         return run(tools.get_evidence_pack, finding_id)
 
     @mcp.tool(annotations=READ)
+    def explain_path(finding_id: str) -> str:
+        """The walk behind one finding, as the path FalkorDB returned: first medicine, its ingredient and
+        class, the cited pattern, the second medicine's class, ingredient and episode, plus the symptom.
+        finding_id looks like "syn-p1:fnd-ccb-edema-loop-1"."""
+        return run(tools.explain_path, finding_id)
+
+    @mcp.tool(annotations=READ)
     def next_missing_fact(patient_id: str) -> str:
         """The next question a pharmacist should ask for a patient: the missing fact, who to ask, the exact
         wording, and the fact ID to pass to which_findings_depend_on. patient_id looks like "syn-p1"."""

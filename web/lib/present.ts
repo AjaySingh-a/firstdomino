@@ -191,6 +191,8 @@ export function querySentence(query: string, ids: string[]): string {
       return `Read this finding's history (${plural(ids.length, "version")}).`;
     case "q9_requirements":
       return "Looked up the question that was already asked and is still unanswered.";
+    case "q11_finding_path":
+      return "Returned the walk itself, as FalkorDB's own path: medicine → class → pattern → class → medicine.";
     case "q3_affected":
       return `Checked which findings depend on this fact (${ids.length}).`;
     default:

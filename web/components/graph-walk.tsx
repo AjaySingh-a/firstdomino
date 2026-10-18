@@ -1,95 +1,132 @@
 "use client";
 
-// The walk Q1 takes through FalkorDB for one finding, drawn edge by edge in the order the query follows
-// it: patient -> first medicine -> its class <- pattern -> effect <- symptom, and pattern -> second class
-// <- second medicine. A fact that is not known yet is dashed. Still picture under reduced motion.
+// The walk behind one finding, drawn from the path FalkorDB returned (q11: nodes(path) and
+// relationships(path)), not rebuilt here. Node i of the walk sits in a fixed slot, each edge carries the
+// relationship type the query returned and an arrow in its stored direction, and the edges are drawn in
+// path order: first medicine -> ingredient -> class <- pattern -> class <- ingredient <- second medicine,
+// then pattern -> effect <- symptom. A fact whose day is not known is dashed. Still under reduced motion.
 
 import { motion, useReducedMotion } from "framer-motion";
 import { StatusChip } from "@/components/status";
-import type { FactState, FindingStatus } from "@/lib/types";
-
-export interface WalkFact {
-  label: string;
-  sub: string;
-  state: FactState | "missing";
-}
+import type { FindingPath, FindingStatus, PathNode } from "@/lib/types";
 
 export interface WalkProps {
-  pid: string;
-  first: WalkFact;
-  firstClass: string;
-  symptom: WalkFact;
-  effect: string;
-  second: WalkFact;
-  secondClass: string;
+  path: FindingPath;
   status: FindingStatus;
   delay?: number;
 }
 
-const X = { patient: 62, fact: 228, kb: 422, pattern: 604 };
-const KB = 52; // half the width of a class or effect node
-const FACT = 62; // half the width of a fact node
-const MID = (X.fact + FACT + X.kb - KB) / 2;
-const Y = { top: 52, mid: 140, bottom: 228 };
+const X = { ep: 64, ing: 212, cls: 384, pat: 600 };
+const Y = { top: 52, mid: 145, bottom: 238 };
+type Slot = { x: number; y: number; w: number };
+// Where walk node i goes; the walk is U-shaped around the pattern on the right.
+const WALK: Slot[] = [
+  { x: X.ep, y: Y.top, w: 116 }, { x: X.ing, y: Y.top, w: 100 }, { x: X.cls, y: Y.top, w: 84 },
+  { x: X.pat, y: Y.mid, w: 132 },
+  { x: X.cls, y: Y.bottom, w: 84 }, { x: X.ing, y: Y.bottom, w: 100 }, { x: X.ep, y: Y.bottom, w: 116 },
+];
+// pattern -> effect <- symptom
+const SIDE: Slot[] = [WALK[3], { x: X.cls, y: Y.mid, w: 116 }, { x: X.ing, y: Y.mid, w: 100 }];
 
-type Edge = { d: string; label: string; lx: number; ly: number; dashed?: boolean };
+const isFact = (n: PathNode) => n.label === "MedicationEpisode" || n.label === "Observation";
+const unknown = (n: PathNode) => isFact(n) && (n.happened_at === null || n.happened_at === undefined || n.state === "unknown");
 
-export function GraphWalk({ pid, first, firstClass, symptom, effect, second, secondClass, status, delay = 0 }: WalkProps) {
+function sub(n: PathNode): string {
+  if (isFact(n)) {
+    const day = n.happened_at === null || n.happened_at === undefined ? "day not known" : `day ${n.happened_at}`;
+    return n.state === "reported" ? `${day} · caregiver` : day;
+  }
+  return { Ingredient: "ingredient", DrugClass: "ATC class", Effect: "effect" }[n.label] ?? n.label;
+}
+
+/** The edge between two slots: a straight line on one row, a curve into the pattern otherwise. */
+function edgePath(a: Slot, b: Slot, forward: boolean) {
+  const [l, r] = a.x < b.x ? [a, b] : [b, a];
+  const x1 = l.x + l.w / 2;
+  const x2 = r.x - r.w / 2;
+  const d = l.y === r.y ? `M${x1} ${l.y} H${x2}` : `M${x1} ${l.y} Q${x2 - 24} ${l.y} ${x2} ${r.y + (l.y < r.y ? -14 : 14)}`;
+  // Draw from the edge's source, so the arrow head lands on its target.
+  const fromLeft = (a.x < b.x) === forward;
+  const rev = l.y === r.y ? `M${x2} ${l.y} H${x1}` : `M${x2} ${r.y + (l.y < r.y ? -14 : 14)} Q${x2 - 24} ${l.y} ${x1} ${l.y}`;
+  return { d: fromLeft ? d : rev, lx: (x1 + x2) / 2 + (l.y === r.y ? 0 : 18), ly: l.y === r.y ? l.y - 8 : (l.y + r.y) / 2 + (l.y < r.y ? -18 : 22) };
+}
+
+export function GraphWalk({ path, status, delay = 0 }: WalkProps) {
   const reduced = useReducedMotion();
-  const unknown = (f: WalkFact) => f.state === "unknown" || f.state === "missing";
-  // The order Q1 walks: each edge is drawn after the one before it.
-  const edges: Edge[] = [
-    { d: `M${X.patient + 26} ${Y.mid - 10} Q${X.patient + 60} ${Y.top} ${X.fact - FACT} ${Y.top}`, label: "HAS", lx: 96, ly: 78, dashed: unknown(first) },
-    { d: `M${X.fact + FACT} ${Y.top} H${X.kb - KB}`, label: "IN_CLASS", lx: MID, ly: Y.top - 8 },
-    { d: `M${X.pattern - 58} ${Y.mid - 12} Q${X.pattern - 70} ${Y.top} ${X.kb + KB} ${Y.top}`, label: "INDEX", lx: 548, ly: 76 },
-    { d: `M${X.pattern - 58} ${Y.mid} H${X.kb + KB}`, label: "VIA", lx: 512, ly: Y.mid - 8 },
-    { d: `M${X.fact + FACT} ${Y.mid} H${X.kb - KB}`, label: "OF_EFFECT", lx: MID, ly: Y.mid - 8, dashed: unknown(symptom) },
-    { d: `M${X.patient + 28} ${Y.mid} H${X.fact - FACT}`, label: "HAS", lx: 120, ly: Y.mid - 8, dashed: unknown(symptom) },
-    { d: `M${X.pattern - 58} ${Y.mid + 12} Q${X.pattern - 70} ${Y.bottom} ${X.kb + KB} ${Y.bottom}`, label: "MARKER", lx: 540, ly: 246 },
-    { d: `M${X.fact + FACT} ${Y.bottom} H${X.kb - KB}`, label: "IN_CLASS", lx: MID, ly: Y.bottom - 8 },
-    { d: `M${X.patient + 26} ${Y.mid + 10} Q${X.patient + 60} ${Y.bottom} ${X.fact - FACT} ${Y.bottom}`, label: "HAS", lx: 96, ly: 206, dashed: unknown(second) },
+  const { walk, sides } = path;
+  const side = sides[0];
+  const edges = [
+    ...walk.edges.map((e, i) => ({ ...e, a: WALK[i], b: WALK[i + 1], dashed: unknown(walk.nodes[i]) || unknown(walk.nodes[i + 1]) })),
+    ...(side?.edges ?? []).map((e, i) => ({ ...e, a: SIDE[i], b: SIDE[i + 1], dashed: unknown(side.nodes[i + 1]) })),
   ];
-  const step = 0.28;
+  const step = 0.26;
   const at = (i: number) => delay + i * step;
   const appear = (i: number) =>
     reduced ? {} : { initial: { opacity: 0, scale: 0.85 }, animate: { opacity: 1, scale: 1 }, transition: { delay: at(i), duration: 0.35 } };
+  const nodes: { n: PathNode; s: Slot; i: number }[] = [
+    ...walk.nodes.slice(0, 7).map((n, i) => ({ n, s: WALK[i], i })),
+    ...(side ? side.nodes.slice(1).map((n, i) => ({ n, s: SIDE[i + 1], i: walk.edges.length + i + 1 })) : []),
+  ];
+  const names = walk.nodes.filter((n) => n.label === "MedicationEpisode").map((n) => n.name);
 
   return (
-    <svg viewBox="0 0 700 290" role="img" className="w-full" aria-label={`Graph walk for ${pid}: ${first.label}, ${symptom.label}, ${second.label}, matched to the pattern through their classes`}>
-      {edges.map((e, i) => (
-        <g key={i}>
-          <motion.path
-            d={e.d}
-            fill="none"
-            stroke="var(--amber)"
-            strokeWidth={2}
-            strokeDasharray={e.dashed ? "6 5" : undefined}
-            initial={reduced ? undefined : e.dashed ? { opacity: 0 } : { pathLength: 0 }}
-            animate={reduced ? undefined : e.dashed ? { opacity: 1 } : { pathLength: 1 }}
-            transition={{ delay: at(i) + 0.15, duration: 0.4, ease: "easeOut" }}
-          />
-          <motion.text x={e.lx} y={e.ly} textAnchor="middle" className="fill-[var(--ink-3)] font-mono text-[9.5px]" {...appear(i + 0.5)}>
-            {e.label}
-          </motion.text>
-        </g>
-      ))}
+    <svg
+      viewBox="0 0 700 290"
+      role="img"
+      className="w-full"
+      aria-label={`The path FalkorDB returned for ${path.finding_id}: ${walk.nodes.map((n) => n.name).join(", ")}${side ? `, and ${side.nodes.at(-1)?.name}` : ""}`}
+    >
+      <defs>
+        <marker id="fd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--amber-ink)" />
+        </marker>
+      </defs>
+      {edges.map((e, i) => {
+        const g = edgePath(e.a, e.b, e.forward);
+        return (
+          <g key={i}>
+            <motion.path
+              d={g.d}
+              fill="none"
+              stroke="var(--amber)"
+              strokeWidth={2}
+              markerEnd="url(#fd-arrow)"
+              strokeDasharray={e.dashed ? "6 5" : undefined}
+              initial={reduced ? undefined : e.dashed ? { opacity: 0 } : { pathLength: 0 }}
+              animate={reduced ? undefined : e.dashed ? { opacity: 1 } : { pathLength: 1 }}
+              transition={{ delay: at(i + 1), duration: 0.4, ease: "easeOut" }}
+            />
+            <motion.text x={g.lx} y={g.ly} textAnchor="middle" className="fill-[var(--ink-3)] font-mono text-[9px]" {...appear(i + 1.4)}>
+              {e.type}
+            </motion.text>
+          </g>
+        );
+      })}
 
-      <Node x={X.patient} y={Y.mid} w={52} label="Patient" sub={pid} round motion={appear(0)} />
-      <Node x={X.fact} y={Y.top} label={first.label} sub={first.sub} dashed={unknown(first)} motion={appear(0.6)} />
-      <Node x={X.kb} y={Y.top} w={KB * 2} label={firstClass} sub="ATC class" kb motion={appear(1.6)} />
-      <Node x={X.fact} y={Y.mid} label={symptom.label} sub={symptom.sub} dashed={unknown(symptom)} diamond motion={appear(4.6)} />
-      <Node x={X.kb} y={Y.mid} w={KB * 2} label={effect.replace("_", " ")} sub="effect" kb motion={appear(3.6)} />
-      <Node x={X.fact} y={Y.bottom} label={second.label} sub={second.sub} dashed={unknown(second)} motion={appear(8.6)} />
-      <Node x={X.kb} y={Y.bottom} w={KB * 2} label={secondClass} sub="ATC class" kb motion={appear(7.6)} />
+      {nodes.map(({ n, s, i }) =>
+        n.label === "Pattern" ? (
+          <motion.g key={`n${i}`} {...appear(i)} style={{ transformOrigin: `${s.x}px ${s.y}px` }}>
+            <rect x={s.x - s.w / 2} y={s.y - 30} width={s.w} height={60} rx={8} fill="var(--amber-wash)" stroke="var(--amber-ink)" strokeWidth={1.5} />
+            <text x={s.x} y={s.y - 8} textAnchor="middle" className="smallcaps fill-[var(--amber-ink)] text-[9px]">
+              cited pattern
+            </text>
+            <text x={s.x} y={s.y + 10} textAnchor="middle" className="fill-[var(--ink)] font-mono text-[9.5px]">
+              {n.id}
+            </text>
+          </motion.g>
+        ) : (
+          <Node key={`n${i}`} slot={s} node={n} motion={appear(i)} />
+        ),
+      )}
 
-      <motion.g {...appear(2.6)}>
-        <rect x={X.pattern - 58} y={Y.mid - 34} width={116} height={68} rx={8} fill="var(--amber-wash)" stroke="var(--amber-ink)" strokeWidth={1.5} />
-        <text x={X.pattern} y={Y.mid - 12} textAnchor="middle" className="fill-[var(--amber-ink)] smallcaps text-[9px]">cited pattern</text>
-        <text x={X.pattern} y={Y.mid + 6} textAnchor="middle" className="fill-[var(--ink)] font-serif text-[15px]">CCB → swelling</text>
-        <text x={X.pattern} y={Y.mid + 22} textAnchor="middle" className="fill-[var(--ink)] font-serif text-[15px]">→ loop diuretic</text>
-      </motion.g>
-      <motion.foreignObject x={X.pattern - 80} y={Y.mid + 44} width={160} height={28} {...(reduced ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: at(9.2), duration: 0.4 } })}>
-        <div className="flex justify-center">
+      <motion.foreignObject
+        x={X.pat - 80}
+        y={Y.mid + 40}
+        width={160}
+        height={28}
+        {...(reduced ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { delay: at(edges.length + 1), duration: 0.4 } })}
+      >
+        <div className="flex justify-center" title={`${names.join(" then ")}: the rules set this status`}>
           <StatusChip status={status} />
         </div>
       </motion.foreignObject>
@@ -97,32 +134,34 @@ export function GraphWalk({ pid, first, firstClass, symptom, effect, second, sec
   );
 }
 
-function Node({
-  x, y, w = 124, label, sub, dashed, kb, round, diamond, motion: m,
-}: {
-  x: number; y: number; w?: number; label: string; sub: string; dashed?: boolean; kb?: boolean; round?: boolean; diamond?: boolean;
-  motion: object;
-}) {
-  const h = kb ? 40 : 34;
+function Node({ slot: { x, y, w }, node, motion: m }: { slot: Slot; node: PathNode; motion: object }) {
+  const fact = isFact(node);
+  const dashed = unknown(node);
+  const h = fact ? 34 : 38;
   return (
     <motion.g {...m} style={{ transformOrigin: `${x}px ${y}px` }}>
-      {round ? (
-        <circle cx={x} cy={y} r={26} fill="var(--ink)" />
-      ) : (
-        <rect
-          x={x - w / 2} y={y - h / 2} width={w} height={h} rx={kb ? 4 : diamond ? 2 : 20}
-          fill={kb ? "var(--ivory)" : "var(--paper)"}
-          stroke={dashed ? "var(--ink-3)" : "var(--ink)"} strokeWidth={1.3} strokeDasharray={dashed ? "4 3" : undefined}
-        />
-      )}
-      <text x={x} y={round ? y + 4 : kb ? y - 2 : y + 5} textAnchor="middle" className={round ? "fill-[var(--ivory)] text-[10px] font-medium" : kb ? "fill-[var(--ink)] font-mono text-[10.5px]" : "fill-[var(--ink)] font-serif text-[15px]"}>
-        {label}
+      <rect
+        x={x - w / 2}
+        y={y - h / 2}
+        width={w}
+        height={h}
+        rx={fact ? (node.label === "Observation" ? 3 : 18) : 4}
+        fill={fact ? "var(--paper)" : "var(--ivory)"}
+        stroke={dashed ? "var(--ink-3)" : "var(--ink)"}
+        strokeWidth={1.3}
+        strokeDasharray={dashed ? "4 3" : undefined}
+      />
+      <text
+        x={x}
+        y={fact ? y + 5 : y - 1}
+        textAnchor="middle"
+        className={fact ? "fill-[var(--ink)] font-serif text-[14px]" : "fill-[var(--ink)] font-mono text-[10.5px]"}
+      >
+        {node.name.replace("_", " ")}
       </text>
-      {!round && (
-        <text x={x} y={kb ? y + 12 : y + h / 2 + 13} textAnchor="middle" className="fill-[var(--ink-3)] text-[9.5px]">
-          {sub}
-        </text>
-      )}
+      <text x={x} y={fact ? y + h / 2 + 12 : y + 12} textAnchor="middle" className="fill-[var(--ink-3)] text-[9px]">
+        {sub(node)}
+      </text>
     </motion.g>
   );
 }

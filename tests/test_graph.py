@@ -101,6 +101,31 @@ def test_story1_end_to_end(db, family):
     }
 
 
+def test_story1_path_is_the_graphs_own(db, family):
+    """q11 returns the walk as FalkorDB's path, in walk order, with each edge's direction."""
+    family(STORIES["syn-p1"])
+    p = store_for(db, family).finding_path(P1_FINDING)
+    assert p.mode == "live"
+    assert [(n.label, n.id or n.name) for n in p.walk.nodes] == [
+        ("MedicationEpisode", "syn-p1:ep-amlodipine"), ("Ingredient", "amlodipine"), ("DrugClass", "C08CA"),
+        ("Pattern", "pat-ccb-edema-loop"), ("DrugClass", "C03CA"), ("Ingredient", "furosemide"),
+        ("MedicationEpisode", "syn-p1:ep-furosemide"),
+    ]
+    assert [(e.type, e.forward) for e in p.walk.edges] == [
+        ("OF", True), ("IN_CLASS", True), ("INDEX", False), ("MARKER", True),
+        ("IN_CLASS", False), ("OF", False),
+    ]
+    [side] = p.sides
+    assert [(n.label, n.id or n.name) for n in side.nodes] == [
+        ("Pattern", "pat-ccb-edema-loop"), ("Effect", "peripheral_edema"),
+        ("Observation", "syn-p1:obs-ankle-swelling"),
+    ]
+    assert [q.query for q in p.query_trace] == ["q11_finding_path"] and p.query_trace[0].ms is not None
+    # The fixture store returns the same shape for the same story, labelled as fixture mode.
+    fx = FixtureStore(STORIES, {pat.id: pat for pat in PATTERNS}).finding_path(P1_FINDING)
+    assert fx.mode == "fixture" and fx.walk == p.walk and fx.sides == p.sides
+
+
 def test_routes_in_graph_mode(db, family, monkeypatch):
     family(story1())
     monkeypatch.setattr(api.main, "store", store_for(db, family))

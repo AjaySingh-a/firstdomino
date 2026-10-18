@@ -30,6 +30,7 @@ import type {
   ReviewDecision,
   ReviewRequest,
   ReviewResult,
+  FindingPath,
   SnapshotFile,
   TimelineResponse,
 } from "./types";
@@ -68,6 +69,7 @@ export interface FirstDominoApi {
   timeline(pid: string): Promise<TimelineResponse>;
   findings(pid: string): Promise<FindingsResponse>;
   investigation(fid: string): Promise<InvestigationResponse>;
+  findingPath(fid: string): Promise<FindingPath>;
   submitEvidence(pid: string, body: EvidenceRequest): Promise<EvidenceResult>;
   review(fid: string, body: ReviewRequest): Promise<ReviewResult>;
   askQuestion(body: QuestionRequest): Promise<QuestionResult>;
@@ -108,6 +110,7 @@ const liveApi: FirstDominoApi = {
   timeline: (pid) => call(`/patients/${enc(pid)}/timeline`),
   findings: (pid) => call(`/patients/${enc(pid)}/findings`),
   investigation: (fid) => call(`/findings/${enc(fid)}/investigation`),
+  findingPath: (fid) => call(`/findings/${enc(fid)}/path`),
   submitEvidence: (pid, body) => call(`/patients/${enc(pid)}/evidence`, post(body)),
   review: (fid, body) => call(`/findings/${enc(fid)}/review`, post(body)),
   askQuestion: (body) => call("/questions", post(body)),
@@ -196,6 +199,11 @@ const fixtureApi: FirstDominoApi = {
     const inv = caseOf(patientOf(fid)).investigations[fid];
     if (!inv) throw new ApiError(404, { error: "not_found", detail: `finding ${fid}` });
     return clone(inv);
+  },
+  findingPath: async (fid) => {
+    const path = snapshot.cases[patientOf(fid)]?.paths?.[fid];
+    if (!path) throw new ApiError(404, { error: "not_found", detail: `finding ${fid}` });
+    return clone(path);
   },
   submitEvidence: async (pid, body) => {
     const c = caseOf(pid);

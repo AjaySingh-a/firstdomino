@@ -46,6 +46,7 @@ def build() -> dict:
             "timeline": dump(store.timeline(pid)),
             "findings": dump(store.findings(pid)),
             "investigations": {f.id: dump(store.investigation(f.id)) for f in story.findings},
+            "paths": {f.id: dump(store.finding_path(f.id)) for f in story.findings},
             "packet": dump(store.packet(pid)),
             "agent_steps": dump(store.agent_steps(pid)),
             # Template phrasing only (no LLM), so the snapshot is the same on every machine.
