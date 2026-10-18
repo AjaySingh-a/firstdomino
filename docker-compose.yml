@@ -1,6 +1,6 @@
 services:
   falkordb:
-    image: falkordb/falkordb:latest
+    image: falkordb/falkordb:v4.22.1  # pinned: the version we built and tested on; CI uses the same
     restart: unless-stopped
     environment:
       # RDB snapshots alone only save on a clean shutdown or every few minutes; the append-only

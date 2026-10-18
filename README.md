@@ -1,5 +1,7 @@
 # FirstDomino
 
+[![CI](https://github.com/AjaySingh-a/firstdomino/actions/workflows/ci.yml/badge.svg)](https://github.com/AjaySingh-a/firstdomino/actions/workflows/ci.yml)
+
 **A side effect, mistaken for a new illness, treated with another medicine. FirstDomino finds that
 chain across a patient's visits as one walk through a FalkorDB graph, and asks for the one missing fact
 a clinician needs.**
