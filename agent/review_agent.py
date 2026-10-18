@@ -211,6 +211,7 @@ class ReviewPass:
         self.question: Question | None = None
         self.packet_text: str | None = None
         self.phrasings: list[str] = []
+        self.memory: str | None = None  # set when an earlier pass already asked the next question
         existing = store.agent_steps(self.pid).steps
         runs = [int(m.group(1)) for s in existing if (m := re.search(r":run-(\d+)-step-", s.id))]
         self.run_n = 1 + max(runs, default=0)
@@ -398,11 +399,17 @@ class ReviewPass:
         except (NotFound, Invalid, Conflict) as e:
             ok, ids, data = False, [], None
             args["error"] = str(e) or type(e).__name__
+            if isinstance(e, NotFound):
+                args["outcome"] = "unknown ID"
         self.used.append(c.tool)
         self.phrasings.append(c.phrasing)
         if ok:
             if isinstance(data, dict) and data.get("text"):
                 args["text"] = data["text"]
+            if isinstance(data, dict):
+                args["outcome"] = data.get("outcome", "answered with a path")
+                if data.get("memory"):
+                    args["memory"] = data["memory"]
             self.seen.absorb(data, ids)
             self.results.append({"tool": c.tool, "args": c.args, "ok": True, "returned": data})
         else:
@@ -478,7 +485,8 @@ class ReviewPass:
         q = inv.next_question
         if q is None:
             self.requirement = None
-            return [], {"next": None, "note": "Nothing this pattern needs is missing."}
+            note = "Nothing this pattern needs is missing."
+            return [], {"next": None, "note": note, "outcome": "not in the graph"}
         about = next((r for r in inv.unknowns if r.requirement_id == q.requirement_id), None)
         self.requirement = {
             "requirement_id": q.requirement_id, "question_id": q.id, "ask_role": q.ask_role,
@@ -488,7 +496,26 @@ class ReviewPass:
         if about:
             self.fact_ids.add(about.fact_id)
         ids = [q.requirement_id, q.id, *([about.fact_id] if about else [])]
-        return ids, {"next": self.requirement}
+        if q.asked_at is None:
+            return ids, {"next": self.requirement, "outcome": "answered with a path"}
+        # Memory: the question was asked in an earlier pass. Say so, citing that pass's step, instead of
+        # skipping ask_question silently.
+        earlier = next(
+            (s for s in self.store.agent_steps(self.pid).steps
+             if s.ok and s.args.get("agent_tool", "ask_question" if s.tool == "draft_question_text" else None)
+             == "ask_question" and q.id in s.result_ids),
+            None,
+        )
+        run = m.group(1) if earlier and (m := re.search(r":run-(\d+)-step-", earlier.id)) else None
+        where = f"run {run}" if run else "an earlier review"
+        memory = (
+            f"Asked in {where} (question {q.id}{f', step {earlier.id}' if earlier else ''}); "
+            f"still waiting for the {q.ask_role}, not asking again."
+        )
+        self.memory = memory
+        return [*ids, *([earlier.id] if earlier else [])], {
+            "next": self.requirement, "outcome": "answered from memory", "memory": memory,
+        }
 
     def _ask_question(self, c: Choice):
         res = self.store.ask_question(QuestionRequest(

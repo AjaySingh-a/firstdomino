@@ -174,6 +174,16 @@ def next_missing_fact(api: FirstDominoAPI, patient_id: str) -> str:
         lines.append(f"  {_question(q)}")
         lines.append(f"  Requirement: [{q['requirement_id']}]")
         ids += [f["id"], q["id"], q["requirement_id"]]
+        if q.get("asked_at") is not None:
+            # From memory: the question is already a node in the graph; cite the step that asked it.
+            steps = api.get(f"/patients/{patient_id}/agent-steps")["steps"]
+            earlier = next((s for s in steps if s["ok"] and q["id"] in s["result_ids"]), None)
+            where = f", step [{earlier['id']}]" if earlier else ""
+            lines.append(
+                f"  From memory: already asked on day {q['asked_at']}{where}; still waiting for the "
+                f"{q['ask_role']}, so it is not asked again."
+            )
+            ids += [earlier["id"]] if earlier else []
         if fact:
             lines.append(
                 f"  To see every finding that depends on this fact: "
