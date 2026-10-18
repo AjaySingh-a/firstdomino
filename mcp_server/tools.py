@@ -103,7 +103,10 @@ def _pack_body(item: dict[str, Any]) -> tuple[list[str], list[str]]:
 
 def list_stories(api: FirstDominoAPI) -> str:
     lines, ids = ["Synthetic stories in FirstDomino:"], []
-    for p in api.get("/patients"):
+    patients = api.get("/patients")
+    # Visitor-built lab patients (lab-...) are not stories; the web app lists them apart too.
+    lab = [p for p in patients if p["id"].startswith("lab-")]
+    for p in (p for p in patients if not p["id"].startswith("lab-")):
         found = api.get(f"/patients/{p['id']}/findings")
         lines.append(f"- {p['label']} [{p['id']}], age {p['age_band']}, case version {p['case_version']}")
         ids.append(p["id"])
@@ -112,6 +115,8 @@ def list_stories(api: FirstDominoAPI) -> str:
             ids.append(f["id"])
         if not found["findings"]:
             lines.append("    No matched pattern. " + NO_CHAIN_NOTE)
+    if lab:
+        lines.append(f"Also {len(lab)} visitor-built lab patient(s) (lab-...), not listed here.")
     return reply(lines, ids)
 
 

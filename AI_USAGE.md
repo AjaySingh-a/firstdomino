@@ -111,7 +111,11 @@ make it pass. The assistant then:
   which path functions our FalkorDB version supports before choosing one (`F-2`);
 - made the agent's memory visible: a second run cites the question and step from the first instead of
   skipping silently (`F-3`);
-- rewrote the top of this README for judges (`F-4`).
+- rewrote the top of this README for judges (`F-4`);
+- added CI that runs the tests against a real FalkorDB container (`F-5`);
+- ran the final check on the live app and saved the outputs to `evidence/2026-10-18/` (`F-6`). That
+  check found one real bug, which was fixed rather than hidden: the MCP `list_stories` tool listed
+  visitor-built lab patients among the stories.
 
 Where a new feature would have changed an existing test's expectation (adding `q11` to the
 investigation's query trace), we chose a design that left the test alone: the web app reads `q11`'s

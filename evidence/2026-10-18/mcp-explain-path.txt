@@ -1,0 +1,7 @@
+The path behind syn-p1:fnd-ccb-edema-loop-1, as FalkorDB returned it (q11):
+amlodipine -[:OF]-> amlodipine -[:IN_CLASS]-> C08CA <-[:INDEX]- Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic -[:MARKER]-> C03CA <-[:IN_CLASS]- furosemide <-[:OF]- furosemide
+Symptom: Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic -[:VIA]-> peripheral_edema <-[:OF_EFFECT]- Ankle swelling
+The path shows how these facts are linked. The rules set the status: a possible pattern.
+
+Synthetic data. A possible pattern for a clinician to review, not a conclusion.
+Evidence IDs: syn-p1:fnd-ccb-edema-loop-1, syn-p1:ep-amlodipine, pat-ccb-edema-loop, syn-p1:ep-furosemide, syn-p1:obs-ankle-swelling

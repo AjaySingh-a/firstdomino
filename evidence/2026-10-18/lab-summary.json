@@ -1,0 +1,69 @@
+{
+  "lab-chain.json": {
+    "patient": "lab-bb2958",
+    "statuses": [
+      "needs_evidence"
+    ],
+    "steps_ms": {
+      "knowledge": 25.0,
+      "write/patient + episodes + observations": 15.8,
+      "q1_candidate_match + engine/rules.py": 10.6,
+      "q11_finding_path": 7.7,
+      "q12_medicine_link (algo.SPpaths)": 7.5,
+      "q6_patient_findings": 29.1
+    },
+    "links": [
+      [
+        "amlodipine",
+        "C08CA",
+        "furosemide",
+        "C03CA",
+        "path"
+      ]
+    ]
+  },
+  "lab-wrong-order.json": {
+    "patient": "lab-dab017",
+    "statuses": [
+      "not_matched"
+    ],
+    "steps_ms": {
+      "knowledge": 19.5,
+      "write/patient + episodes + observations": 13.8,
+      "q1_candidate_match + engine/rules.py": 9.5,
+      "q11_finding_path": 7.5,
+      "q12_medicine_link (algo.SPpaths)": 7.3,
+      "q6_patient_findings": 16.9
+    },
+    "links": [
+      [
+        "amlodipine",
+        "C08CA",
+        "furosemide",
+        "C03CA",
+        "path"
+      ]
+    ]
+  },
+  "lab-lookalike.json": {
+    "patient": "lab-31d145",
+    "statuses": [],
+    "steps_ms": {
+      "knowledge": 19.6,
+      "write/patient + episodes + observations": 17.6,
+      "q1_candidate_match + engine/rules.py": 2.5,
+      "q11_finding_path": 0.0,
+      "q12_medicine_link (algo.SPpaths)": 4.9,
+      "q6_patient_findings": 27.3
+    },
+    "links": [
+      [
+        "diltiazem",
+        "C08DB",
+        "furosemide",
+        "C03CA",
+        "no path"
+      ]
+    ]
+  }
+}

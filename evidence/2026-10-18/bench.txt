@@ -1,0 +1,14 @@
+uv run python -m bench.run
+case01  7/7  agrees
+case02  7/7  agrees
+case03  7/7  agrees
+case04  7/7  agrees
+case05  7/7  agrees
+case06  7/7  agrees
+case07  7/7  agrees
+case08  8/8  agrees
+case09  9/9  agrees
+case10  8/8  agrees
+case11  9/9  agrees
+case12  15/15  agrees
+wrote bench/results.md

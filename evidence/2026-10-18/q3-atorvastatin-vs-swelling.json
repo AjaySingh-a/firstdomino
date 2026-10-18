@@ -1,0 +1,37 @@
+{
+  "atorvastatin (syn-p3, no pattern uses it)": {
+    "patient_id": "syn-p3",
+    "case_version": 4,
+    "fact_id": "syn-p3:ep-atorvastatin",
+    "findings": []
+  },
+  "ankle swelling (syn-p3)": {
+    "patient_id": "syn-p3",
+    "case_version": 4,
+    "fact_id": "syn-p3:obs-ankle-swelling",
+    "findings": [
+      {
+        "id": "syn-p3:fnd-ccb-edema-loop-1",
+        "patient_id": "syn-p3",
+        "pattern_id": "pat-ccb-edema-loop",
+        "pattern_version": 1,
+        "eval_version": 2,
+        "status": "reviewed",
+        "revision_n": 1,
+        "index_episode_id": "syn-p3:ep-amlodipine",
+        "marker_episode_id": "syn-p3:ep-furosemide",
+        "effect": "peripheral_edema",
+        "observation_ids": [
+          "syn-p3:obs-ankle-swelling"
+        ],
+        "cited_source_ids": [
+          "syn-p3:src-cardio-d0",
+          "syn-p3:src-pharm-d40",
+          "syn-p3:src-cg-d45"
+        ],
+        "requirement_ids": [],
+        "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "mode": "graph",
+  "falkordb": "up",
+  "appendonly": "yes"
+}
