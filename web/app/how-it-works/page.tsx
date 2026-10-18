@@ -13,17 +13,17 @@ const FLOW = [
   {
     icon: FileText,
     title: "Records",
-    text: "Clinic letters, pharmacy records, a hospital discharge, what the caregiver says. Each fact keeps its source, its day, and whether it is on record, reported or not known yet.",
+    text: "Letters, pharmacy records, what the caregiver says. Each fact keeps its source, its day and how sure it is.",
   },
   {
     icon: Network,
     title: "Graph",
-    text: "Every medicine, symptom, record and finding is a node in FalkorDB. A short list of published, cited patterns is matched against the patient's own timeline.",
+    text: "Every medicine, symptom, record and finding is a node in FalkorDB, matched against cited patterns.",
   },
   {
     icon: MessageCircleQuestion,
     title: "Questions",
-    text: "Where a fact is missing, FirstDomino asks for the one that would settle the most, and asks the person who can answer it. The clinician decides.",
+    text: "It asks for the one missing fact that settles the most, from the person who knows. The clinician decides.",
   },
 ];
 
@@ -127,6 +127,9 @@ export default function HowItWorks() {
         <Wordmark />
         <nav className="flex items-center gap-4">
           <TourButton />
+          <Link href="/lab" className="text-[12.5px] font-medium text-amber-ink underline decoration-amber underline-offset-2 hover:text-ink">
+            Patient lab
+          </Link>
           <Link href="/" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
             Home
           </Link>

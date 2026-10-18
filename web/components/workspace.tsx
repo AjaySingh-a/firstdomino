@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DATA_SOURCE, StaleError, api } from "@/lib/api";
-import { STORY_TITLES, isOpenPattern, litIds, shortHeadline } from "@/lib/present";
+import { STORY_TITLES, isLabPatient, isOpenPattern, isStory, litIds, shortHeadline } from "@/lib/present";
 import { Tech, TechToggle } from "@/lib/tech";
 import { TOUR_FINDINGS, type DrawerTab } from "@/lib/tour";
 import type { ConflictError, EvidenceRequest, EvidenceResult, Patient, ReviewRequest } from "@/lib/types";
@@ -54,7 +54,7 @@ function WorkspaceView({ pid }: { pid: string }) {
   const investigation = useInvestigation(selected, version);
 
   useEffect(() => {
-    api.patients().then(setPatients, () => setPatients([]));
+    api.patients().then((ps) => setPatients(ps.filter((p) => isStory(p.id))), () => setPatients([]));
   }, [version]);
 
   const openFindings = useMemo(() => (findings.kind === "ready" ? findings.data.findings.filter(isOpenPattern) : []), [findings]);
@@ -180,9 +180,12 @@ function WorkspaceView({ pid }: { pid: string }) {
             <Link href="/how-it-works" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
               How it works
             </Link>
+            <Link href="/lab" className={cn("text-[12.5px] underline decoration-rule-strong underline-offset-2 hover:text-ink", isLabPatient(pid) ? "font-medium text-amber-ink" : "text-ink-2")}>
+              Patient lab
+            </Link>
             <nav aria-label="Stories" className="flex items-center gap-1">
               <span className="smallcaps mr-1 text-ink-3">Story</span>
-              {(patients.length ? patients : [{ id: pid } as Patient]).map((p, i) => (
+              {(patients.length || !isStory(pid) ? patients : [{ id: pid } as Patient]).map((p, i) => (
                 <Link
                   key={p.id}
                   href={`/patients/${p.id}`}

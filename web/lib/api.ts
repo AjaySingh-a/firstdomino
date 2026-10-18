@@ -17,6 +17,9 @@ import type {
   FindingsResponse,
   HealthResponse,
   InvestigationResponse,
+  LabPalette,
+  LabRequest,
+  LabResult,
   PacketResponse,
   Patient,
   QuestionRequest,
@@ -75,6 +78,9 @@ export interface FirstDominoApi {
   packet(pid: string): Promise<PacketResponse>;
   /** Restore one synthetic story (`pid`), or every story. */
   reset(pid?: string): Promise<ResetResponse>;
+  /** The patient lab: live FalkorDB only. Without the graph there is nothing to evaluate a new patient on. */
+  labPalette(): Promise<LabPalette>;
+  createLabPatient(body: LabRequest): Promise<LabResult>;
 }
 
 // ---------- live ----------
@@ -109,6 +115,8 @@ const liveApi: FirstDominoApi = {
   affected: (pid, factId) => call(`/patients/${enc(pid)}/facts/${enc(factId)}/affected`),
   packet: (pid) => call(`/patients/${enc(pid)}/packet`),
   reset: (pid) => call("/sandbox/reset", post(pid ? { patient_id: pid } : {})),
+  labPalette: () => call("/lab/palette"),
+  createLabPatient: (body) => call("/lab/patients", post(body)),
 };
 
 // ---------- fixtures ----------
@@ -335,6 +343,15 @@ const fixtureApi: FirstDominoApi = {
     resetSession(pid);
     return { reset: true, patients: Object.values(session).map((c) => clone(c.timeline.patient)) };
   },
+  // Saved snapshots cannot evaluate a patient nobody has seen: the lab needs the live graph, as the API says.
+  labPalette: async () => {
+    throw new ApiError(503, GRAPH_REQUIRED);
+  },
+  createLabPatient: async () => {
+    throw new ApiError(503, GRAPH_REQUIRED);
+  },
 };
+
+const GRAPH_REQUIRED = { error: "graph_required", detail: "the patient lab needs FalkorDB" };
 
 export const api: FirstDominoApi = DATA_SOURCE === "live" ? liveApi : fixtureApi;

@@ -57,6 +57,10 @@ export const STORY_TITLES: Record<string, string> = {
   "syn-p3": "When the record changes",
 };
 
+/** The three curated stories, not the patients visitors build in the lab (`lab-…`). */
+export const isStory = (pid: string) => pid in STORY_TITLES;
+export const isLabPatient = (pid: string) => pid.startsWith("lab-");
+
 export const STATE_LABEL: Record<AnswerState, string> = {
   documented: "On record",
   reported: "Reported by the caregiver",

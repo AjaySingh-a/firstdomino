@@ -17,7 +17,9 @@ PATTERNS = list(load_patterns().values())
 
 
 def med(name, day, state="documented", reason=None, reason_state="unknown"):
-    return {"name": name, "start_day": day, "start_state": state, "reason": reason, "reason_state": reason_state}
+    return {
+        "name": name, "start_day": day, "start_state": state, "reason": reason, "reason_state": reason_state,
+    }
 
 
 def req(*meds, onset=20, onset_state="reported"):
