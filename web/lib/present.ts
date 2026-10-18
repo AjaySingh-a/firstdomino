@@ -208,3 +208,7 @@ export function askedAbout(label: string): string {
   if (began) return `when the ${began[1].toLowerCase()} began`;
   return label.charAt(0).toLowerCase() + label.slice(1);
 }
+
+/** Said wherever no finding is shown: an empty walk is not an all-clear. */
+export const NO_CHAIN_NOTE =
+  "FirstDomino models one curated pattern, so no chain here does not rule anything else out. A clinician still reviews the whole medicine list.";
