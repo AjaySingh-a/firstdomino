@@ -283,39 +283,49 @@ export default function LabPage() {
   );
 }
 
+// Known days sit on 2–80% of the width; "day ?" has its own column at the right end, so the two never meet.
+const dayX = (day: number) => (Math.min(day, MAX_DAY) / MAX_DAY) * 78 + 2;
+const UNKNOWN_X = 96;
+
 function Timeline({ draft, meds }: { draft: Draft; meds: Record<string, PaletteMedicine> }) {
   const marks = [
     ...draft.rows.map((r) => ({ key: `m${r.key}`, label: r.name, day: r.day, state: r.state, kind: isCcb(meds[r.name]) ? "first" : isDiuretic(meds[r.name]) ? "second" : "other" })),
     ...(draft.symptom.on ? [{ key: "s", label: "swelling", day: draft.symptom.day, state: draft.symptom.state, kind: "symptom" }] : []),
-  ];
+  ]
+    .map((m) => ({ ...m, left: m.state === "unknown" ? UNKNOWN_X : dayX(m.day) }))
+    .sort((a, b) => a.left - b.left);
   return (
     <div className="relative px-4 pb-4 pt-6 sm:px-5" aria-hidden>
-      <div className="relative h-[86px]">
-        <div className="absolute inset-x-0 top-[52px] h-px bg-ink" />
+      <div className="relative h-[100px]">
+        <div className="absolute inset-x-0 top-[66px] h-px bg-ink" />
         {[0, 30, 60, 90, 120].map((d) => (
-          <span key={d} className="absolute top-[58px] -translate-x-1/2 font-mono text-[10px] text-ink-3" style={{ left: `${(d / MAX_DAY) * 92 + 2}%` }}>
+          <span key={d} className={cn("absolute top-[72px] font-mono text-[10px] text-ink-3", d > 0 && "-translate-x-1/2")} style={{ left: `${d === 0 ? 0 : dayX(d)}%` }}>
             d{d}
           </span>
         ))}
-        <span className="absolute right-0 top-[58px] font-mono text-[10px] text-ink-3">day ?</span>
+        <span className="absolute right-0 top-[72px] font-mono text-[10px] text-ink-3">day ?</span>
         {marks.map((m, i) => {
           const unknown = m.state === "unknown";
-          const left = unknown ? 97 : (Math.min(m.day, MAX_DAY) / MAX_DAY) * 92 + 2;
+          // Labels near an edge grow inwards; neighbours (in day order) sit on different rows.
+          const align = m.left < 14 ? "left-[-6px]" : m.left > 82 ? "right-[-6px]" : "left-0 -translate-x-1/2";
           return (
             <motion.div
               key={m.key}
-              className="absolute top-0 flex -translate-x-1/2 flex-col items-center"
+              className="absolute top-0 w-0"
               initial={false}
-              animate={{ left: `${left}%` }}
+              animate={{ left: `${m.left}%` }}
               transition={{ type: "spring", stiffness: 220, damping: 26 }}
               style={{ zIndex: 10 + i }}
             >
-              <span className={cn("whitespace-nowrap font-serif text-[14px]", m.kind === "other" ? "text-ink-3" : "text-ink")} style={{ marginTop: (i % 2) * 18 }}>
+              <span
+                className={cn("absolute whitespace-nowrap font-serif text-[14px] leading-none", align, m.kind === "other" ? "text-ink-3" : "text-ink")}
+                style={{ top: (i % 3) * 18 }}
+              >
                 {m.label}
               </span>
               <span
                 className={cn(
-                  "absolute top-[46px] size-3 border",
+                  "absolute left-[-6px] top-[60px] size-3 border",
                   m.kind === "symptom" ? "rotate-45" : "rounded-full",
                   unknown ? "border-dashed border-ink-3 bg-transparent" : m.state === "reported" ? "border-ink bg-paper" : m.kind === "other" ? "border-ink-3 bg-ink-3" : "border-ink bg-ink",
                   m.kind === "first" && !unknown && "bg-amber",
@@ -333,7 +343,7 @@ function DaySlider({ value, onChange, disabled, label }: { value: number; onChan
   return (
     <div className={cn("flex items-center gap-3", disabled && "opacity-40")}>
       <input type="range" min={0} max={MAX_DAY} value={value} disabled={disabled} aria-label={label} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-[var(--ink)]" />
-      <span className="tabular w-12 font-mono text-[12px] text-ink-2">{disabled ? "day ?" : `day ${value}`}</span>
+      <span className="tabular w-14 shrink-0 whitespace-nowrap font-mono text-[12px] text-ink-2">{disabled ? "day ?" : `day ${value}`}</span>
     </div>
   );
 }
@@ -440,7 +450,7 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
           const a = nameOf(f.index_episode_id);
           const b = nameOf(f.marker_episode_id);
           return (
-            <motion.article key={f.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.3 }} className="rounded-[10px] border border-ink bg-paper p-4 sm:p-6">
+            <motion.article key={f.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.3 }} className="min-w-0 rounded-[10px] border border-ink bg-paper p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-3">
                 <StatusChip status={f.status} />
                 <p className="font-serif text-[22px] leading-tight">{f.headline}</p>
