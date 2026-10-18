@@ -167,6 +167,22 @@ railway service status --service api --json      # BUILDING -> SUCCESS
 
 From then on, a push to `main` deploys the API. Check `/health` again afterwards.
 
+### Why `main` stopped deploying (found 2026-10-18)
+
+- **Symptom:** after PR #14 merged, live `/lab/palette` answered 404 and the web app's lab said "The API
+  is not reachable right now". `railway deployment list --service api` showed no deploy after
+  2026-10-16 16:08 (`50ac1de`, PR #7): none of PRs #8–#16 had deployed the API.
+- **Cause:** the service's saved source had the repo but **no branch**
+  (`railway environment config --json` → `source: {"repo": "AjaySingh-a/firstdomino"}`). Without a
+  branch Railway has no push trigger, so merges to `main` built nothing. The 2026-10-16 build of
+  `main` came from running `railway service source connect` by hand (step 4), not from a push. It is
+  the same "the branch did not stick" problem as `railway add --branch` in step 1.
+- **Fix:** `railway service source connect --repo AjaySingh-a/firstdomino --branch main --service api`
+  again (CLI 5.70.0). That started a build of `main` (`c4f0840`) at once, and the lab routes went live.
+- **Check after every merge:** `railway deployment list --service api --json` should show a new
+  deploy for the merged commit within a minute. If it does not, run the `source connect` line
+  above, or press **Deploy** on the `api` service in the dashboard.
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
