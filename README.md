@@ -4,8 +4,7 @@
 medicine. FirstDomino finds these possible chains in a medication story and asks for the one missing
 fact a clinician needs.**
 
-<!-- Demo GIF: record the guided tour and save it as docs/media/demo.gif -->
-![FirstDomino guided tour](docs/media/demo.gif)
+![The caregiver answers the one missing fact: the dashed arc turns solid, the finding moves from version 1 to version 2, and only that finding is re-checked](docs/media/demo.gif)
 
 - **Web app:** https://firstdomino-web.vercel.app
 - **API health:** https://api-production-b29f.up.railway.app/health
@@ -86,6 +85,32 @@ restart it from the **Guided tour** button in any page header.
 | `syn-p1` | Nobody recorded why furosemide was started | `needs_evidence`: asks the caregiver for the reason |
 | `syn-p2` | A discharge summary documents a different reason (new heart failure) | `competing_explanation`: shown side by side, not dismissed, and the prescriber is never called mistaken |
 | `syn-p3` | A clinician reviewed revision 1; a GP note then moves the swelling onset | Revision 2 `needs_reassessment`, the decision stays on revision 1 |
+
+## Build your own patient: the patient lab
+
+Three stories can look staged, so **https://firstdomino-web.vercel.app/lab** lets you build one.
+
+1. Place up to five medicines on a timeline (amlodipine, nifedipine, felodipine, diltiazem, furosemide,
+   bumetanide, torsemide, hydrochlorothiazide, atorvastatin, metformin, lisinopril), set each start day
+   and how sure it is (on record, the caregiver says, not known), give a reason or leave it unrecorded,
+   and add ankle swelling or not.
+2. **Write to the graph and walk it.** `POST /lab/patients` writes a new synthetic patient into FalkorDB
+   with the same named write queries as the stories, and Q1 plus the unchanged `engine/rules.py` evaluate
+   it. The page shows each step's time on the live graph, then draws each finding's walk edge by edge:
+   patient → medicine → ATC class ← pattern → effect ← symptom, and pattern → second class ← second
+   medicine.
+3. **The same list, read without the graph.** Next to the result, the page shows what a flat check would
+   say ("a calcium-channel blocker and a diuretic, together"). Put furosemide first and the flat check
+   still flags the pair; the graph says the order doesn't fit. Swap amlodipine for diltiazem, which is
+   also called a calcium-channel blocker but sits in another ATC class (`C08DB`, not `C08CA`), and the
+   flat check flags it while the graph finds no chain.
+4. **Open the full review.** The new `lab-…` patient works everywhere: answer the missing fact, run the
+   review agent, ask Q3 what depends on a fact, print the packet.
+
+**Without FalkorDB there is no answer.** With `FD_STORE=fixtures` the lab endpoint returns
+`503 {"error": "graph_required"}`, and the web app's fixture mode says the same. There is no fallback:
+a patient nobody has seen can only be evaluated as a graph traversal. The newest 40 lab patients are
+kept, and **Reset all stories** deletes them all.
 
 ## Architecture and graph model
 
@@ -410,7 +435,7 @@ The API runs on Railway next to a FalkorDB service (AOF on), and the web app on 
 
 ## Limitations
 
-- **One pattern, three stories.** The curated set has one pattern (calcium-channel blocker → ankle
+- **One pattern, three stories, plus the lab.** Lab patients use the same single pattern. The curated set has one pattern (calcium-channel blocker → ankle
   swelling → loop diuretic) and three synthetic stories. The graph and rules are built for more, but
   more patterns have not been curated yet.
 - **Not clinically validated.** No real patient data, no clinical study, no regulatory review. The
