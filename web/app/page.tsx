@@ -54,8 +54,8 @@ export default function Landing() {
             <div>
               <p className="smallcaps text-amber-ink">Find the first domino</p>
               <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ y: 10 }}
+                animate={{ y: 0 }}
                 transition={{ duration: 0.6 }}
                 className="mt-3 font-serif text-[clamp(32px,5.2vw,56px)] leading-[1.04] tracking-[-0.01em]"
               >
@@ -63,9 +63,9 @@ export default function Landing() {
                 treated with <em className="text-amber-ink">another medicine</em>.
               </motion.h1>
               <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.25, duration: 0.6 }}
+                initial={{ y: 6 }}
+                animate={{ y: 0 }}
+                transition={{ delay: 0.15, duration: 0.5 }}
                 className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-ink-2"
               >
                 FirstDomino finds these possible chains across visits and asks for the one missing fact.
