@@ -4,7 +4,7 @@ import type { AnswerState, FindingStatus } from "@/lib/types";
 
 const TONE: Record<Tone, string> = {
   amber: "border-amber bg-amber-wash text-amber-ink",
-  teal: "border-teal bg-teal-wash text-teal",
+  teal: "border-teal bg-teal-wash text-teal-ink",
   muted: "border-rule-strong bg-paper text-ink-3",
 };
 

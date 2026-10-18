@@ -316,7 +316,7 @@ function StepRow({
       <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="font-mono text-[12px] text-ink">{toolOf(step)}</span>
         <span className="font-mono text-[10.5px] text-ink-3">{step.tool}</span>
-        <span className={cn("smallcaps text-[10px]", step.ok ? "text-teal" : "text-coral")}>{step.ok ? "ok" : "failed"}</span>
+        <span className={cn("smallcaps text-[10px]", step.ok ? "text-teal-ink" : "text-coral")}>{step.ok ? "ok" : "failed"}</span>
         {phrasing && <span className="text-[10.5px] text-ink-3">· {phrasing}</span>}
         {fallback && (
           <span
