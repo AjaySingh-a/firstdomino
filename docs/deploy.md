@@ -177,11 +177,16 @@ From then on, a push to `main` deploys the API. Check `/health` again afterwards
   branch Railway has no push trigger, so merges to `main` built nothing. The 2026-10-16 build of
   `main` came from running `railway service source connect` by hand (step 4), not from a push. It is
   the same "the branch did not stick" problem as `railway add --branch` in step 1.
-- **Fix:** `railway service source connect --repo AjaySingh-a/firstdomino --branch main --service api`
+- **What we ran:** `railway service source connect --repo AjaySingh-a/firstdomino --branch main --service api`
   again (CLI 5.70.0). That started a build of `main` (`c4f0840`) at once, and the lab routes went live.
-- **Check after every merge:** `railway deployment list --service api --json` should show a new
-  deploy for the merged commit within a minute. If it does not, run the `source connect` line
-  above, or press **Deploy** on the `api` service in the dashboard.
+- **Not fixed by that:** PRs #17–#23 merged afterwards and still triggered no deploy. The saved source
+  still shows no branch, so the push trigger is still missing. Check in the dashboard: **api →
+  Settings → Source** should show branch `main`, and the Railway GitHub app needs access to
+  `AjaySingh-a/firstdomino`.
+- **Until then, after every merge that touches the API** (`api/`, `engine/`, `agent/`, `data/`,
+  `pyproject.toml`, `uv.lock`, `railway.json`): run the `source connect` line above, or press
+  **Deploy** on the `api` service. Then check `railway deployment list --service api --json` for the
+  merged commit and `/health`. Web-only merges need nothing on Railway, because Vercel deploys them.
 
 ## Troubleshooting
 
