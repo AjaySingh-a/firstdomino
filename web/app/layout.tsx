@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_URL, pageMeta } from "@/lib/meta";
 import { Providers } from "./providers";
@@ -12,6 +12,8 @@ const serif = Instrument_Serif({
   variable: "--font-instrument-serif",
 });
 const sans = Geist({ subsets: ["latin"], display: "swap", variable: "--font-geist" });
+// Display: a bold grotesque for headlines and big numbers; the serif italic marks the accent words.
+const display = Bricolage_Grotesque({ subsets: ["latin"], display: "swap", variable: "--font-bricolage" });
 const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-jetbrains-mono" });
 
 export const metadata: Metadata = {
@@ -31,7 +33,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${serif.variable} ${sans.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-dvh bg-ivory text-ink antialiased">
         <Providers>{children}</Providers>
       </body>

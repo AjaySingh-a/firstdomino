@@ -70,9 +70,9 @@ function FooterLink({ item }: { item: Item }) {
 export function SiteFooter({ className }: { className?: string }) {
   return (
     <footer className={cn("mt-16 border-t border-ink bg-paper print:hidden", className)}>
-      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:grid-cols-[1.4fr_repeat(3,1fr)] sm:px-8">
+      <div className="wrap grid grid-cols-2 gap-x-6 gap-y-8 py-14 sm:grid-cols-[1.6fr_repeat(3,1fr)]">
         <div className="col-span-2 sm:col-span-1">
-          <p className="font-serif text-[22px] leading-none">FirstDomino</p>
+          <p className="font-display text-[28px] font-extrabold leading-none tracking-[-0.03em]">FirstDomino</p>
           <p className="mt-2 max-w-[30ch] text-[13px] leading-snug text-ink-2">
             Finds possible prescribing cascades across visits, and asks for the fact a clinician still needs.
           </p>
@@ -91,7 +91,7 @@ export function SiteFooter({ className }: { className?: string }) {
         ))}
       </div>
       <div className="border-t border-rule">
-        <p className="mx-auto flex max-w-6xl flex-wrap gap-x-3 gap-y-1 px-4 py-4 text-[12px] text-ink-3 sm:px-8">
+        <p className="wrap flex flex-wrap gap-x-3 gap-y-1 py-5 text-[12px] text-ink-3">
           <span className="w-full sm:w-auto">All patients are synthetic. Possible patterns for a clinician to review, never conclusions.</span>
           <span aria-hidden className="hidden sm:inline">·</span>
           <span>Team Kodeline</span>
