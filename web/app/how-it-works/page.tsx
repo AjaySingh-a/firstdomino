@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, MessageCircleQuestion, Network } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
+import { Accent } from "@/components/reveal";
 import { SiteHeader } from "@/components/site-header";
 import { pageMeta } from "@/lib/meta";
 
@@ -127,7 +128,7 @@ export default function HowItWorks() {
       <div className="mx-auto max-w-5xl px-4 pb-4 sm:px-8">
         <SiteHeader current="how" />
 
-        <h1 className="mt-10 font-serif text-[clamp(36px,6vw,56px)] leading-[1.02]">How it works</h1>
+        <h1 className="mt-12 font-display text-[clamp(40px,6.5vw,88px)] font-extrabold leading-[0.95] tracking-[-0.035em]">How it <Accent>works</Accent>.</h1>
         <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-ink-2">
           Records go in, a graph connects them, and FirstDomino asks for the missing fact. Possible patterns for a
           clinician to review; never a conclusion, never a medicine change.

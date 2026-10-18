@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import type { WalkFact } from "@/components/graph-walk";
 import { SiteFooter } from "@/components/site-footer";
+import { Accent } from "@/components/reveal";
 import { SiteHeader } from "@/components/site-header";
 import { StatusChip } from "@/components/status";
 import { ApiError, api } from "@/lib/api";
@@ -122,7 +123,7 @@ export default function LabPage() {
 
   return (
     <>
-      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-8">
+      <div className="wrap flex min-h-dvh flex-col">
         <SiteHeader current="lab" />
 
         <main className="flex-1 pb-20">
@@ -134,12 +135,12 @@ export default function LabPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="mt-3 font-serif text-[clamp(34px,5.4vw,58px)] leading-[1.02]"
+              className="mt-4 font-display text-[clamp(38px,6vw,84px)] font-extrabold leading-[0.95] tracking-[-0.035em]"
             >
-              Build a patient. <em className="text-amber-ink">Watch the graph decide.</em>
+              Build a patient. <Accent>Watch the graph decide.</Accent>
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-ink-2">
-              Nothing here is precomputed. Your patient is written to the graph, walked, and judged by the same rules as the stories.
+              <b className="text-ink">Nothing here is precomputed.</b> Your patient is written to FalkorDB, walked, and judged by the same rules as the stories.
             </motion.p>
           </section>
 
@@ -437,7 +438,7 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
         {Math.round(total)} ms on the live graph, start to finish. Every step is a named Cypher query starting from <span className="font-mono">Patient {"{"}id: &quot;{patient.id}&quot;{"}"}</span>.
       </p>
 
-      <div className="mt-8 grid gap-6">
+      <div className={cn("mt-8 grid gap-6", findings.length > 1 ? "xl:grid-cols-2" : "max-w-5xl")}>
         {findings.length === 0 && (
           <div className="rounded-[10px] border border-rule-strong bg-paper p-6">
             <p className="font-serif text-[26px]">No chain in the graph.</p>
