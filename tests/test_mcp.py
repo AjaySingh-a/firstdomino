@@ -117,6 +117,13 @@ def test_next_missing_fact_points_at_the_dependency_tool(api):
     } <= evidence_ids(text)
 
 
+def test_next_missing_fact_says_when_it_answers_from_memory(api):
+    server = build_server(api, allow_writes=True)
+    call(server, "ask_question", requirement_id="syn-p1:req-furosemide-indication")
+    text = call(server, "next_missing_fact", patient_id="syn-p1")
+    assert "From memory: already asked on day" in text and "not asked again" in text
+
+
 def test_next_missing_fact_when_nothing_is_open(api):
     # Story 2 has another reason on record, so no question is waiting.
     text = call(build_server(api), "next_missing_fact", patient_id="syn-p2")

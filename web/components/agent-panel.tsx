@@ -67,6 +67,10 @@ export function stepSentence(step: AgentStep, inv: InvestigationResponse, timeli
     case "inspect_episode":
       return `Looked at when ${name(step.args.episode_id)} was started, and why.`;
     case "next_missing_fact":
+      if (step.args.outcome === "answered from memory") {
+        const run = /:run-(\d+)-step-/.exec(step.result_ids.find((id) => /:run-\d+-step-/.test(id)) ?? "")?.[1];
+        return `Already asked ${run ? `in run ${run}` : "earlier"}: still waiting for ${role}, so not asking again.`;
+      }
       return step.result_ids.length ? `Found the missing fact: ${ask(step.result_ids.find((id) => id.includes(":req-")))}.` : "Looked for a missing fact: nothing is missing.";
     case "ask_question":
       return `Asked ${role} ${ask(step.args.requirement_id)}.`;
@@ -311,6 +315,14 @@ function StepRow({
         <span className="shrink-0 font-mono text-[11px] text-ink-3">{n}.</span>
         <span className="min-w-0 text-[13px] leading-snug text-ink">{stepSentence(step, inv, timeline)}</span>
         {!step.ok && <span className="smallcaps text-[10px] text-coral">failed</span>}
+        {step.args.outcome === "answered from memory" && (
+          <span
+            title={typeof step.args.memory === "string" ? step.args.memory : "Read from the graph's memory of earlier runs"}
+            className="smallcaps shrink-0 rounded-[3px] border border-teal bg-teal-wash px-1.5 py-px text-[10px] text-teal-ink"
+          >
+            from memory
+          </span>
+        )}
       </p>
       {tech && (
       <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

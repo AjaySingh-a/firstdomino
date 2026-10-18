@@ -686,7 +686,8 @@
               "args": {
                 "agent_tool": "get_evidence_pack",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:fnd-ccb-edema-loop-1",
@@ -711,7 +712,8 @@
                 "agent_tool": "inspect_episode",
                 "episode_id": "syn-p1:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:ep-furosemide",
@@ -728,7 +730,8 @@
               "args": {
                 "agent_tool": "next_missing_fact",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:req-furosemide-indication",
@@ -748,7 +751,8 @@
                 "requirement_id": "syn-p1:req-furosemide-indication",
                 "phrasing": "template",
                 "fallback_reason": "no_key",
-                "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help."
+                "text": "Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help.",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:q-furosemide-indication",
@@ -766,7 +770,8 @@
                 "agent_tool": "request_reevaluation",
                 "fact_id": "syn-p1:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:ep-furosemide",
@@ -784,7 +789,8 @@
                 "agent_tool": "prepare_packet",
                 "phrasing": "template",
                 "fallback_reason": "no_key",
-                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help. Any change to a medicine is the prescribing clinician's decision."
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why the water tablet (furosemide) was started around day 35? A letter, a prescription note, or what the doctor said at the time would help. Any change to a medicine is the prescribing clinician's decision.",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p1:ep-amlodipine",
@@ -1435,7 +1441,8 @@
               "args": {
                 "agent_tool": "get_evidence_pack",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p2:fnd-ccb-edema-loop-1",
@@ -1459,7 +1466,8 @@
                 "agent_tool": "inspect_episode",
                 "episode_id": "syn-p2:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p2:ep-furosemide",
@@ -1476,7 +1484,8 @@
               "args": {
                 "agent_tool": "next_missing_fact",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "not in the graph"
               },
               "result_ids": [],
               "at": 60
@@ -1491,7 +1500,8 @@
                 "agent_tool": "request_reevaluation",
                 "fact_id": "syn-p2:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p2:ep-furosemide",
@@ -1509,7 +1519,8 @@
                 "agent_tool": "prepare_packet",
                 "phrasing": "template",
                 "fallback_reason": "no_key",
-                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern with a competing explanation. Reason furosemide was started: \"heart failure, new diagnosis during hospital stay\" (documented), a competing explanation worth weighing. Any change to a medicine is the prescribing clinician's decision."
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern with a competing explanation. Reason furosemide was started: \"heart failure, new diagnosis during hospital stay\" (documented), a competing explanation worth weighing. Any change to a medicine is the prescribing clinician's decision.",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p2:ep-amlodipine",
@@ -2213,7 +2224,8 @@
               "args": {
                 "agent_tool": "get_evidence_pack",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p3:fnd-ccb-edema-loop-1",
@@ -2238,7 +2250,8 @@
                 "agent_tool": "inspect_episode",
                 "episode_id": "syn-p3:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p3:ep-furosemide",
@@ -2255,7 +2268,8 @@
               "args": {
                 "agent_tool": "next_missing_fact",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "not in the graph"
               },
               "result_ids": [],
               "at": 62
@@ -2270,7 +2284,8 @@
                 "agent_tool": "request_reevaluation",
                 "fact_id": "syn-p3:ep-furosemide",
                 "phrasing": "template",
-                "fallback_reason": "no_key"
+                "fallback_reason": "no_key",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p3:ep-furosemide",
@@ -2288,7 +2303,8 @@
                 "agent_tool": "prepare_packet",
                 "phrasing": "template",
                 "fallback_reason": "no_key",
-                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a reviewed possible pattern. Revision 1 has a clinician decision (follow up); it stays on that revision. Any change to a medicine is the prescribing clinician's decision."
+                "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a reviewed possible pattern. Revision 1 has a clinician decision (follow up); it stays on that revision. Any change to a medicine is the prescribing clinician's decision.",
+                "outcome": "answered with a path"
               },
               "result_ids": [
                 "syn-p3:ep-amlodipine",

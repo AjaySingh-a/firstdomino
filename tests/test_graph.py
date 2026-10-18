@@ -727,6 +727,25 @@ def test_review_agent_pass_matches_the_fixture_store(db, family):
     assert persisted == ["syn-p1:step-1", *(f"syn-p1:run-1-step-{k}" for k in range(1, 7))]
 
 
+def test_second_agent_run_answers_from_memory(db, family):
+    """F-3: run 2 does not ask again, and says so, citing run 1's question and step."""
+    from agent.review_agent import run_review_agent
+
+    family(story1())
+    store = store_for(db, family)
+    first = run_review_agent(store, P1_FINDING, None)
+    asked = next(s for s in first.steps if s.args["agent_tool"] == "ask_question")
+    qid = first.question.id
+    second = run_review_agent(store, P1_FINDING, None)
+    tools = [s.args["agent_tool"] for s in second.steps]
+    assert "ask_question" not in tools and len(second.steps) <= 6
+    nxt = next(s for s in second.steps if s.args["agent_tool"] == "next_missing_fact")
+    assert nxt.args["outcome"] == "answered from memory"
+    assert qid in nxt.result_ids and asked.id in nxt.result_ids
+    assert nxt.args["memory"].startswith(f"Asked in run 1 (question {qid}, step {asked.id})")
+    assert second.case_version == first.case_version  # memory read, nothing written but agent steps
+
+
 # ---------- D-4: seeding on a host where GRAPH.COPY cannot fork ----------
 
 
