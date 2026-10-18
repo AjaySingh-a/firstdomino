@@ -8,7 +8,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Database, FlaskConical, Plus, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { GraphWalk, type WalkFact } from "@/components/graph-walk";
+import dynamic from "next/dynamic";
+import type { WalkFact } from "@/components/graph-walk";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusChip } from "@/components/status";
@@ -60,6 +61,10 @@ const PRESETS: { id: string; label: string; hint: string; make: () => Draft }[] 
     }),
   },
 ];
+
+const GraphWalk = dynamic(() => import("@/components/graph-walk").then((m) => m.GraphWalk), {
+  loading: () => <div className="aspect-[700/290] w-full" aria-hidden />,
+});
 
 const isCcb = (m?: PaletteMedicine) => !!m && /calcium-channel blocker/i.test(m.group);
 const isDiuretic = (m?: PaletteMedicine) => !!m && /diuretic/i.test(m.group);

@@ -3,11 +3,12 @@ import Link from "next/link";
 import { FileText, MessageCircleQuestion, Network } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { pageMeta } from "@/lib/meta";
 
-export const metadata: Metadata = {
-  title: "How it works · FirstDomino",
-  description: "Records become a graph; the graph finds possible chains and the one fact that would settle each.",
-};
+export const metadata: Metadata = pageMeta(
+  "How it works",
+  "Records become a graph; the graph finds possible chains and the one fact that would settle each.",
+);
 
 const FLOW = [
   {

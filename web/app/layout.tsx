@@ -1,21 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_URL, pageMeta } from "@/lib/meta";
 import { Providers } from "./providers";
 
 const serif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
   style: ["normal", "italic"],
+  display: "swap",
   variable: "--font-instrument-serif",
 });
-const sans = Geist({ subsets: ["latin"], variable: "--font-geist" });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono" });
+const sans = Geist({ subsets: ["latin"], display: "swap", variable: "--font-geist" });
+const mono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-jetbrains-mono" });
 
 export const metadata: Metadata = {
-  title: "FirstDomino",
-  description:
-    "Sometimes a side effect of one medicine is mistaken for a new illness and treated with another medicine. FirstDomino finds these possible chains and asks for the one missing fact a clinician needs.",
+  metadataBase: new URL(SITE_URL),
+  ...pageMeta(
+    "FirstDomino · possible prescribing cascades, on a graph",
+    "Sometimes a side effect of one medicine is treated with another medicine. FirstDomino finds these possible chains in synthetic patients and asks for the one missing fact.",
+  ),
+  title: { default: "FirstDomino · possible prescribing cascades, on a graph", template: "%s · FirstDomino" },
 };
 
 export const viewport: Viewport = {

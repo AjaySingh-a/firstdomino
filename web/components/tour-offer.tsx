@@ -50,11 +50,11 @@ export function WelcomeCard({ open, onSkip }: { open: boolean; onSkip: () => voi
       {open && (
         <motion.aside
           aria-labelledby="welcome-h"
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.35 }}
-          className="mt-6 rounded-[8px] border border-l-[3px] border-amber bg-amber-wash/50 px-5 py-4 shadow-[0_10px_30px_-18px_rgba(31,26,20,0.45)]"
+          exit={{ opacity: 0, y: 12 }}
+          transition={{ duration: 0.35, delay: 0.4 }}
+          className="fixed inset-x-4 bottom-4 z-50 rounded-[8px] border border-l-[3px] border-amber bg-[color-mix(in_srgb,var(--amber-wash)_45%,var(--paper))] px-4 py-3 sm:px-5 sm:py-4 shadow-[0_10px_30px_-12px_rgba(31,26,20,0.45)] sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-[440px]"
         >
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <div>
@@ -62,7 +62,7 @@ export function WelcomeCard({ open, onSkip }: { open: boolean; onSkip: () => voi
               <p id="welcome-h" className="mt-0.5 font-serif text-[24px] leading-tight">
                 Take the 2-minute guided tour
               </p>
-              <p className="mt-1 max-w-[56ch] text-[13.5px] leading-snug text-ink-2">
+              <p className="mt-1 hidden max-w-[56ch] text-[13.5px] leading-snug text-ink-2 sm:block">
                 It walks through one synthetic story: the possible pattern, the missing fact, and what the clinician
                 reviews.
               </p>
@@ -71,16 +71,16 @@ export function WelcomeCard({ open, onSkip }: { open: boolean; onSkip: () => voi
               <Link
                 href={tourHref(1)}
                 onClick={startTour}
-                className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-ink bg-ink px-4 text-[14px] font-medium text-ivory transition-colors hover:bg-ink-2"
+                className="inline-flex h-9 items-center gap-2 rounded-[6px] border border-ink bg-ink px-3 text-[13px] sm:h-10 sm:px-4 sm:text-[14px] font-medium text-ivory transition-colors hover:bg-ink-2"
               >
                 <Compass className="size-4" aria-hidden /> Start the tour
               </Link>
               <button
                 type="button"
                 onClick={onSkip}
-                className="inline-flex h-10 items-center rounded-[6px] border border-ink px-4 text-[14px] font-medium text-ink transition-colors hover:bg-paper"
+                className="inline-flex h-9 items-center rounded-[6px] border border-ink px-3 text-[13px] sm:h-10 sm:px-4 sm:text-[14px] font-medium text-ink transition-colors hover:bg-paper"
               >
-                I&rsquo;ll explore on my own
+                Explore on my own
               </button>
             </div>
           </div>
