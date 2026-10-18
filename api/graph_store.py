@@ -34,6 +34,7 @@ from falkordb import FalkorDB
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
+from api import lab
 from api.models import (
     AffectedResponse,
     AgentStep,
@@ -50,6 +51,8 @@ from api.models import (
     FindingsResponse,
     Ingredient,
     InvestigationResponse,
+    LabResult,
+    LabStep,
     MedicationEpisode,
     Observation,
     PacketItem,
@@ -64,6 +67,7 @@ from api.models import (
     ReviewRequest,
     ReviewResult,
     Source,
+    StoryFixture,
     TimelineResponse,
 )
 from api.store import (
@@ -83,8 +87,8 @@ from api.store import (
     value_field,
 )
 from engine.db import connect, family_graph, props, run
-from engine.evaluate import reevaluate
-from engine.loaders.seed import DEFAULT_FAMILY, agent_step_props, fact_props, seed
+from engine.evaluate import evaluate_patient, reevaluate
+from engine.loaders.seed import DEFAULT_FAMILY, agent_step_props, fact_props, load_story, seed
 from engine.questions import question_for
 
 log = logging.getLogger("firstdomino.api")
@@ -506,6 +510,53 @@ class GraphStore:
             raise Conflict("stale_case_version", pid, req.case_version, self._patient(pid).case_version)
         return AgentStepResult(case_version=patient.case_version, step=step, replayed=False)
 
+    # ---------- patient lab ----------
+
+    LAB_KEEP = int(os.environ.get("FD_LAB_KEEP", "40"))
+
+    def create_lab_patient(self, story: StoryFixture) -> LabResult:
+        """Load a visitor-built synthetic patient into the family graph and evaluate it with the same
+        named queries and rules as the stories. Each step is timed. The oldest lab patients beyond
+        FD_LAB_KEEP are deleted (admin/drop_patient), so the public demo graph stays small."""
+        self._refresh()
+        g = self.db.select_graph(family_graph(self.family_id))
+        pid = story.patient.id
+        steps: list[LabStep] = []
+
+        def timed(name: str, fn):
+            t = time.perf_counter()
+            out, detail = fn()
+            steps.append(LabStep(name=name, detail=detail, ms=round((time.perf_counter() - t) * 1000, 1)))
+            return out
+
+        def knowledge():
+            for m in lab.palette().medicines:
+                run(g, "write/kb_ingredient", name=m.name, rxcui=m.rxcui, drug_class=m.drug_class)
+            return None, "medicines linked to their ATC classes (Ingredient -[:IN_CLASS]-> DrugClass)"
+
+        def facts():
+            load_story(g, story)
+            n = len(story.episodes) + len(story.observations)
+            return None, f"{n} facts and {len(story.sources)} sources written from Patient {{id: '{pid}'}}"
+
+        def evaluate():
+            evs = evaluate_patient(g, pid, story.patient.as_of_day)
+            walk = "medicine -> class -> pattern -> effect -> symptom"
+            return evs, f"Q1 walked {walk}: {len(evs)} chain(s); the rules set each status"
+
+        timed("knowledge", knowledge)
+        timed("write/patient + episodes + observations", facts)
+        timed("q1_candidate_match + engine/rules.py", evaluate)
+        self._lab_order = [p for p in getattr(self, "_lab_order", []) if p != pid] + [pid]
+        while len(self._lab_order) > self.LAB_KEEP:
+            run(g, "admin/drop_patient", pid=self._lab_order.pop(0))
+        self._refresh()
+        found = timed(
+            "q6_patient_findings",
+            lambda: (f := self.findings(pid), f"{len(f.findings)} finding(s) read back"),
+        )
+        return LabResult(patient=self._patient(pid), findings=found.findings, steps=steps)
+
     def reset(self, pid: str | None = None) -> None:
         """Drop and re-seed kb_template and the configured family graph from the fixtures. With `pid`,
         delete only that patient's subgraph (admin/drop_patient) and seed its story again; the other
@@ -513,6 +564,7 @@ class GraphStore:
         if pid is None:
             self.fixtures.reset()
             seed(self.db, self.family_id, self._stories(), list(self.fixtures.patterns.values()), reset=True)
+            self._lab_order = []  # the family graph was dropped, lab patients with it
             self._seeded = True
             self._refresh()
             return

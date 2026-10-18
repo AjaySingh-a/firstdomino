@@ -423,6 +423,63 @@ class ResetResponse(Model):
     patients: list[Patient]
 
 
+# ---------- patient lab ----------
+
+
+class PaletteMedicine(Model):
+    name: str
+    rxcui: str
+    drug_class: str
+    group: str
+    dose_text: str
+    usual_reason: str | None
+
+
+class LabPalette(Model):
+    """GET /lab/palette: the medicines a visitor can place, and the curated patterns they are matched
+    against."""
+
+    medicines: list[PaletteMedicine]
+    symptoms: list[str]
+    patterns: list[Pattern]
+
+
+class LabMedicine(Model):
+    name: str
+    start_day: Day | None
+    start_state: FactState
+    reason: str | None = None
+    reason_state: AnswerState = "unknown"
+
+
+class LabSymptom(Model):
+    label: str = "Ankle swelling"
+    onset_day: Day | None
+    state: FactState
+
+
+class LabRequest(Model):
+    """POST /lab/patients: a synthetic patient built by the visitor. Loaded into FalkorDB and evaluated by
+    engine/rules.py like any story."""
+
+    medicines: list[LabMedicine] = Field(min_length=1, max_length=5)
+    symptom: LabSymptom | None = None
+
+
+class LabStep(Model):
+    """One timed step of building the patient: what ran against FalkorDB and what it returned."""
+
+    name: str
+    detail: str
+    ms: float
+
+
+class LabResult(Model):
+    patient: Patient
+    findings: list[Finding]
+    steps: list[LabStep]
+
+
 # ---------- fixture file ----------
 
 

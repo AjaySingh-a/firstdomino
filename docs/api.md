@@ -483,3 +483,39 @@ Response:
 ```json
 { "reset": true, "patients": [{ "id": "syn-p1", "case_version": 2, "…": "…" }, "…"] }
 ```
+
+## GET /lab/palette
+
+The medicines a visitor can place on a synthetic patient in the patient lab (`data/lab/palette.json`:
+name, RxCUI, ATC class, group, dose text, usual reason), the symptoms, and the curated patterns they are
+matched against. Medicines outside the patterns' classes (diltiazem, hydrochlorothiazide, atorvastatin…)
+are there on purpose: no walk from them reaches a pattern.
+
+## POST /lab/patients
+
+Builds a synthetic patient from the visitor's choices, loads it into FalkorDB with the same named write
+queries as the stories (`engine/loaders/seed.load_story`), and evaluates it with Q1 + `engine/rules.py`.
+Nothing in the lab decides a finding. The new patient (`lab-<6 hex>`) then works with every endpoint
+above: timeline, investigation, evidence, review agent, packet.
+
+```json
+{
+  "medicines": [
+    { "name": "nifedipine", "start_day": 0, "start_state": "documented",
+      "reason": "high blood pressure", "reason_state": "documented" },
+    { "name": "bumetanide", "start_day": 40, "start_state": "documented" }
+  ],
+  "symptom": { "onset_day": 20, "state": "reported" }
+}
+```
+
+- 1 to 5 medicines, each once, from the palette. Days 0-730. An `unknown` state drops the day, and no day
+  means `unknown`. A reason needs a state (`documented` or `reported`).
+- The oldest lab patients beyond `FD_LAB_KEEP` (40) are deleted. "Reset all stories" deletes all of them.
+
+**201**: `{ "patient": Patient, "findings": [Finding], "steps": [{ "name", "detail", "ms" }] }`. `steps`
+times each stage against FalkorDB (knowledge, facts, `q1_candidate_match` + rules, `q6_patient_findings`).
+
+**422** `invalid` (unknown medicine, repeated medicine, day out of range). **503**
+`{"error": "graph_required"}` when the API runs without FalkorDB (`FD_STORE=fixtures`): there is no
+fixture fallback, because a new patient's findings exist only as a graph traversal.
