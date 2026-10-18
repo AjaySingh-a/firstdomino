@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, Compass, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChainAnimation, HowItWorksStrip } from "@/components/chain";
+import { ChainAnimation } from "@/components/chain";
+import { GraphMemory, ProofStrip, Tracks } from "@/components/landing-proof";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useTourOffer, WelcomeCard } from "@/components/tour-offer";
@@ -21,9 +22,9 @@ type Story = { patient: Patient; findings: Finding[] };
 
 /** One plain sentence per story, for a first-time visitor. Keyed by the synthetic patient. */
 const SHOWS: Record<string, string> = {
-  "syn-p1": "Furosemide was started after ankle swelling, but nobody wrote down why. FirstDomino asks.",
-  "syn-p2": "Same medicines, but the hospital recorded another reason for furosemide. Both are shown side by side.",
-  "syn-p3": "A clinician already reviewed it, then a late GP note changed a date. The review needs a fresh look.",
+  "syn-p1": "Furosemide followed ankle swelling. Nobody wrote down why, so FirstDomino asks.",
+  "syn-p2": "Same medicines, another reason on record. Both are shown side by side.",
+  "syn-p3": "Already reviewed, then a late note moved a date. It needs a fresh look.",
 };
 
 export default function Landing() {
@@ -67,7 +68,7 @@ export default function Landing() {
                 transition={{ delay: 0.25, duration: 0.6 }}
                 className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-ink-2"
               >
-                FirstDomino finds these chains across visits and asks for the one fact a clinician still needs.
+                FirstDomino finds these possible chains across visits and asks for the one missing fact.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
@@ -105,15 +106,11 @@ export default function Landing() {
           </section>
 
           <WhyGraph />
+          <LabCta />
+          <ProofStrip />
+          <GraphMemory />
 
-          <section aria-labelledby="how-h" className="border-t border-ink py-8">
-            <h2 id="how-h" className="font-serif text-[30px]">How a chain happens</h2>
-            <div className="mt-4">
-              <HowItWorksStrip />
-            </div>
-          </section>
-
-          <section id="stories" aria-labelledby="stories-h" className="scroll-mt-6 border-t border-ink pb-16 pt-6">
+          <section id="stories" aria-labelledby="stories-h" className="scroll-mt-6 border-t border-ink pb-10 pt-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="stories-h" className="font-serif text-[30px]">Three synthetic stories</h2>
               <p className="text-[13px] text-ink-3">For a pharmacist&rsquo;s medication review. The clinician decides.</p>
@@ -158,6 +155,7 @@ export default function Landing() {
               </ol>
             )}
           </section>
+          <Tracks />
         </main>
       </div>
       <SiteFooter className="mt-0" />
@@ -167,17 +165,17 @@ export default function Landing() {
 
 /** Three numbers, each one a graph query. They appear as the visitor scrolls. */
 const WHY = [
-  { n: "1 walk", q: "Q1", text: "Medicine → class → pattern → symptom → second medicine. One traversal from the patient." },
-  { n: "1 question", q: "Q2", text: "The missing fact the most open findings wait on, and who can answer it." },
-  { n: "0 re-checks", q: "Q3", text: "Change a medicine no pattern uses and nothing reopens. Only linked findings move." },
+  { n: "1 walk", q: "Q1", text: "Medicine → class → pattern → symptom → second medicine, in one walk." },
+  { n: "1 question", q: "Q2", text: "The missing fact most findings wait on, and who can answer it." },
+  { n: "0 re-checks", q: "Q3", text: "Change an unrelated medicine and nothing reopens." },
 ];
 
 function WhyGraph() {
   return (
-    <section aria-labelledby="why-h" className="border-t border-ink py-10">
+    <section aria-labelledby="why-h" className="border-t border-ink pb-4 pt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="why-h" className="font-serif text-[30px]">Why it needs a graph</h2>
-        <p className="text-[13px] text-ink-3">Without FalkorDB the lab answers 503. There is no fallback.</p>
+        <p className="text-[13px] text-ink-3">Each number is one graph query.</p>
       </div>
       <ol className="mt-5 grid gap-px overflow-hidden rounded-[8px] border border-ink bg-ink md:grid-cols-3">
         {WHY.map((w, i) => (
@@ -197,17 +195,23 @@ function WhyGraph() {
           </motion.li>
         ))}
       </ol>
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-amber-ink bg-amber-wash/50 px-5 py-4"
-      >
-        <p className="font-serif text-[22px] leading-tight">Don&rsquo;t take our three stories on trust. Build your own.</p>
-        <Link href="/lab" className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-ink bg-ink px-4 text-[14px] font-medium text-ivory hover:bg-ink-2">
-          <FlaskConical className="size-4" aria-hidden /> Open the patient lab
-        </Link>
-      </motion.div>
     </section>
+  );
+}
+
+/** The lab's call to action: the visitor's own patient, evaluated live. */
+function LabCta() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      className="mb-10 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-amber-ink bg-amber-wash/50 px-5 py-4"
+    >
+      <p className="font-serif text-[22px] leading-tight">Don&rsquo;t take our three stories on trust. Build your own.</p>
+      <Link href="/lab" className="inline-flex h-10 items-center gap-2 rounded-[6px] border border-ink bg-ink px-4 text-[14px] font-medium text-ivory hover:bg-ink-2">
+        <FlaskConical className="size-4" aria-hidden /> Open the patient lab
+      </Link>
+    </motion.div>
   );
 }
