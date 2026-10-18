@@ -130,6 +130,10 @@ export function AgentPanel({
     };
   }, [loadHistory, inv.case_version]);
 
+  // Right after an answer the case reloads first and this investigation a moment later. Until it has
+  // caught up, a run would send the old case version and get a 409.
+  const catchingUp = inv.case_version !== timeline.patient.case_version;
+
   async function run() {
     setRunning(true);
     setResult(null);
@@ -178,7 +182,7 @@ export function AgentPanel({
         At most six steps from a fixed list of tools, each recorded below.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button size="sm" data-tour="agent-run" onClick={run} disabled={running || stale}>
+        <Button size="sm" data-tour="agent-run" onClick={run} disabled={running || stale || catchingUp}>
           <Bot className="size-3.5" aria-hidden />
           {running ? "Running…" : "Run review agent"}
         </Button>
