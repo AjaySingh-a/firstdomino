@@ -9,9 +9,9 @@ import { ArrowRight, Database, FlaskConical, Plus, RotateCcw, X } from "lucide-r
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { GraphWalk, type WalkFact } from "@/components/graph-walk";
-import { Wordmark } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import { StatusChip } from "@/components/status";
-import { TourButton } from "@/components/tour-offer";
 import { ApiError, api } from "@/lib/api";
 import { STATUS } from "@/lib/present";
 import type { FactState, Finding, LabPalette, LabRequest, LabResult, PaletteMedicine } from "@/lib/types";
@@ -116,170 +116,163 @@ export default function LabPage() {
   const unused = (palette?.medicines ?? []).filter((m) => !draft.rows.some((r) => r.name === m.name));
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink py-4">
-        <Wordmark />
-        <nav className="flex items-center gap-4 text-[12.5px]">
-          <TourButton />
-          <Link href="/how-it-works" className="text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
-            How it works
-          </Link>
-        </nav>
-      </header>
+    <>
+      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-4 sm:px-8">
+        <SiteHeader current="lab" />
 
-      <main className="flex-1 pb-20">
-        <section className="py-10 sm:py-14">
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="smallcaps flex items-center gap-2 text-amber-ink">
-            <FlaskConical className="size-3.5" aria-hidden /> Patient lab · live on FalkorDB
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mt-3 font-serif text-[clamp(34px,5.4vw,58px)] leading-[1.02]"
-          >
-            Build a patient. <em className="text-amber-ink">Watch the graph decide.</em>
-          </motion.h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-ink-2">
-            Nothing here is precomputed. Your patient is written to the graph, walked, and judged by the same rules as the stories.
-          </motion.p>
-        </section>
+        <main className="flex-1 pb-20">
+          <section className="py-10 sm:py-14">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="smallcaps flex items-center gap-2 text-amber-ink">
+              <FlaskConical className="size-3.5" aria-hidden /> Patient lab · live on FalkorDB
+            </motion.p>
+            <motion.h1
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-3 font-serif text-[clamp(34px,5.4vw,58px)] leading-[1.02]"
+            >
+              Build a patient. <em className="text-amber-ink">Watch the graph decide.</em>
+            </motion.h1>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mt-4 max-w-[58ch] text-[16px] leading-relaxed text-ink-2">
+              Nothing here is precomputed. Your patient is written to the graph, walked, and judged by the same rules as the stories.
+            </motion.p>
+          </section>
 
-        {paletteError === "graph" && (
-          <p className="rounded-[8px] border border-amber bg-amber-wash/50 p-5 text-[14px]">
-            The lab needs the live graph. Saved snapshots can&rsquo;t evaluate a patient nobody has seen, and that is the point.
-          </p>
-        )}
-        {paletteError && paletteError !== "graph" && <p className="rounded-[8px] border border-coral bg-coral-wash p-5 text-[14px]">{paletteError}</p>}
+          {paletteError === "graph" && (
+            <p className="rounded-[8px] border border-amber bg-amber-wash/50 p-5 text-[14px]">
+              The lab needs the live graph. Saved snapshots can&rsquo;t evaluate a patient nobody has seen, and that is the point.
+            </p>
+          )}
+          {paletteError && paletteError !== "graph" && <p className="rounded-[8px] border border-coral bg-coral-wash p-5 text-[14px]">{paletteError}</p>}
 
-        {palette && (
-          <>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Start from">
-              {PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setDraft(p.make());
-                    setPreset(p.id);
-                  }}
-                  className={cn(
-                    "group rounded-full border px-3.5 py-1.5 text-left text-[13px] transition-colors",
-                    preset === p.id ? "border-ink bg-ink text-ivory" : "border-rule-strong bg-paper hover:border-ink",
-                  )}
-                >
-                  {p.label}
-                  <span className={cn("ml-2 text-[11px]", preset === p.id ? "text-ivory/70" : "text-ink-3")}>{p.hint}</span>
-                </button>
-              ))}
-            </div>
+          {palette && (
+            <>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Start from">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setDraft(p.make());
+                      setPreset(p.id);
+                    }}
+                    className={cn(
+                      "group rounded-full border px-3.5 py-1.5 text-left text-[13px] transition-colors",
+                      preset === p.id ? "border-ink bg-ink text-ivory" : "border-rule-strong bg-paper hover:border-ink",
+                    )}
+                  >
+                    {p.label}
+                    <span className={cn("ml-2 text-[11px]", preset === p.id ? "text-ivory/70" : "text-ink-3")}>{p.hint}</span>
+                  </button>
+                ))}
+              </div>
 
-            <section className="mt-5 overflow-hidden rounded-[10px] border border-ink bg-paper">
-              <Timeline draft={draft} meds={meds} />
-              <ul className="divide-y divide-rule border-t border-rule">
-                <AnimatePresence initial={false}>
-                  {draft.rows.map((r) => (
-                    <motion.li key={r.key} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                      <div className="grid gap-3 px-4 py-3 sm:px-5 md:grid-cols-[180px_1fr_auto_auto] md:items-center">
-                        <div>
-                          <select
-                            aria-label="Medicine"
-                            value={r.name}
-                            onChange={(e) => setRow(r.key, { name: e.target.value })}
-                            className="w-full rounded-[4px] border border-rule-strong bg-ivory px-2 py-1.5 font-serif text-[18px]"
-                          >
-                            {[meds[r.name], ...unused].filter(Boolean).map((m) => (
-                              <option key={m!.name} value={m!.name}>{m!.name}</option>
-                            ))}
-                          </select>
-                          <p className="mt-1 font-mono text-[10.5px] text-ink-3">
-                            {meds[r.name]?.drug_class} · {meds[r.name]?.group}
-                          </p>
-                        </div>
-                        <DaySlider value={r.day} disabled={r.state === "unknown"} onChange={(day) => setRow(r.key, { day })} label={`${r.name} start day`} />
-                        <Segmented value={r.state} onChange={(state) => setRow(r.key, { state })} label="Start day" />
-                        <div className="flex items-center gap-2">
-                          <select
-                            aria-label={`Why ${r.name} was started`}
-                            value={r.reason}
-                            onChange={(e) => setRow(r.key, { reason: e.target.value })}
-                            className="rounded-[4px] border border-rule-strong bg-ivory px-2 py-1.5 text-[12.5px]"
-                          >
-                            {REASONS.map((x) => (
-                              <option key={x} value={x}>{x ? `for ${x}` : "reason not recorded"}</option>
-                            ))}
-                          </select>
-                          {r.reason && (
+              <section className="mt-5 overflow-hidden rounded-[10px] border border-ink bg-paper">
+                <Timeline draft={draft} meds={meds} />
+                <ul className="divide-y divide-rule border-t border-rule">
+                  <AnimatePresence initial={false}>
+                    {draft.rows.map((r) => (
+                      <motion.li key={r.key} layout initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                        <div className="grid gap-3 px-4 py-3 sm:px-5 md:grid-cols-[180px_1fr_auto_auto] md:items-center">
+                          <div>
+                            <select
+                              aria-label="Medicine"
+                              value={r.name}
+                              onChange={(e) => setRow(r.key, { name: e.target.value })}
+                              className="w-full rounded-[4px] border border-rule-strong bg-ivory px-2 py-1.5 font-serif text-[18px]"
+                            >
+                              {[meds[r.name], ...unused].filter(Boolean).map((m) => (
+                                <option key={m!.name} value={m!.name}>{m!.name}</option>
+                              ))}
+                            </select>
+                            <p className="mt-1 font-mono text-[10.5px] text-ink-3">
+                              {meds[r.name]?.drug_class} · {meds[r.name]?.group}
+                            </p>
+                          </div>
+                          <DaySlider value={r.day} disabled={r.state === "unknown"} onChange={(day) => setRow(r.key, { day })} label={`${r.name} start day`} />
+                          <Segmented value={r.state} onChange={(state) => setRow(r.key, { state })} label="Start day" />
+                          <div className="flex items-center gap-2">
+                            <select
+                              aria-label={`Why ${r.name} was started`}
+                              value={r.reason}
+                              onChange={(e) => setRow(r.key, { reason: e.target.value })}
+                              className="rounded-[4px] border border-rule-strong bg-ivory px-2 py-1.5 text-[12.5px]"
+                            >
+                              {REASONS.map((x) => (
+                                <option key={x} value={x}>{x ? `for ${x}` : "reason not recorded"}</option>
+                              ))}
+                            </select>
+                            {r.reason && (
+                              <button
+                                type="button"
+                                onClick={() => setRow(r.key, { reasonState: r.reasonState === "documented" ? "reported" : "documented" })}
+                                className="rounded-full border border-rule-strong px-2 py-1 text-[11px] text-ink-2 hover:border-ink"
+                                title="Who says so"
+                              >
+                                {r.reasonState === "documented" ? "on record" : "caregiver"}
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => setRow(r.key, { reasonState: r.reasonState === "documented" ? "reported" : "documented" })}
-                              className="rounded-full border border-rule-strong px-2 py-1 text-[11px] text-ink-2 hover:border-ink"
-                              title="Who says so"
+                              aria-label={`Remove ${r.name}`}
+                              disabled={draft.rows.length === 1}
+                              onClick={() => edit((d) => ({ ...d, rows: d.rows.filter((x) => x.key !== r.key) }))}
+                              className="grid size-7 place-items-center rounded-full text-ink-3 hover:bg-ivory hover:text-ink disabled:opacity-30"
                             >
-                              {r.reasonState === "documented" ? "on record" : "caregiver"}
+                              <X className="size-4" />
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            aria-label={`Remove ${r.name}`}
-                            disabled={draft.rows.length === 1}
-                            onClick={() => edit((d) => ({ ...d, rows: d.rows.filter((x) => x.key !== r.key) }))}
-                            className="grid size-7 place-items-center rounded-full text-ink-3 hover:bg-ivory hover:text-ink disabled:opacity-30"
-                          >
-                            <X className="size-4" />
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-                <li className="grid gap-3 bg-ivory/60 px-4 py-3 sm:px-5 md:grid-cols-[180px_1fr_auto_auto] md:items-center">
-                  <label className="flex items-center gap-2 font-serif text-[18px]">
-                    <input type="checkbox" checked={draft.symptom.on} onChange={(e) => edit((d) => ({ ...d, symptom: { ...d.symptom, on: e.target.checked } }))} className="accent-[var(--amber-ink)]" />
-                    Ankle swelling
-                  </label>
-                  <DaySlider value={draft.symptom.day} disabled={!draft.symptom.on || draft.symptom.state === "unknown"} onChange={(day) => edit((d) => ({ ...d, symptom: { ...d.symptom, day } }))} label="Swelling onset day" />
-                  <Segmented value={draft.symptom.state} disabled={!draft.symptom.on} onChange={(state) => edit((d) => ({ ...d, symptom: { ...d.symptom, state } }))} label="Onset day" />
-                  <span className="text-[11.5px] text-ink-3">{draft.symptom.on ? "symptom" : "none on record"}</span>
-                </li>
-              </ul>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink px-4 py-3 sm:px-5">
-                <button
-                  type="button"
-                  disabled={draft.rows.length >= 5 || unused.length === 0}
-                  onClick={() => edit((d) => ({ ...d, rows: [...d.rows, row(unused[0].name, 10)] }))}
-                  className="inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink disabled:opacity-40"
-                >
-                  <Plus className="size-4" /> Add a medicine
-                </button>
-                <button
-                  type="button"
-                  onClick={run}
-                  disabled={busy}
-                  className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink bg-ink px-5 text-[15px] font-medium text-ivory transition-colors hover:bg-ink-2 disabled:opacity-60"
-                >
-                  <Database className={cn("size-4", busy && "animate-pulse")} aria-hidden />
-                  {busy ? "Writing to FalkorDB…" : "Write to the graph and walk it"}
-                </button>
-              </div>
-              {error && <p className="border-t border-coral bg-coral-wash px-5 py-3 text-[13px]">{error}</p>}
-            </section>
-          </>
-        )}
-
-        <AnimatePresence mode="wait">
-          {result && palette && (
-            <motion.div key={result.res.patient.id} id="lab-result" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="scroll-mt-6">
-              <Result result={result.res} draft={result.draft} meds={meds} palette={palette} onAgain={() => setResult(null)} />
-            </motion.div>
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                  <li className="grid gap-3 bg-ivory/60 px-4 py-3 sm:px-5 md:grid-cols-[180px_1fr_auto_auto] md:items-center">
+                    <label className="flex items-center gap-2 font-serif text-[18px]">
+                      <input type="checkbox" checked={draft.symptom.on} onChange={(e) => edit((d) => ({ ...d, symptom: { ...d.symptom, on: e.target.checked } }))} className="accent-[var(--amber-ink)]" />
+                      Ankle swelling
+                    </label>
+                    <DaySlider value={draft.symptom.day} disabled={!draft.symptom.on || draft.symptom.state === "unknown"} onChange={(day) => edit((d) => ({ ...d, symptom: { ...d.symptom, day } }))} label="Swelling onset day" />
+                    <Segmented value={draft.symptom.state} disabled={!draft.symptom.on} onChange={(state) => edit((d) => ({ ...d, symptom: { ...d.symptom, state } }))} label="Onset day" />
+                    <span className="text-[11.5px] text-ink-3">{draft.symptom.on ? "symptom" : "none on record"}</span>
+                  </li>
+                </ul>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink px-4 py-3 sm:px-5">
+                  <button
+                    type="button"
+                    disabled={draft.rows.length >= 5 || unused.length === 0}
+                    onClick={() => edit((d) => ({ ...d, rows: [...d.rows, row(unused[0].name, 10)] }))}
+                    className="inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink disabled:opacity-40"
+                  >
+                    <Plus className="size-4" /> Add a medicine
+                  </button>
+                  <button
+                    type="button"
+                    onClick={run}
+                    disabled={busy}
+                    className="inline-flex h-11 items-center gap-2 rounded-[6px] border border-ink bg-ink px-5 text-[15px] font-medium text-ivory transition-colors hover:bg-ink-2 disabled:opacity-60"
+                  >
+                    <Database className={cn("size-4", busy && "animate-pulse")} aria-hidden />
+                    {busy ? "Writing to FalkorDB…" : "Write to the graph and walk it"}
+                  </button>
+                </div>
+                {error && <p className="border-t border-coral bg-coral-wash px-5 py-3 text-[13px]">{error}</p>}
+              </section>
+            </>
           )}
-        </AnimatePresence>
-      </main>
 
-      <footer className="border-t border-rule py-5 text-[12px] text-ink-3">
-        Every lab patient is synthetic and is deleted on reset. Findings are possible patterns for a clinician to review, never conclusions.
-      </footer>
-    </div>
+          <AnimatePresence mode="wait">
+            {result && palette && (
+              <motion.div key={result.res.patient.id} id="lab-result" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="scroll-mt-6">
+                <Result result={result.res} draft={result.draft} meds={meds} palette={palette} onAgain={() => setResult(null)} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+
+        <p className="text-[12px] text-ink-3">Every lab patient is synthetic and is deleted on reset.</p>
+      </div>
+      <SiteFooter className="mt-6" />
+    </>
   );
 }
 

@@ -16,12 +16,13 @@ import { InvestigationDrawer } from "./investigation-drawer";
 import { MedicationRiver } from "./medication-river";
 import type { SubmitOutcome } from "./next-question";
 import { SandboxPanel } from "./sandbox-panel";
-import { Wordmark } from "./site-header";
+import { SiteFooter } from "./site-footer";
+import { SiteNav, Wordmark } from "./site-header";
 import { SourceList } from "./source-list";
 import { LoadingState, NoMatchState, StaleState, UnavailableState } from "./state-notice";
 import { StatusChip } from "./status";
 import { TourProvider, useTour } from "./tour";
-import { TourButton, TourOffer } from "./tour-offer";
+import { TourOffer } from "./tour-offer";
 
 export function Workspace({ pid }: { pid: string }) {
   return (
@@ -176,13 +177,7 @@ function WorkspaceView({ pid }: { pid: string }) {
         <div className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Wordmark />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <TourButton onRestart={tour.active ? tour.restart : undefined} />
-            <Link href="/how-it-works" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
-              How it works
-            </Link>
-            <Link href="/lab" className={cn("text-[12.5px] underline decoration-rule-strong underline-offset-2 hover:text-ink", isLabPatient(pid) ? "font-medium text-amber-ink" : "text-ink-2")}>
-              Patient lab
-            </Link>
+            <SiteNav current={isLabPatient(pid) ? "lab" : undefined} onTourRestart={tour.active ? tour.restart : undefined} />
             <nav aria-label="Stories" className="flex items-center gap-1">
               <span className="smallcaps mr-1 text-ink-3">Story</span>
               {(patients.length || !isStory(pid) ? patients : [{ id: pid } as Patient]).map((p, i) => (
@@ -380,6 +375,7 @@ function WorkspaceView({ pid }: { pid: string }) {
           </main>
         </div>
       )}
+      <SiteFooter className="mt-0" />
     </div>
   );
 }

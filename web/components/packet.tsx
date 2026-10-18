@@ -10,8 +10,8 @@ import type { AgentStep, FactRef, PacketItem, PacketResponse, TimelineResponse }
 import { describeError, type Loadable } from "@/lib/use-workspace";
 import { cn } from "@/lib/utils";
 import { FactStates } from "./fact-states";
-import { Wordmark } from "./site-header";
-import { TourButton } from "./tour-offer";
+import { SiteFooter } from "./site-footer";
+import { SiteHeader } from "./site-header";
 import { LoadingState, UnavailableState } from "./state-notice";
 import { StateTag, StatusChip } from "./status";
 import { Button } from "./ui/button";
@@ -33,19 +33,18 @@ export function Packet({ pid }: { pid: string }) {
   useEffect(load, [load]);
 
   return (
-    <div className="packet mx-auto min-h-dvh max-w-4xl px-4 pb-16 sm:px-8 print:max-w-none print:px-0 print:pb-0">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink py-4 print:py-2">
-        <Wordmark />
-        <div className="flex flex-wrap items-center gap-3">
-          <TourButton className="print:hidden" />
+    <>
+      <div className="packet mx-auto min-h-dvh max-w-4xl px-4 pb-16 sm:px-8 print:max-w-none print:px-0 print:pb-0">
+        <SiteHeader className="print:py-2">
           <Toolbar pid={pid} />
-        </div>
-      </header>
+        </SiteHeader>
 
-      {state.kind === "loading" && <LoadingState className="mt-8" label="Assembling the packet" lines={6} />}
-      {state.kind === "unavailable" && <UnavailableState className="mt-8" message={state.message} onRetry={load} />}
-      {state.kind === "ready" && <Body {...state.data} />}
-    </div>
+        {state.kind === "loading" && <LoadingState className="mt-8" label="Assembling the packet" lines={6} />}
+        {state.kind === "unavailable" && <UnavailableState className="mt-8" message={state.message} onRetry={load} />}
+        {state.kind === "ready" && <Body {...state.data} />}
+      </div>
+      <SiteFooter className="mt-0" />
+    </>
   );
 }
 
@@ -371,13 +370,13 @@ function NextConversation({ item }: { item: PacketItem }) {
   if (item.finding.status === "needs_reassessment") points.push("The evidence changed after the last review: worth a fresh look.");
   return (
     <>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-[13.5px] leading-relaxed text-ink">
-        {points.length ? points.map((p) => <li key={p}>{p}</li>) : <li>Confirm the documented timeline above and whether this possible pattern is worth acting on.</li>}
-        <li>Any change to a medicine is the prescribing clinician&rsquo;s decision.</li>
-      </ul>
-      <p className="mt-1.5 text-[11px] text-ink-3 print:hidden">
-        Run the review agent from the workspace drawer to draft this as text.
-      </p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-[13.5px] leading-relaxed text-ink">
+          {points.length ? points.map((p) => <li key={p}>{p}</li>) : <li>Confirm the documented timeline above and whether this possible pattern is worth acting on.</li>}
+          <li>Any change to a medicine is the prescribing clinician&rsquo;s decision.</li>
+        </ul>
+        <p className="mt-1.5 text-[11px] text-ink-3 print:hidden">
+          Run the review agent from the workspace drawer to draft this as text.
+        </p>
     </>
   );
 }
