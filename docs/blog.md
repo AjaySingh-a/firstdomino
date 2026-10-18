@@ -1,6 +1,6 @@
 ---
 title: "Every prescription looked reasonable. The chain didn't."
-published: false
+published: true
 description: How we used FalkorDB to find prescribing cascades as one walk through a graph, with a review agent that is not allowed to decide anything.
 tags: falkordb, ai, showdev, hackathon
 cover_image: https://raw.githubusercontent.com/AjaySingh-a/firstdomino/main/docs/blog-cover.png
@@ -18,7 +18,7 @@ It is common. An international panel (ThinkCascades, 2022) agreed on nine import
 
 For Graph Hacks we built **FirstDomino**. It finds that chain in one patient's record as a single walk through a FalkorDB graph, and asks for the one missing fact a clinician needs to review it.
 
-{% embed VIDEO_URL %}
+{% embed https://youtu.be/2DeOnoqJeyY %}
 
 ## Try it in 60 seconds
 
