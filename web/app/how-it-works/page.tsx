@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, MessageCircleQuestion, Network } from "lucide-react";
-import { Wordmark } from "@/components/site-header";
-import { TourButton } from "@/components/tour-offer";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
   title: "How it works · FirstDomino",
@@ -122,82 +122,74 @@ function GraphDiagram() {
 
 export default function HowItWorks() {
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-8">
-      <header className="flex items-center justify-between border-b border-ink py-4">
-        <Wordmark />
-        <nav className="flex items-center gap-4">
-          <TourButton />
-          <Link href="/lab" className="text-[12.5px] font-medium text-amber-ink underline decoration-amber underline-offset-2 hover:text-ink">
-            Patient lab
-          </Link>
-          <Link href="/" className="text-[12.5px] text-ink-2 underline decoration-rule-strong underline-offset-2 hover:text-ink">
-            Home
-          </Link>
-        </nav>
-      </header>
+    <>
+      <div className="mx-auto max-w-5xl px-4 pb-4 sm:px-8">
+        <SiteHeader current="how" />
 
-      <h1 className="mt-10 font-serif text-[clamp(36px,6vw,56px)] leading-[1.02]">How it works</h1>
-      <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-ink-2">
-        Records go in, a graph connects them, and FirstDomino asks for the fact that is missing. It flags possible
-        patterns for a clinician to review. It never says one thing led to another, and it never changes a medicine.
-      </p>
-
-      <ol className="mt-8 grid gap-px overflow-hidden rounded-[8px] border border-ink bg-ink md:grid-cols-3">
-        {FLOW.map((s, i) => (
-          <li key={s.title} className="relative bg-paper p-5">
-            <div className="flex items-center gap-2">
-              <s.icon className="size-5 text-amber-ink" aria-hidden />
-              <p className="font-mono text-[11px] text-ink-3">{i + 1}</p>
-            </div>
-            <h2 className="mt-2 font-serif text-[24px] leading-tight">
-              {s.title}
-              {i < FLOW.length - 1 && <span className="ml-2 text-amber-ink" aria-hidden>&rarr;</span>}
-            </h2>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-2">{s.text}</p>
-          </li>
-        ))}
-      </ol>
-
-      <section aria-labelledby="model-h" className="mt-12">
-        <h2 id="model-h" className="font-serif text-[30px]">The graph model</h2>
-        <p className="mt-1 max-w-[65ch] text-[13.5px] text-ink-2">
-          A finding is a node of its own, linked to the facts it rests on, the pattern it matches and the fact it still
-          needs. That is what lets one changed fact move exactly the right findings.
+        <h1 className="mt-10 font-serif text-[clamp(36px,6vw,56px)] leading-[1.02]">How it works</h1>
+        <p className="mt-3 max-w-[60ch] text-[16px] leading-relaxed text-ink-2">
+          Records go in, a graph connects them, and FirstDomino asks for the fact that is missing. It flags possible
+          patterns for a clinician to review. It never says one thing led to another, and it never changes a medicine.
         </p>
-        <div className="mt-4">
-          <GraphDiagram />
-        </div>
-      </section>
 
-      <section aria-labelledby="falkor-h" className="mt-12">
-        <h2 id="falkor-h" className="font-serif text-[30px]">What FalkorDB does here</h2>
-        <dl className="mt-4 divide-y divide-rule border-y border-rule">
-          {FALKOR.map(([title, text]) => (
-            <div key={title} className="grid gap-1 py-3 sm:grid-cols-[220px_1fr] sm:gap-4">
-              <dt className="font-serif text-[19px] leading-snug">{title}</dt>
-              <dd className="text-[13.5px] leading-relaxed text-ink-2">{text}</dd>
-            </div>
+        <ol className="mt-8 grid gap-px overflow-hidden rounded-[8px] border border-ink bg-ink md:grid-cols-3">
+          {FLOW.map((s, i) => (
+            <li key={s.title} className="relative bg-paper p-5">
+              <div className="flex items-center gap-2">
+                <s.icon className="size-5 text-amber-ink" aria-hidden />
+                <p className="font-mono text-[11px] text-ink-3">{i + 1}</p>
+              </div>
+              <h2 className="mt-2 font-serif text-[24px] leading-tight">
+                {s.title}
+                {i < FLOW.length - 1 && <span className="ml-2 text-amber-ink" aria-hidden>&rarr;</span>}
+              </h2>
+              <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-2">{s.text}</p>
+            </li>
           ))}
-        </dl>
-        <p className="mt-4 text-[12.5px] text-ink-3">
-          Without the graph the app can only replay saved examples. With it, every answer is checked, versioned and
-          traceable. In any review, open &ldquo;How the graph found this&rdquo; and turn on &ldquo;Show technical
-          details&rdquo; to see the named queries and their Cypher.
-        </p>
-        <p className="mt-2 text-[12.5px] text-ink-3">
-          AI assistants such as Claude Desktop can use the same review through FirstDomino&rsquo;s MCP server:
-          read-only tools that go through this API and return the evidence IDs behind every answer.
-        </p>
-      </section>
+        </ol>
 
-      <div className="mt-12 flex flex-wrap gap-3">
-        <Link href="/patients/syn-p1?tour=story1&step=1" className="inline-flex h-10 items-center rounded-[6px] border border-ink bg-ink px-4 text-[14px] font-medium text-ivory hover:bg-ink-2">
-          Take the 2-minute guided tour
-        </Link>
-        <Link href="/#stories" className="inline-flex h-10 items-center rounded-[6px] border border-ink px-4 text-[14px] font-medium text-ink hover:bg-paper">
-          Explore the stories
-        </Link>
+        <section aria-labelledby="model-h" className="mt-12">
+          <h2 id="model-h" className="font-serif text-[30px]">The graph model</h2>
+          <p className="mt-1 max-w-[65ch] text-[13.5px] text-ink-2">
+            A finding is a node of its own, linked to the facts it rests on, the pattern it matches and the fact it still
+            needs. That is what lets one changed fact move exactly the right findings.
+          </p>
+          <div className="mt-4">
+            <GraphDiagram />
+          </div>
+        </section>
+
+        <section aria-labelledby="falkor-h" className="mt-12">
+          <h2 id="falkor-h" className="font-serif text-[30px]">What FalkorDB does here</h2>
+          <dl className="mt-4 divide-y divide-rule border-y border-rule">
+            {FALKOR.map(([title, text]) => (
+              <div key={title} className="grid gap-1 py-3 sm:grid-cols-[220px_1fr] sm:gap-4">
+                <dt className="font-serif text-[19px] leading-snug">{title}</dt>
+                <dd className="text-[13.5px] leading-relaxed text-ink-2">{text}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-4 text-[12.5px] text-ink-3">
+            Without the graph the app can only replay saved examples. With it, every answer is checked, versioned and
+            traceable. In any review, open &ldquo;How the graph found this&rdquo; and turn on &ldquo;Show technical
+            details&rdquo; to see the named queries and their Cypher.
+          </p>
+          <p className="mt-2 text-[12.5px] text-ink-3">
+            AI assistants such as Claude Desktop can use the same review through FirstDomino&rsquo;s MCP server:
+            read-only tools that go through this API and return the evidence IDs behind every answer.
+          </p>
+        </section>
+
+        <div className="mt-12 flex flex-wrap gap-3">
+          <Link href="/patients/syn-p1?tour=story1&step=1" className="inline-flex h-10 items-center rounded-[6px] border border-ink bg-ink px-4 text-[14px] font-medium text-ivory hover:bg-ink-2">
+            Take the 2-minute guided tour
+          </Link>
+          <Link href="/#stories" className="inline-flex h-10 items-center rounded-[6px] border border-ink px-4 text-[14px] font-medium text-ink hover:bg-paper">
+            Explore the stories
+          </Link>
+        </div>
       </div>
-    </div>
+      <SiteFooter />
+    </>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 // Reference sheet of the workspace's distinct states, for review and QA.
-import { Wordmark } from "@/components/site-header";
-import { TourButton } from "@/components/tour-offer";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import {
   InsufficientEvidenceState,
   LoadingState,
@@ -37,27 +37,27 @@ const STATES = [
 
 export default function StatesPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
-      <header className="flex items-center justify-between border-b border-ink pb-4">
-        <Wordmark />
-        <TourButton />
-      </header>
-      <h1 className="mt-8 font-serif text-[40px] leading-none">Interface states</h1>
-      <p className="mt-2 text-[14px] text-ink-2">
-        Every view is in exactly one of these. Coral is reserved for errors.
-      </p>
-      <ol className="mt-8 space-y-8">
-        {STATES.map((s, i) => (
-          <li key={s.name} className="grid gap-3 border-t border-rule pt-5 sm:grid-cols-[200px_1fr]">
-            <div>
-              <p className="font-mono text-[11px] text-ink-3">{String(i + 1).padStart(2, "0")}</p>
-              <h2 className="font-serif text-[22px] leading-tight">{s.name}</h2>
-              <p className="mt-1 text-[12.5px] text-ink-3">{s.when}</p>
-            </div>
-            <div>{s.node}</div>
-          </li>
-        ))}
-      </ol>
-    </div>
+    <>
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
+        <SiteHeader className="pt-0" />
+        <h1 className="mt-8 font-serif text-[40px] leading-none">Interface states</h1>
+        <p className="mt-2 text-[14px] text-ink-2">
+          Every view is in exactly one of these. Coral is reserved for errors.
+        </p>
+        <ol className="mt-8 space-y-8">
+          {STATES.map((s, i) => (
+            <li key={s.name} className="grid gap-3 border-t border-rule pt-5 sm:grid-cols-[200px_1fr]">
+              <div>
+                <p className="font-mono text-[11px] text-ink-3">{String(i + 1).padStart(2, "0")}</p>
+                <h2 className="font-serif text-[22px] leading-tight">{s.name}</h2>
+                <p className="mt-1 text-[12.5px] text-ink-3">{s.when}</p>
+              </div>
+              <div>{s.node}</div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <SiteFooter />
+    </>
   );
 }

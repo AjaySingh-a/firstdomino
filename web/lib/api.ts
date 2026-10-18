@@ -39,6 +39,8 @@ export type DataSource = "fixtures" | "live";
 export const DATA_SOURCE: DataSource =
   process.env.NEXT_PUBLIC_DATA_SOURCE === "live" ? "live" : "fixtures";
 const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+/** For the footer's "API health" link. */
+export const API_HEALTH_URL = `${PUBLIC_API_URL}/health`;
 // Server components run inside the web container, where localhost is not the API.
 // API_INTERNAL_URL (runtime, e.g. http://api:8000 in docker compose) is used there instead.
 const API_URL =
