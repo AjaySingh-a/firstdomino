@@ -1,6 +1,7 @@
 // The ONE data adapter for the web app.
 //   NEXT_PUBLIC_DATA_SOURCE=fixtures (default) -> reads lib/fixtures/fixtures.json, a copy of
-//     data/snapshots/fixtures.json, which holds the stub API's real responses.
+//     data/snapshots/fixtures.json: the three hand-written stories replayed from their files. It
+//     evaluates nothing (the lab answers 503 graph_required); the deployed app runs live on FalkorDB.
 //   NEXT_PUBLIC_DATA_SOURCE=live -> calls NEXT_PUBLIC_API_URL.
 // Components import `api` from here and never call fetch themselves.
 

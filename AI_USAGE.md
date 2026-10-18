@@ -98,6 +98,26 @@ We used **Claude Code** (Anthropic) as our coding assistant throughout the hacka
   edited them, approved each merge to `main` (which deploys), and recorded the video and published the
   blog ourselves.
 
+**The final pass (18 October, afternoon)**
+
+We re-read the hackathon's own guide to graph agents and listed the gaps we still had. We wrote six
+tasks (`F-1` to `F-6`) with fixed rules: add queries, endpoints, tools and copy, but do not change the
+rules, Q1's columns, the pattern, the stories or the statuses, and never edit a test's expectation to
+make it pass. The assistant then:
+
+- made every empty result say that no chain does not rule anything out (`F-1`);
+- added `q11_finding_path`, which returns the walk as FalkorDB's own path, and `q12_medicine_link`,
+  which uses the `algo.SPpaths` algorithm to prove a lookalike medicine has no path. It first tested
+  which path functions our FalkorDB version supports before choosing one (`F-2`);
+- made the agent's memory visible: a second run cites the question and step from the first instead of
+  skipping silently (`F-3`);
+- rewrote the top of this README for judges (`F-4`).
+
+Where a new feature would have changed an existing test's expectation (adding `q11` to the
+investigation's query trace), we chose a design that left the test alone: the web app reads `q11`'s
+trace from the new endpoint. Each task merged only after `make test`, `make lint`, `make test-stack`
+and `make bench` passed.
+
 **Guardrails we put around the assistant's work**
 
 Tests that the assistant's code has to pass:
