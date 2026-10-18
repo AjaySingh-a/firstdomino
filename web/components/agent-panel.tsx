@@ -171,12 +171,11 @@ export function AgentPanel({
   return (
     <div data-tour="agent">
       <p className="text-[13px] leading-relaxed text-ink-2">
-        The review assistant reads the evidence, finds the missing fact, asks for it, checks which findings depend on
-        it and drafts the next conversation with the clinician.{" "}
+        The review assistant reads the evidence, asks for the missing fact and drafts the next conversation.{" "}
         <strong className="font-medium text-ink">It can read and ask. It never decides and never changes a fact.</strong>
       </p>
       <p className="mt-1.5 text-[11.5px] text-ink-3">
-        At most six steps, each from a fixed list of allowed tools, each one recorded below.
+        At most six steps from a fixed list of tools, each recorded below.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button size="sm" data-tour="agent-run" onClick={run} disabled={running || stale}>

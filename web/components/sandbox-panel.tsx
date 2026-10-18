@@ -106,9 +106,8 @@ export function SandboxPanel({
             Synthetic scenario: edit a fact
           </h2>
           <p className="mt-1.5 max-w-[60ch] text-[12.5px] text-ink-2">
-            Try a different version of this synthetic story. Only the findings that depend on the edited fact are
-            re-evaluated, and each gets a new revision. A medicine that no pattern involves changes no finding.
-            Reset restores all three synthetic stories.
+            Try another version of this story. Only findings that depend on the edited fact are re-checked. Reset
+            restores all three stories.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={reset} disabled={busy !== null || !live}>
