@@ -26,6 +26,10 @@ STATE = {
     "not_available": "not available (this is not a no)",
 }
 OPEN = {"candidate", "needs_evidence", "competing_explanation", "needs_reassessment"}
+NO_CHAIN_NOTE = (
+    "FirstDomino models one curated pattern, so no chain here does not rule anything else out. "
+    "A clinician still reviews the whole medicine list."
+)
 FOOTER = "Synthetic data. A possible pattern for a clinician to review, not a conclusion."
 
 
@@ -107,7 +111,7 @@ def list_stories(api: FirstDominoAPI) -> str:
             lines.append(f"    {f['headline']}. Status: {STATUS.get(f['status'], f['status'])} [{f['id']}]")
             ids.append(f["id"])
         if not found["findings"]:
-            lines.append("    No matched pattern.")
+            lines.append("    No matched pattern. " + NO_CHAIN_NOTE)
     return reply(lines, ids)
 
 
@@ -222,7 +226,7 @@ def prepare_packet(api: FirstDominoAPI, patient_id: str) -> str:
             lines.append("Open question: " + _question(q))
             ids += [q["id"], q["requirement_id"]]
     if not pk["items"]:
-        lines.append("No matched pattern for this patient.")
+        lines.append("No matched pattern for this patient. " + NO_CHAIN_NOTE)
     return reply(lines, ids)
 
 

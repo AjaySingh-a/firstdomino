@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Link2, Printer } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { DECISION_LABEL, STATUS, day, sourceById, stripSynthetic } from "@/lib/present";
+import { DECISION_LABEL, NO_CHAIN_NOTE, STATUS, day, sourceById, stripSynthetic } from "@/lib/present";
 import { Tech } from "@/lib/tech";
 import type { AgentStep, FactRef, PacketItem, PacketResponse, TimelineResponse } from "@/lib/types";
 import { describeError, type Loadable } from "@/lib/use-workspace";
@@ -133,7 +133,7 @@ function Body({ packet, timeline, steps }: Data) {
       ))}
       {packet.items.length === 0 && (
         <Section n={3} title="Possible patterns">
-          <Empty>No possible pattern matched for this patient.</Empty>
+          <Empty>No possible pattern matched for this patient. {NO_CHAIN_NOTE}</Empty>
         </Section>
       )}
 

@@ -3,6 +3,7 @@
 // The distinct interface states. "Evaluation unavailable" must never read as "no pattern".
 import { motion } from "framer-motion";
 import { AlertTriangle, CircleDashed, HelpCircle, RefreshCw, SearchX } from "lucide-react";
+import { NO_CHAIN_NOTE } from "@/lib/present";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
@@ -125,12 +126,10 @@ export function InsufficientEvidenceState({ missing, className }: { missing?: st
   );
 }
 
-export function NoMatchState({ patterns, className }: { patterns?: number; className?: string }) {
-  const which = patterns === undefined ? "the curated patterns" : `the ${patterns} curated pattern${patterns === 1 ? "" : "s"}`;
+export function NoMatchState({ className }: { patterns?: number; className?: string }) {
   return (
     <Notice tone="neutral" icon={<SearchX className="size-4" />} title="No matched pattern" className={className}>
-      The evaluation ran, and none of {which} matched this story. FirstDomino only knows a few cited patterns,
-      so this says nothing about patterns outside that list.
+      The evaluation ran and found no chain. {NO_CHAIN_NOTE}
     </Notice>
   );
 }

@@ -15,7 +15,7 @@ import { Accent } from "@/components/reveal";
 import { SiteHeader } from "@/components/site-header";
 import { StatusChip } from "@/components/status";
 import { ApiError, api } from "@/lib/api";
-import { STATUS } from "@/lib/present";
+import { NO_CHAIN_NOTE, STATUS } from "@/lib/present";
 import type { FactState, Finding, LabPalette, LabRequest, LabResult, PaletteMedicine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -442,7 +442,7 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
         {findings.length === 0 && (
           <div className="rounded-[10px] border border-rule-strong bg-paper p-6">
             <p className="font-serif text-[26px]">No chain in the graph.</p>
-            <p className="mt-1 text-[14px] text-ink-2">No walk from these medicines reaches the cited pattern. Nothing to review, so nothing is raised.</p>
+            <p className="mt-1 text-[14px] text-ink-2">No walk from these medicines reaches the cited pattern. {NO_CHAIN_NOTE}</p>
           </div>
         )}
         {findings.map((f, i) => {
