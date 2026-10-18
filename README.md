@@ -1,21 +1,141 @@
 # FirstDomino
 
-**Sometimes a side effect of one medicine is mistaken for a new illness and treated with another
-medicine. FirstDomino finds these possible chains in a medication story and asks for the one missing
-fact a clinician needs.**
+**A side effect, mistaken for a new illness, treated with another medicine. FirstDomino finds that
+chain across a patient's visits as one walk through a FalkorDB graph, and asks for the one missing fact
+a clinician needs.**
 
-![The caregiver answers the one missing fact: the dashed arc turns solid, the finding moves from version 1 to version 2, and only that finding is re-checked](docs/media/demo.gif)
+FirstDomino rebuilds a synthetic patient's medication story as a graph, matches it against a cited
+prescribing-cascade pattern through drug classes, and keeps every fact, finding, question, agent step
+and clinician decision with its history.
 
-- **Web app:** https://firstdomino-web.vercel.app
-- **API health:** https://api-production-b29f.up.railway.app/health
-- **Video:** <link>
+| | |
+|---|---|
+| **Live app** | https://firstdomino-web.vercel.app |
+| **Patient lab** (build your own patient) | https://firstdomino-web.vercel.app/lab |
+| **API health** | https://api-production-b29f.up.railway.app/health |
+| **Repository** | https://github.com/AjaySingh-a/firstdomino |
+| **Video** | TODO |
+| **Blog** | TODO |
+| **Tracks** | Agents That Act on Connected Data · Agent Memory and Coordination |
 
-Built for **Graph Hacks** (WeMakeDevs x FalkorDB, 15-18 Oct 2026) by team **Kodeline**.
+Built for **Graph Hacks** (WeMakeDevs x FalkorDB, 15-18 Oct 2026) by team **Kodeline** (Ajay Singh, Dev Grover).
 
 > [!IMPORTANT]
 > **All patient data in this repository is synthetic.** FirstDomino is a hackathon prototype, not a
 > medical device, and it has not been clinically validated. Findings are *possible patterns for a
 > clinician to review*, never conclusions about causes, and never advice to change a medicine.
+
+![The caregiver answers the one missing fact: the dashed arc turns solid, the finding moves from version 1 to version 2, and only that finding is re-checked](docs/media/demo.gif)
+
+## Verify it in 60 seconds
+
+1. Open **https://firstdomino-web.vercel.app/lab**, click **Reason not recorded**, then **Write to the
+   graph and walk it**. A new patient is written to FalkorDB, and the walk is drawn from the path the
+   query returned, with each step's milliseconds.
+2. Click **A lookalike medicine** and run it. Diltiazem is in another ATC class (`C08DB`), so
+   `algo.SPpaths` finds **no path** to the pattern, while a flat name check still flags the pair.
+3. Click **Wrong order** and run it. The path still exists, but the rules say `not_matched`: the path
+   explains, the rules decide.
+4. Back on the home page, take the **2-minute guided tour**: answer the missing fact, and only the one
+   finding that depends on it is re-checked (Q3).
+
+```bash
+curl https://api-production-b29f.up.railway.app/health
+# {"status":"ok","mode":"graph","falkordb":"up","appendonly":"yes"}
+curl https://api-production-b29f.up.railway.app/findings/syn-p1%3Afnd-ccb-edema-loop-1/path
+make up && make bench   # 12 of 12 synthetic cases agree with the documented rules (98 of 98 checks)
+```
+
+Saved outputs from the final check are in [evidence/2026-10-18/](evidence/2026-10-18/).
+
+## Why FalkorDB is load-bearing
+
+| Capability | Where (file / query / test) | Remove FalkorDB and… |
+|---|---|---|
+| One graph per family, chosen with `select_graph` (isolation without a `WHERE` filter) | `engine/db.py` `family_graph`, `api/graph_store.py` `_graph`; `tests/test_graph.py::test_two_patients_in_one_family_graph_never_cross`, `test_writes_never_cross_patients`, bench `case12` | there is no tenant boundary at all |
+| The Q1 walk through drug classes: medicine → ingredient → ATC class ← pattern → class ← ingredient ← medicine | `engine/queries/q1_candidate_match.cypher`; `tests/test_graph.py::test_story1_end_to_end` | nothing finds a chain; the lab returns `503 graph_required` |
+| The path returned by the same query (`nodes(path)`, `relationships(path)`) | `q11_finding_path.cypher`, `GET /findings/{id}/path`; `test_story1_path_is_the_graphs_own` | the walk on screen would be redrawn by the front end, not read from the graph |
+| A graph algorithm as a tool: `algo.SPpaths` between two medicines over `OF \| IN_CLASS \| INDEX \| MARKER` only | `q12_medicine_link.cypher`, lab `links`; `tests/test_lab.py::test_lookalike_has_no_path_in_the_graph` | no proof that a lookalike has no connection, only a missing row |
+| Q2, the next question: the missing fact most open findings wait on | `q2_next_question.cypher`; `test_a_question_is_asked_once_and_stays_until_answered` | no "one fact to ask" |
+| Q3, dependency scope: only findings linked to a changed fact re-evaluate | `q3_affected.cypher`; `test_an_unrelated_change_reopens_nothing`, `test_affected_is_read_only_q3` | every change would re-check everything |
+| Append-only `FactVersion` and `FindingRevision` chains (`SUPERSEDES`, `PREVIOUS`), decisions kept on their revision | `write/evidence_apply`, `write/revision_next`, `q5_history`; `test_correction_appends_a_version_and_reassesses_the_reviewed_finding` | history and the reviewed revision are lost |
+| Compare-and-set writes in one query: a stale `case_version` gets 409 | `write/evidence_apply`, `write/review`; `test_stale_case_version_is_409_and_writes_nothing`, `test_concurrent_writes_on_one_version_let_exactly_one_through` | two people could overwrite each other |
+| `AgentStep` and `Question` nodes as memory, read before the next step | `write/agent_step`, `write/question`, `q9_requirements`, `q10_agent_steps`; `test_second_agent_run_answers_from_memory` | the agent would ask the caregiver again every run |
+| AOF persistence and a restart test of FalkorDB and the API | `docker-compose.yml`, `/health` `appendonly`; `tests/test_stack.py::test_restart_of_api_and_falkordb_keeps_everything` | a restart forgets every answer and decision |
+| FalkorDB Browser for looking at the graph | http://localhost:3000 with `make up` (connect to `localhost:6379`) | — |
+
+## What breaks without FalkorDB
+
+- **The deployed app runs on FalkorDB** (`/health` reports `"mode": "graph"`, `"falkordb": "up"`).
+- **Fixture mode replays the three hand-written stories from their files and evaluates nothing.** It
+  exists so the UI can be developed offline (`NEXT_PUBLIC_DATA_SOURCE=fixtures`, or the API without
+  `FD_STORE=graph`). It cannot find a chain in any patient it has not been handed.
+- **The patient lab returns `503 {"error": "graph_required"}`** without FalkorDB. There is no fallback,
+  because a patient nobody has seen can only be evaluated as a graph traversal.
+
+## How we follow the WeMakeDevs graph-agent guide
+
+From [How to build an agent that reasons over a graph](https://www.wemakedevs.org/blogs/how-to-build-an-agent-that-reasons-over-a-graph):
+
+| Guide principle | What we do | File |
+|---|---|---|
+| The graph does work the agent cannot | Q1 matches through ATC classes, Q2 picks the next fact, Q3 scopes re-evaluation; the rules, not the LLM, set every status | `engine/queries/`, `engine/rules.py` |
+| Fixed tools; the agent never writes Cypher | Six allowlisted tools; every arg must be an ID a tool returned | `agent/tools.py`, `agent/review_agent.py` |
+| Return the path from the same query | q11 returns `nodes(path)` and `relationships(path)`; the web draws them in order | `q11_finding_path.cypher`, `web/components/graph-walk.tsx` |
+| Graph algorithms as tools | `algo.SPpaths` over the knowledge layer proves a lookalike has no path | `q12_medicine_link.cypher` |
+| Memory as nodes, read before the next step | Run 2 reads run 1's `Question` and `AgentStep` and says "answered from memory" | `agent/review_agent.py` `_next_missing_fact` |
+| A separate graph per tenant | `family_<id>` graphs via `select_graph` | `engine/db.py` |
+| "Not in the graph" is not "nothing wrong" | Every empty result says FirstDomino models one curated pattern and a clinician still reviews the list | `web/lib/present.ts` `NO_CHAIN_NOTE`, `mcp_server/tools.py` |
+
+Each tool result carries an outcome label: answered with a path, answered from memory, not in the
+graph, or unknown ID.
+
+## Judge FAQ
+
+**Why a graph and not SQL joins?** The match is a variable path (medicine → ingredient → class ←
+pattern → class ← ingredient ← medicine, plus effect ← symptom) that we read back as one path object,
+run a path algorithm over, and use in reverse (Q3: which findings hang off this fact). Versions,
+revisions and decisions are linked by edges, so history is a walk, not a set of audit tables.
+
+**Why can't the LLM write Cypher?** A model that writes queries can read another patient or invent a
+link. Our queries are named files that start from `Patient {id: $pid}` (a test enforces it), and the
+agent only picks among six fixed tools with IDs it has already seen.
+
+**Does "no chain" mean nothing is wrong?** No. FirstDomino models one curated pattern. No chain only
+means that pattern was not found; a clinician still reviews the whole medicine list, and the app says so.
+
+**How would it grow to the 65 PIPC cascades?** Each cascade is a `Pattern` node with `INDEX`, `MARKER`
+and `VIA` edges to ATC classes and an effect, plus its citation. Q1, q11 and q12 do not change; each
+new pattern needs curation and a clinical review, which we did not rush.
+
+**What is real and what is synthetic?** Real: the published research, the ATC classes and RxNorm codes,
+the code, the deployment. Synthetic: every patient, story and proof case.
+
+**What did we design, and what did the AI write?** We designed the problem, the evidence model, the
+stories, the rules and the copy rules; an AI coding assistant wrote much of the code from our task
+prompts, and we reviewed, tested and merged it. Details: [AI_USAGE.md](AI_USAGE.md).
+
+## Numbers you can check
+
+| Number | Produced by |
+|---|---|
+| 12 of 12 synthetic cases, 98 of 98 checks agree with the documented rules | `make bench` → [bench/results.md](bench/results.md) |
+| 5 of 5 deliberately wrong expectations reported as disagreements | a one-off check of the runner during the proof work (see [Proof](#proof)); not a committed command |
+| 0 facts lost after restarting FalkorDB and the API | `make test-restart` (`tests/test_stack.py::test_restart_of_api_and_falkordb_keeps_everything`) |
+| 191 tests pass (12 skipped without the Docker stack or live API) | `make test` |
+| 37 tests pass inside the API container on FalkorDB | `make test-stack` |
+| Lab patient written and walked in tens of milliseconds | the lab page's timed steps; saved in [evidence/2026-10-18/](evidence/2026-10-18/) |
+
+## Deep dive
+
+| Document | What is in it |
+|---|---|
+| [docs/data-model.md](docs/data-model.md) | Graph labels, relationships, statuses, every named query |
+| [docs/api.md](docs/api.md) | Every endpoint with JSON examples |
+| [docs/deploy.md](docs/deploy.md) | Railway (API + FalkorDB) and Vercel, with checks |
+| [bench/results.md](bench/results.md) | The proof suite, unedited |
+| [evidence/2026-10-18/](evidence/2026-10-18/) | Live outputs and screenshots from the final check |
+| [AI_USAGE.md](AI_USAGE.md) | How we planned, worked and used AI |
 
 ## The problem
 
@@ -96,14 +216,17 @@ Three stories can look staged, so **https://firstdomino-web.vercel.app/lab** let
    and add ankle swelling or not.
 2. **Write to the graph and walk it.** `POST /lab/patients` writes a new synthetic patient into FalkorDB
    with the same named write queries as the stories, and Q1 plus the unchanged `engine/rules.py` evaluate
-   it. The page shows each step's time on the live graph, then draws each finding's walk edge by edge:
-   patient → medicine → ATC class ← pattern → effect ← symptom, and pattern → second class ← second
-   medicine.
+   it. The page shows each step's time on the live graph, then draws each finding's walk from the path
+   FalkorDB returned (q11: `nodes(path)`, `relationships(path)`), edge by edge in path order: medicine →
+   ingredient → ATC class ← pattern → class ← ingredient ← second medicine, and pattern → effect ←
+   symptom. For every pair of medicines, `algo.SPpaths` (q12) looks for a connection through the
+   knowledge layer only.
 3. **The same list, read without the graph.** Next to the result, the page shows what a flat check would
    say ("a calcium-channel blocker and a diuretic, together"). Put furosemide first and the flat check
    still flags the pair; the graph says the order doesn't fit. Swap amlodipine for diltiazem, which is
    also called a calcium-channel blocker but sits in another ATC class (`C08DB`, not `C08CA`), and the
-   flat check flags it while the graph finds no chain.
+   flat check flags it while the graph finds no chain: q12 reports no path from `C08DB` through the
+   pattern.
 4. **Open the full review.** The new `lab-…` patient works everywhere: answer the missing fact, run the
    review agent, ask Q3 what depends on a fact, print the packet.
 
@@ -206,6 +329,8 @@ starts from `Patient {id: $pid}`, and `tests/test_contracts.py` enforces that.
 | `q8_evidence_event` | One evidence event, so re-sending its `event_id` replays it or resumes it |
 | `q9_requirements` | This patient's requirements, what each is about, and the question asked for it |
 | `q10_agent_steps` | The review agent's steps for this patient, oldest first |
+| `q11_finding_path` | For one finding: the walk itself, returned as FalkorDB's path (`nodes(path)`, `relationships(path)`) in walk order, plus pattern → effect ← symptom |
+| `q12_medicine_link` | For two of a patient's medicines: the shortest connection through the knowledge layer only, found by `algo.SPpaths` over `OF \| IN_CLASS \| INDEX \| MARKER`; no path means no connection through a cited pattern |
 
 **Writes (`write/`)**: each is a `MERGE` or a compare-and-set in one query.
 
@@ -260,6 +385,10 @@ six allowlisted tools ([`agent/tools.py`](agent/tools.py)):
   key the whole pass runs on templates, so it always finishes.
 - **Every step is persisted** as an `AgentStep` in FalkorDB, failures included, and the API limits
   LLM-backed passes per client.
+- **Memory is visible.** On a second pass for the same finding, `next_missing_fact` reads the earlier
+  `Question` and `AgentStep` from the graph and records "Asked in run 1 (question …, step …); still
+  waiting for the caregiver, not asking again" instead of asking again. Each step carries an outcome
+  label: answered with a path, answered from memory, not in the graph, unknown ID.
 
 The LLM is reached through Groq's OpenAI-compatible API (`openai/gpt-oss-120b` by default, with an
 optional fallback model). See [AI_USAGE.md](AI_USAGE.md).
@@ -275,7 +404,8 @@ needed. Set `FD_API_URL` to use another one, for example `http://localhost:8000`
 |---|---|
 | `list_stories` | The synthetic stories, their findings and statuses |
 | `get_evidence_pack(finding_id)` | What is on record, what conflicts, what is not known yet, the cited pattern, the sources |
-| `next_missing_fact(patient_id)` | The next question to ask, who to ask, and the fact it fills |
+| `explain_path(finding_id)` | The walk behind a finding, as the path FalkorDB returned, written hop by hop with each relationship's direction |
+| `next_missing_fact(patient_id)` | The next question to ask, who to ask, and the fact it fills; "from memory" when it was already asked |
 | `inspect_episode(episode_id)` | One medication episode and the findings that use it |
 | `which_findings_depend_on(patient_id, fact_id)` | The findings evaluated again if that fact changes (read-only) |
 | `prepare_packet(patient_id)` | The clinician's review packet as text |
@@ -404,9 +534,10 @@ No `.env` is needed for the demo. Without `LLM_API_KEY` the review agent runs on
 | P2 proof suite (FalkorDB on `localhost:6379`) | `make bench` | `uv run python -m bench.run` |
 
 The web app reads data through one adapter, `web/lib/api.ts`. `NEXT_PUBLIC_DATA_SOURCE=fixtures` (the
-default for `npm run dev`) serves saved API responses from `data/snapshots/fixtures.json`, so the UI
-works without a backend. `live` calls the API at `NEXT_PUBLIC_API_URL`, and Docker Compose uses this.
-`uv run uvicorn …` without `FD_STORE=graph` serves in-memory fixtures; Docker Compose runs the API on
+default for `npm run dev`) replays the three hand-written stories from `data/snapshots/fixtures.json` and
+evaluates nothing; it is for UI work offline, and the patient lab answers `503 graph_required` there.
+`live` calls the API at `NEXT_PUBLIC_API_URL`, and Docker Compose uses this. `uv run uvicorn …` without
+`FD_STORE=graph` also only replays the story files; Docker Compose and the deployed app run the API on
 FalkorDB.
 
 > [!NOTE]
@@ -435,9 +566,13 @@ The API runs on Railway next to a FalkorDB service (AOF on), and the web app on 
 
 ## Limitations
 
-- **One pattern, three stories, plus the lab.** Lab patients use the same single pattern. The curated set has one pattern (calcium-channel blocker → ankle
-  swelling → loop diuretic) and three synthetic stories. The graph and rules are built for more, but
-  more patterns have not been curated yet.
+- **One pattern, three stories, plus the lab.** The curated set has one pattern (calcium-channel
+  blocker → ankle swelling → loop diuretic) and three synthetic stories; lab patients use the same
+  pattern. The graph, rules and queries are built for more, but more patterns have not been curated yet.
+- **Paths and the algorithm.** q11 returns the walk as FalkorDB's path and q12 uses `algo.SPpaths`
+  (checked on FalkorDB 4.22.1; `shortestPath` there does not support undirected traversals). The
+  algorithm runs over a small knowledge layer, so it proves a connection or its absence; it does not
+  rank or weigh evidence, and the rules still decide every status.
 - **Not clinically validated.** No real patient data, no clinical study, no regulatory review. The
   proof suite checks agreement with our own documented rules, written by the team that built the
   engine.
@@ -464,7 +599,7 @@ The API runs on Railway next to a FalkorDB service (AOF on), and the web app on 
 - **Not used:** adverse-event report counts. FDA notes that these reports cannot establish causation.
 - **Software:** FalkorDB, FastAPI, Next.js, the MCP Python SDK and the other dependencies in
   `pyproject.toml` and `web/package.json`, under their own licences.
-- **This repository** does not carry a licence file yet.
+- **This repository** is released under the [MIT licence](LICENSE).
 
 ## Guardrails
 

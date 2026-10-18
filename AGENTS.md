@@ -47,9 +47,12 @@ tests/      pytest: API behaviour + contract guards
 Without `make` (e.g. on Windows): `uv run pytest`, `uv run ruff check .`, `uv run uvicorn api.main:app --reload`,
 `cd web && npm run dev`, `docker compose --profile test run --rm --build api-test`.
 
-Docker Compose runs the API with `FD_STORE=graph` (FalkorDB). Without it the API serves the fixtures.
+Docker Compose and the deployed app run the API with `FD_STORE=graph` (FalkorDB). Without it the API only
+replays the three hand-written stories from their files and evaluates nothing; the lab answers 503
+`graph_required`.
 
-Web data source: `NEXT_PUBLIC_DATA_SOURCE=fixtures` (default) or `live` with `NEXT_PUBLIC_API_URL`.
+Web data source: `NEXT_PUBLIC_DATA_SOURCE=fixtures` (default; replays the snapshot of the three stories,
+evaluates nothing) or `live` with `NEXT_PUBLIC_API_URL`.
 
 ## Conventions
 

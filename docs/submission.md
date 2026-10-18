@@ -15,10 +15,11 @@ Finds possible prescribing cascades in a patient's medication story as one walk 
 
 Sometimes a side effect of one medicine is mistaken for a new illness and treated with another
 medicine: a prescribing cascade. FirstDomino rebuilds a synthetic patient's medication story across
-visits as a FalkorDB graph and matches it against cited patterns through drug classes. It asks for the
-single missing fact that would settle each possible chain, and keeps every fact, finding, question and
-clinician decision with its full history. Judges can build their own patient in the patient lab and
-watch the graph evaluate it live.
+visits as a FalkorDB graph and matches it against cited patterns through drug classes. It returns each
+chain as the graph's own path, uses a path algorithm to prove when a lookalike medicine has no
+connection, asks for the single missing fact that would settle each possible chain, and keeps every
+fact, finding, question, agent step and clinician decision with its full history. Judges can build
+their own patient in the patient lab and watch the graph evaluate it live.
 
 ## Long description
 
@@ -43,18 +44,26 @@ facts and the clinician decides.
   it.
 - **Q3** follows a changed fact's edges to the findings that depend on it. Only those are re-checked.
   Changing an unrelated medicine reopens nothing.
+- **The path comes from the graph.** `q11` returns each finding's walk as FalkorDB's own path
+  (`nodes(path)`, `relationships(path)`), and the app draws exactly that. `q12` runs the `algo.SPpaths`
+  algorithm between two medicines through the knowledge layer only: a lookalike in another drug class
+  (diltiazem) has no path, which the graph proves rather than assumes.
 - Nothing is overwritten. Fact versions, finding revisions and decisions stay on the revision they
   were made on. Stale writes get a 409, and evidence events are idempotent and resume after a crash.
 - A bounded **review agent** (Groq LLM, six allowlisted tools, at most six steps) reads the evidence,
   asks for the missing fact and drafts the clinician packet. It can never create a finding or change a
   fact. Every reply is validated, templates are the fallback, and every step is saved in the graph.
-- An **MCP server** exposes the same read-only tools to Claude Desktop.
+- **Memory you can see.** A second agent run reads the earlier `Question` and `AgentStep` nodes and says
+  "asked in run 1, still waiting for the caregiver" instead of asking again.
+- An **MCP server** exposes the same read-only tools to Claude Desktop, including `explain_path`.
+- **Honest empty results.** FirstDomino models one curated pattern, so "no chain" never reads as an
+  all-clear; every empty result says a clinician still reviews the whole medicine list.
 - The **patient lab** lets anyone build a synthetic patient. It is written to FalkorDB and evaluated
   by the same queries and rules in milliseconds, next to what a flat medicine list would say. Without
   FalkorDB the lab returns 503: there is no fallback.
 
 **Proof.** 12 of 12 synthetic cases (98 of 98 checks) agree with the documented rules on the graph
-engine. A runner self-check catches all 5 deliberately wrong expectations. A restart test of FalkorDB
+engine. 191 tests pass, and 37 more run inside the API container on FalkorDB. A runner self-check catches all 5 deliberately wrong expectations. A restart test of FalkorDB
 and the API reads everything back unchanged (AOF on). This is agreement with our own documented rules,
 not clinical accuracy.
 
@@ -97,7 +106,7 @@ templates take over when it fails. Details: [AI_USAGE.md](../AI_USAGE.md).
 | Public repository | https://github.com/AjaySingh-a/firstdomino (visibility: PUBLIC, MIT licence) | ✅ |
 | README with setup instructions | README.md → "Run locally" (Docker Compose, make / non-make commands) | ✅ |
 | README with the graph data model | README.md → "Architecture and graph model" (labels, relationships, two Mermaid diagrams); full detail in docs/data-model.md | ✅ |
-| The Cypher queries | `engine/queries/` (10 read queries, `write/`, `admin/`), every one listed in README.md → "Every Cypher query" | ✅ |
+| The Cypher queries | `engine/queries/` (12 read queries, `write/`, `admin/`), every one listed in README.md → "Every Cypher query" | ✅ |
 | Demo video | README.md "Video" line and this page | ⏳ add the YouTube link after upload |
 | Live deployment | https://firstdomino-web.vercel.app and https://api-production-b29f.up.railway.app/health (`falkordb: up`, `appendonly: yes`) | ✅ |
 | Tracks named | README.md → "Tracks entered"; this page | ✅ |
