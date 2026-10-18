@@ -309,7 +309,7 @@ function FindingSection({ n, item, timeline, steps }: { n: number; item: PacketI
           <ul className="space-y-2">
             {item.decisions.map((d) => (
               <li key={d.id} className="border-l-[3px] border-teal pl-3">
-                <p className="smallcaps text-[10px] text-teal">
+                <p className="smallcaps text-[10px] text-teal-ink">
                   {d.by_role} · {DECISION_LABEL[d.decision]} · revision {d.revision_n} · {day(d.decided_at)}
                   {d.revision_n !== f.revision_n && " · kept on that revision"}
                 </p>

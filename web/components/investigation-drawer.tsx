@@ -443,7 +443,7 @@ function History({
                   data-tour={current ? undefined : "kept-decision"}
                   className="mt-3 rounded-[4px] border border-teal/60 border-l-[3px] border-l-teal bg-teal-wash/50 px-3 py-2"
                 >
-                  <p className="smallcaps text-[10px] text-teal">
+                  <p className="smallcaps text-[10px] text-teal-ink">
                     {d.by_role} · {DECISION_LABEL[d.decision]} · {day(d.decided_at)}
                     {!current && " · kept on the version they saw"}
                   </p>
@@ -533,7 +533,7 @@ function ReviewForm({ inv, onReview }: { inv: InvestigationResponse; onReview: P
         </Button>
         <AnimatePresence>
           {done && (
-            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-teal">
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-teal-ink">
               Decision recorded.
             </motion.span>
           )}
