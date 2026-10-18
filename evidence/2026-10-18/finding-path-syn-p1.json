@@ -1,0 +1,138 @@
+{
+  "patient_id": "syn-p1",
+  "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+  "mode": "live",
+  "walk": {
+    "nodes": [
+      {
+        "label": "MedicationEpisode",
+        "id": "syn-p1:ep-amlodipine",
+        "name": "amlodipine",
+        "happened_at": 0,
+        "state": "documented"
+      },
+      {
+        "label": "Ingredient",
+        "id": null,
+        "name": "amlodipine",
+        "happened_at": null,
+        "state": null
+      },
+      {
+        "label": "DrugClass",
+        "id": null,
+        "name": "C08CA",
+        "happened_at": null,
+        "state": null
+      },
+      {
+        "label": "Pattern",
+        "id": "pat-ccb-edema-loop",
+        "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+        "happened_at": null,
+        "state": null
+      },
+      {
+        "label": "DrugClass",
+        "id": null,
+        "name": "C03CA",
+        "happened_at": null,
+        "state": null
+      },
+      {
+        "label": "Ingredient",
+        "id": null,
+        "name": "furosemide",
+        "happened_at": null,
+        "state": null
+      },
+      {
+        "label": "MedicationEpisode",
+        "id": "syn-p1:ep-furosemide",
+        "name": "furosemide",
+        "happened_at": 35,
+        "state": "documented"
+      }
+    ],
+    "edges": [
+      {
+        "type": "OF",
+        "forward": true
+      },
+      {
+        "type": "IN_CLASS",
+        "forward": true
+      },
+      {
+        "type": "INDEX",
+        "forward": false
+      },
+      {
+        "type": "MARKER",
+        "forward": true
+      },
+      {
+        "type": "IN_CLASS",
+        "forward": false
+      },
+      {
+        "type": "OF",
+        "forward": false
+      }
+    ]
+  },
+  "sides": [
+    {
+      "nodes": [
+        {
+          "label": "Pattern",
+          "id": "pat-ccb-edema-loop",
+          "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+          "happened_at": null,
+          "state": null
+        },
+        {
+          "label": "Effect",
+          "id": null,
+          "name": "peripheral_edema",
+          "happened_at": null,
+          "state": null
+        },
+        {
+          "label": "Observation",
+          "id": "syn-p1:obs-ankle-swelling",
+          "name": "Ankle swelling",
+          "happened_at": 21,
+          "state": "reported"
+        }
+      ],
+      "edges": [
+        {
+          "type": "VIA",
+          "forward": true
+        },
+        {
+          "type": "OF_EFFECT",
+          "forward": false
+        }
+      ]
+    }
+  ],
+  "query_trace": [
+    {
+      "query": "q11_finding_path",
+      "params": {
+        "pid": "syn-p1",
+        "fid": "syn-p1:fnd-ccb-edema-loop-1"
+      },
+      "rows": 1,
+      "mode": "live",
+      "result_ids": [
+        "syn-p1:ep-amlodipine",
+        "pat-ccb-edema-loop",
+        "syn-p1:ep-furosemide"
+      ],
+      "ms": 9.1
+    }
+  ]
+}

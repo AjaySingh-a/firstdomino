@@ -1,0 +1,144 @@
+{
+  "evidence_result": {
+    "event_id": "syn-p3:evt-onset-correction",
+    "patient_id": "syn-p3",
+    "case_version_before": 4,
+    "case_version": 5,
+    "before": {
+      "id": "syn-p3:obs-ankle-swelling",
+      "patient_id": "syn-p3",
+      "happened_at": 28,
+      "recorded_at": 45,
+      "state": "reported",
+      "source_ids": [
+        "syn-p3:src-cg-d45"
+      ],
+      "label": "Ankle swelling",
+      "effect": "peripheral_edema"
+    },
+    "after": {
+      "id": "syn-p3:obs-ankle-swelling",
+      "patient_id": "syn-p3",
+      "happened_at": 14,
+      "recorded_at": 62,
+      "state": "documented",
+      "source_ids": [
+        "syn-p3:src-cg-d45",
+        "syn-p3:src-gp-note-d14"
+      ],
+      "label": "Ankle swelling",
+      "effect": "peripheral_edema"
+    },
+    "affected_finding_ids": [
+      "syn-p3:fnd-ccb-edema-loop-1"
+    ],
+    "new_revisions": [
+      {
+        "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2",
+        "patient_id": "syn-p3",
+        "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+        "n": 2,
+        "status": "needs_reassessment",
+        "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look. The documented and reported days fit the order of this pattern.",
+        "changed_fact_ids": [
+          "syn-p3:obs-ankle-swelling"
+        ],
+        "created_at": 62,
+        "previous_n": 1,
+        "eval_version": 2
+      }
+    ],
+    "finding_changes": [
+      {
+        "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+        "before": {
+          "id": "syn-p3:fnd-ccb-edema-loop-1",
+          "patient_id": "syn-p3",
+          "pattern_id": "pat-ccb-edema-loop",
+          "pattern_version": 1,
+          "eval_version": 2,
+          "status": "reviewed",
+          "revision_n": 1,
+          "index_episode_id": "syn-p3:ep-amlodipine",
+          "marker_episode_id": "syn-p3:ep-furosemide",
+          "effect": "peripheral_edema",
+          "observation_ids": [
+            "syn-p3:obs-ankle-swelling"
+          ],
+          "cited_source_ids": [
+            "syn-p3:src-cardio-d0",
+            "syn-p3:src-pharm-d40",
+            "syn-p3:src-cg-d45"
+          ],
+          "requirement_ids": [],
+          "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+        },
+        "after": {
+          "id": "syn-p3:fnd-ccb-edema-loop-1",
+          "patient_id": "syn-p3",
+          "pattern_id": "pat-ccb-edema-loop",
+          "pattern_version": 1,
+          "eval_version": 2,
+          "status": "needs_reassessment",
+          "revision_n": 2,
+          "index_episode_id": "syn-p3:ep-amlodipine",
+          "marker_episode_id": "syn-p3:ep-furosemide",
+          "effect": "peripheral_edema",
+          "observation_ids": [
+            "syn-p3:obs-ankle-swelling"
+          ],
+          "cited_source_ids": [
+            "syn-p3:src-cardio-d0",
+            "syn-p3:src-pharm-d40",
+            "syn-p3:src-cg-d45"
+          ],
+          "requirement_ids": [],
+          "headline": "Possible pattern: amlodipine, then ankle swelling, then furosemide"
+        }
+      }
+    ],
+    "pending_reevaluation_ids": [],
+    "replayed": false
+  },
+  "revisions": [
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "n": 1,
+      "status": "candidate",
+      "reason": "First evaluation. The documented and reported days fit the order of this pattern.",
+      "changed_fact_ids": [],
+      "created_at": 45,
+      "previous_n": null,
+      "eval_version": 2
+    },
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1:rev-2",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "n": 2,
+      "status": "needs_reassessment",
+      "reason": "Ankle swelling: happened_at changed from 28 (reported) to 14 (documented). Revision 1 was reviewed, so it needs a fresh look. The documented and reported days fit the order of this pattern.",
+      "changed_fact_ids": [
+        "syn-p3:obs-ankle-swelling"
+      ],
+      "created_at": 62,
+      "previous_n": 1,
+      "eval_version": 2
+    }
+  ],
+  "decisions": [
+    {
+      "id": "syn-p3:fnd-ccb-edema-loop-1:rev-1:dec-1",
+      "patient_id": "syn-p3",
+      "finding_id": "syn-p3:fnd-ccb-edema-loop-1",
+      "revision_n": 1,
+      "by_role": "clinician",
+      "decision": "follow_up",
+      "reason": "Possible pattern noted. Plan to discuss the amlodipine dose and the ongoing need for furosemide with the cardiology team.",
+      "decided_at": 50
+    }
+  ],
+  "finding_status": "needs_reassessment"
+}

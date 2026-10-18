@@ -126,7 +126,8 @@ prompts, and we reviewed, tested and merged it. Details: [AI_USAGE.md](AI_USAGE.
 | 0 facts lost after restarting FalkorDB and the API | `make test-restart` (`tests/test_stack.py::test_restart_of_api_and_falkordb_keeps_everything`) |
 | 191 tests pass (12 skipped without the Docker stack or live API) | `make test` |
 | 37 tests pass inside the API container on FalkorDB | `make test-stack` |
-| Lab patient written and walked in tens of milliseconds | the lab page's timed steps; saved in [evidence/2026-10-18/](evidence/2026-10-18/) |
+| A lab patient written to FalkorDB and walked in 72-96 ms end to end on the live graph (q11 and q12 take a few ms each) | the lab page's timed steps; saved in [evidence/2026-10-18/lab-summary.json](evidence/2026-10-18/lab-summary.json) |
+| 7 of 7 MCP read tools answer against the live API | `FD_MCP_LIVE=1 uv run pytest tests/test_mcp_live.py` |
 
 ## Deep dive
 

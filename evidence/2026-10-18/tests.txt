@@ -1,0 +1,8 @@
+# make test
+191 passed, 12 skipped, 1 warning in 8.32s
+
+# make test-stack
+37 passed, 1 skipped, 1 warning in 4.84s
+
+# make lint
+All checks passed!

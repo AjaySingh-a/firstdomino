@@ -1,0 +1,320 @@
+{
+  "request": {
+    "medicines": [
+      {
+        "name": "amlodipine",
+        "start_day": 30,
+        "start_state": "documented",
+        "reason": "high blood pressure",
+        "reason_state": "documented"
+      },
+      {
+        "name": "furosemide",
+        "start_day": 5,
+        "start_state": "documented",
+        "reason": null,
+        "reason_state": "unknown"
+      }
+    ],
+    "symptom": {
+      "label": "Ankle swelling",
+      "onset_day": 20,
+      "state": "documented"
+    }
+  },
+  "status": 201,
+  "response": {
+    "patient": {
+      "id": "lab-dab017",
+      "label": "Lab patient dab017",
+      "age_band": "75-79",
+      "case_version": 1,
+      "as_of_day": 37,
+      "synthetic": true
+    },
+    "findings": [
+      {
+        "id": "lab-dab017:fnd-ccb-edema-loop-1",
+        "patient_id": "lab-dab017",
+        "pattern_id": "pat-ccb-edema-loop",
+        "pattern_version": 1,
+        "eval_version": 2,
+        "status": "not_matched",
+        "revision_n": 1,
+        "index_episode_id": "lab-dab017:ep-amlodipine",
+        "marker_episode_id": "lab-dab017:ep-furosemide",
+        "effect": "peripheral_edema",
+        "observation_ids": [
+          "lab-dab017:obs-ankle-swelling"
+        ],
+        "cited_source_ids": [
+          "lab-dab017:src-record"
+        ],
+        "requirement_ids": [],
+        "headline": "Order does not fit the pattern: amlodipine, ankle swelling, furosemide"
+      }
+    ],
+    "steps": [
+      {
+        "name": "knowledge",
+        "detail": "medicines linked to their ATC classes (Ingredient -[:IN_CLASS]-> DrugClass)",
+        "ms": 19.5
+      },
+      {
+        "name": "write/patient + episodes + observations",
+        "detail": "3 facts and 1 sources written from Patient {id: 'lab-dab017'}",
+        "ms": 13.8
+      },
+      {
+        "name": "q1_candidate_match + engine/rules.py",
+        "detail": "Q1 walked medicine -> class -> pattern -> effect -> symptom: 1 chain(s); the rules set each status",
+        "ms": 9.5
+      },
+      {
+        "name": "q11_finding_path",
+        "detail": "1 path(s) returned as nodes(path), relationships(path)",
+        "ms": 7.5
+      },
+      {
+        "name": "q12_medicine_link (algo.SPpaths)",
+        "detail": "1 of 1 medicine pair(s) connected through classes and a pattern",
+        "ms": 7.3
+      },
+      {
+        "name": "q6_patient_findings",
+        "detail": "1 finding(s) read back",
+        "ms": 16.9
+      }
+    ],
+    "paths": [
+      {
+        "patient_id": "lab-dab017",
+        "finding_id": "lab-dab017:fnd-ccb-edema-loop-1",
+        "mode": "live",
+        "walk": {
+          "nodes": [
+            {
+              "label": "MedicationEpisode",
+              "id": "lab-dab017:ep-amlodipine",
+              "name": "amlodipine",
+              "happened_at": 30,
+              "state": "documented"
+            },
+            {
+              "label": "Ingredient",
+              "id": null,
+              "name": "amlodipine",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "DrugClass",
+              "id": null,
+              "name": "C08CA",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "Pattern",
+              "id": "pat-ccb-edema-loop",
+              "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "DrugClass",
+              "id": null,
+              "name": "C03CA",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "Ingredient",
+              "id": null,
+              "name": "furosemide",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "MedicationEpisode",
+              "id": "lab-dab017:ep-furosemide",
+              "name": "furosemide",
+              "happened_at": 5,
+              "state": "documented"
+            }
+          ],
+          "edges": [
+            {
+              "type": "OF",
+              "forward": true
+            },
+            {
+              "type": "IN_CLASS",
+              "forward": true
+            },
+            {
+              "type": "INDEX",
+              "forward": false
+            },
+            {
+              "type": "MARKER",
+              "forward": true
+            },
+            {
+              "type": "IN_CLASS",
+              "forward": false
+            },
+            {
+              "type": "OF",
+              "forward": false
+            }
+          ]
+        },
+        "sides": [
+          {
+            "nodes": [
+              {
+                "label": "Pattern",
+                "id": "pat-ccb-edema-loop",
+                "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+                "happened_at": null,
+                "state": null
+              },
+              {
+                "label": "Effect",
+                "id": null,
+                "name": "peripheral_edema",
+                "happened_at": null,
+                "state": null
+              },
+              {
+                "label": "Observation",
+                "id": "lab-dab017:obs-ankle-swelling",
+                "name": "Ankle swelling",
+                "happened_at": 20,
+                "state": "documented"
+              }
+            ],
+            "edges": [
+              {
+                "type": "VIA",
+                "forward": true
+              },
+              {
+                "type": "OF_EFFECT",
+                "forward": false
+              }
+            ]
+          }
+        ],
+        "query_trace": [
+          {
+            "query": "q11_finding_path",
+            "params": {
+              "pid": "lab-dab017",
+              "fid": "lab-dab017:fnd-ccb-edema-loop-1"
+            },
+            "rows": 1,
+            "mode": "live",
+            "result_ids": [
+              "lab-dab017:ep-amlodipine",
+              "pat-ccb-edema-loop",
+              "lab-dab017:ep-furosemide"
+            ],
+            "ms": 7.4
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "a_id": "lab-dab017:ep-amlodipine",
+        "b_id": "lab-dab017:ep-furosemide",
+        "a_name": "amlodipine",
+        "b_name": "furosemide",
+        "a_class": "C08CA",
+        "b_class": "C03CA",
+        "path": {
+          "nodes": [
+            {
+              "label": "MedicationEpisode",
+              "id": "lab-dab017:ep-amlodipine",
+              "name": "amlodipine",
+              "happened_at": 30,
+              "state": "documented"
+            },
+            {
+              "label": "Ingredient",
+              "id": null,
+              "name": "amlodipine",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "DrugClass",
+              "id": null,
+              "name": "C08CA",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "Pattern",
+              "id": "pat-ccb-edema-loop",
+              "name": "Calcium-channel blocker, then leg or ankle swelling, then a loop diuretic",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "DrugClass",
+              "id": null,
+              "name": "C03CA",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "Ingredient",
+              "id": null,
+              "name": "furosemide",
+              "happened_at": null,
+              "state": null
+            },
+            {
+              "label": "MedicationEpisode",
+              "id": "lab-dab017:ep-furosemide",
+              "name": "furosemide",
+              "happened_at": 5,
+              "state": "documented"
+            }
+          ],
+          "edges": [
+            {
+              "type": "OF",
+              "forward": true
+            },
+            {
+              "type": "IN_CLASS",
+              "forward": true
+            },
+            {
+              "type": "INDEX",
+              "forward": false
+            },
+            {
+              "type": "MARKER",
+              "forward": true
+            },
+            {
+              "type": "IN_CLASS",
+              "forward": false
+            },
+            {
+              "type": "OF",
+              "forward": false
+            }
+          ]
+        },
+        "ms": 7.2
+      }
+    ]
+  }
+}

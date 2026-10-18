@@ -1,0 +1,251 @@
+[
+  {
+    "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+    "case_version": 3,
+    "steps": [
+      {
+        "id": "syn-p1:run-1-step-1",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "get_evidence_pack",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:fnd-ccb-edema-loop-1",
+          "syn-p1:ep-amlodipine",
+          "syn-p1:ep-furosemide",
+          "syn-p1:obs-ankle-swelling",
+          "syn-p1:src-cardio-d0",
+          "syn-p1:src-pharm-d35",
+          "syn-p1:src-cg-d60",
+          "syn-p1:req-furosemide-indication",
+          "syn-p1:fnd-ccb-edema-loop-1:rev-1"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-1-step-2",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "inspect_episode",
+          "episode_id": "syn-p1:ep-furosemide",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-furosemide",
+          "syn-p1:src-pharm-d35"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-1-step-3",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_next_question",
+        "ok": true,
+        "args": {
+          "agent_tool": "next_missing_fact",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:req-furosemide-indication",
+          "syn-p1:q-furosemide-indication",
+          "syn-p1:ep-furosemide"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-1-step-4",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "draft_question_text",
+        "ok": true,
+        "args": {
+          "agent_tool": "ask_question",
+          "requirement_id": "syn-p1:req-furosemide-indication",
+          "phrasing": "llm",
+          "text": "Do you know why furosemide was started around day 35?",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:q-furosemide-indication",
+          "syn-p1:req-furosemide-indication"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-1-step-5",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "request_reevaluation",
+          "fact_id": "syn-p1:ep-furosemide",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-furosemide",
+          "syn-p1:fnd-ccb-edema-loop-1"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-1-step-6",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "draft_packet_text",
+        "ok": true,
+        "args": {
+          "agent_tool": "prepare_packet",
+          "phrasing": "llm",
+          "text": "Possible pattern: amlodipine started day 0, ankle swelling began day 21, furosemide started day 35. The review still needs the indication for furosemide. The question to the caregiver is: Do you know why furosemide was started around day 35? This pattern is worth reviewing.",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-amlodipine",
+          "syn-p1:ep-furosemide",
+          "syn-p1:obs-ankle-swelling",
+          "syn-p1:q-furosemide-indication"
+        ],
+        "at": 60
+      }
+    ],
+    "question": {
+      "id": "syn-p1:q-furosemide-indication",
+      "patient_id": "syn-p1",
+      "requirement_id": "syn-p1:req-furosemide-indication",
+      "ask_role": "caregiver",
+      "text": "Do you know why furosemide was started around day 35?",
+      "asked_at": 60,
+      "answer": null,
+      "answer_state": null
+    },
+    "packet_text": "Possible pattern: amlodipine started day 0, ankle swelling began day 21, furosemide started day 35. The review still needs the indication for furosemide. The question to the caregiver is: Do you know why furosemide was started around day 35? This pattern is worth reviewing.",
+    "phrasing": "llm"
+  },
+  {
+    "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+    "case_version": 3,
+    "steps": [
+      {
+        "id": "syn-p1:run-2-step-1",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "get_evidence_pack",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:fnd-ccb-edema-loop-1",
+          "syn-p1:ep-amlodipine",
+          "syn-p1:ep-furosemide",
+          "syn-p1:obs-ankle-swelling",
+          "syn-p1:src-cardio-d0",
+          "syn-p1:src-pharm-d35",
+          "syn-p1:src-cg-d60",
+          "syn-p1:req-furosemide-indication",
+          "syn-p1:fnd-ccb-edema-loop-1:rev-1"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-2-step-2",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "inspect_episode",
+          "episode_id": "syn-p1:ep-furosemide",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-furosemide",
+          "syn-p1:src-pharm-d35"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-2-step-3",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_next_question",
+        "ok": true,
+        "args": {
+          "agent_tool": "next_missing_fact",
+          "phrasing": "llm",
+          "outcome": "answered from memory",
+          "memory": "Asked in run 1 (question syn-p1:q-furosemide-indication, step syn-p1:run-1-step-4); still waiting for the caregiver, not asking again."
+        },
+        "result_ids": [
+          "syn-p1:req-furosemide-indication",
+          "syn-p1:q-furosemide-indication",
+          "syn-p1:ep-furosemide",
+          "syn-p1:run-1-step-4"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-2-step-4",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "get_investigation",
+        "ok": true,
+        "args": {
+          "agent_tool": "request_reevaluation",
+          "fact_id": "syn-p1:ep-furosemide",
+          "phrasing": "llm",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-furosemide",
+          "syn-p1:fnd-ccb-edema-loop-1"
+        ],
+        "at": 60
+      },
+      {
+        "id": "syn-p1:run-2-step-5",
+        "patient_id": "syn-p1",
+        "finding_id": "syn-p1:fnd-ccb-edema-loop-1",
+        "tool": "draft_packet_text",
+        "ok": true,
+        "args": {
+          "agent_tool": "prepare_packet",
+          "phrasing": "template",
+          "rejected": [
+            "text states how certain a fact is ('unknown'); leave certainty to the record",
+            "openai/gpt-oss-20b did not produce valid JSON (HTTP 400)"
+          ],
+          "fallback_reason": "invalid_json",
+          "text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why furosemide was started around day 35? Any change to a medicine is the prescribing clinician's decision.",
+          "outcome": "answered with a path"
+        },
+        "result_ids": [
+          "syn-p1:ep-amlodipine",
+          "syn-p1:ep-furosemide",
+          "syn-p1:obs-ankle-swelling",
+          "syn-p1:q-furosemide-indication"
+        ],
+        "at": 60
+      }
+    ],
+    "question": null,
+    "packet_text": "Worth reviewing: calcium-channel blocker, then leg or ankle swelling, then a loop diuretic. This is a possible pattern that needs evidence. Not known yet: reason furosemide was started. Open question for the caregiver (asked): Do you know why furosemide was started around day 35? Any change to a medicine is the prescribing clinician's decision.",
+    "phrasing": "mixed"
+  }
+]

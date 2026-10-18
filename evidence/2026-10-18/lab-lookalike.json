@@ -1,0 +1,82 @@
+{
+  "request": {
+    "medicines": [
+      {
+        "name": "diltiazem",
+        "start_day": 0,
+        "start_state": "documented",
+        "reason": "high blood pressure",
+        "reason_state": "documented"
+      },
+      {
+        "name": "furosemide",
+        "start_day": 40,
+        "start_state": "documented",
+        "reason": null,
+        "reason_state": "unknown"
+      }
+    ],
+    "symptom": {
+      "label": "Ankle swelling",
+      "onset_day": 20,
+      "state": "reported"
+    }
+  },
+  "status": 201,
+  "response": {
+    "patient": {
+      "id": "lab-31d145",
+      "label": "Lab patient 31d145",
+      "age_band": "75-79",
+      "case_version": 1,
+      "as_of_day": 47,
+      "synthetic": true
+    },
+    "findings": [],
+    "steps": [
+      {
+        "name": "knowledge",
+        "detail": "medicines linked to their ATC classes (Ingredient -[:IN_CLASS]-> DrugClass)",
+        "ms": 19.6
+      },
+      {
+        "name": "write/patient + episodes + observations",
+        "detail": "3 facts and 2 sources written from Patient {id: 'lab-31d145'}",
+        "ms": 17.6
+      },
+      {
+        "name": "q1_candidate_match + engine/rules.py",
+        "detail": "Q1 walked medicine -> class -> pattern -> effect -> symptom: 0 chain(s); the rules set each status",
+        "ms": 2.5
+      },
+      {
+        "name": "q11_finding_path",
+        "detail": "0 path(s) returned as nodes(path), relationships(path)",
+        "ms": 0.0
+      },
+      {
+        "name": "q12_medicine_link (algo.SPpaths)",
+        "detail": "0 of 1 medicine pair(s) connected through classes and a pattern",
+        "ms": 4.9
+      },
+      {
+        "name": "q6_patient_findings",
+        "detail": "0 finding(s) read back",
+        "ms": 27.3
+      }
+    ],
+    "paths": [],
+    "links": [
+      {
+        "a_id": "lab-31d145:ep-diltiazem",
+        "b_id": "lab-31d145:ep-furosemide",
+        "a_name": "diltiazem",
+        "b_name": "furosemide",
+        "a_class": "C08DB",
+        "b_class": "C03CA",
+        "path": null,
+        "ms": 4.8
+      }
+    ]
+  }
+}
