@@ -395,6 +395,57 @@ export interface ResetResponse {
   patients: Patient[];
 }
 
+// ---------- patient lab ----------
+
+export interface PaletteMedicine {
+  name: string;
+  rxcui: string;
+  drug_class: string;
+  group: string;
+  dose_text: string;
+  usual_reason: string | null;
+}
+
+/** GET /lab/palette: the medicines a visitor can place, and the curated patterns they are matched against. */
+export interface LabPalette {
+  medicines: PaletteMedicine[];
+  symptoms: string[];
+  patterns: Pattern[];
+}
+
+export interface LabMedicine {
+  name: string;
+  start_day: Day | null;
+  start_state: FactState;
+  reason?: string | null;
+  reason_state?: AnswerState;
+}
+
+export interface LabSymptom {
+  label?: string;
+  onset_day: Day | null;
+  state: FactState;
+}
+
+/** POST /lab/patients: a synthetic patient built by the visitor, evaluated on FalkorDB by the same rules. */
+export interface LabRequest {
+  medicines: LabMedicine[];
+  symptom?: LabSymptom | null;
+}
+
+/** One timed step of building the patient: what ran against FalkorDB and what it returned. */
+export interface LabStep {
+  name: string;
+  detail: string;
+  ms: number;
+}
+
+export interface LabResult {
+  patient: Patient;
+  findings: Finding[];
+  steps: LabStep[];
+}
+
 // ---------- fixture file (data/stories/*.json) ----------
 
 export interface StoryFixture {

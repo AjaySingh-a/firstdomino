@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "note": "Medicines a visitor can place on a synthetic patient in the patient lab. Codes: RxNorm RxCUI and the WHO ATC class (5 characters, as the patterns use). Only the curated patterns in data/patterns/ decide what matches; a medicine outside their classes never forms a finding.",
+  "medicines": [
+    { "name": "amlodipine", "rxcui": "17767", "drug_class": "C08CA", "group": "Calcium-channel blocker (dihydropyridine)", "dose_text": "5 mg once daily", "usual_reason": "high blood pressure" },
+    { "name": "nifedipine", "rxcui": "7417", "drug_class": "C08CA", "group": "Calcium-channel blocker (dihydropyridine)", "dose_text": "30 mg once daily", "usual_reason": "high blood pressure" },
+    { "name": "felodipine", "rxcui": "4316", "drug_class": "C08CA", "group": "Calcium-channel blocker (dihydropyridine)", "dose_text": "5 mg once daily", "usual_reason": "high blood pressure" },
+    { "name": "diltiazem", "rxcui": "3443", "drug_class": "C08DB", "group": "Calcium-channel blocker (not a dihydropyridine)", "dose_text": "120 mg once daily", "usual_reason": "high blood pressure" },
+    { "name": "furosemide", "rxcui": "4603", "drug_class": "C03CA", "group": "Loop diuretic", "dose_text": "20 mg once daily", "usual_reason": null },
+    { "name": "bumetanide", "rxcui": "1808", "drug_class": "C03CA", "group": "Loop diuretic", "dose_text": "1 mg once daily", "usual_reason": null },
+    { "name": "torsemide", "rxcui": "38413", "drug_class": "C03CA", "group": "Loop diuretic", "dose_text": "10 mg once daily", "usual_reason": null },
+    { "name": "hydrochlorothiazide", "rxcui": "5487", "drug_class": "C03AA", "group": "Thiazide diuretic", "dose_text": "12.5 mg once daily", "usual_reason": "high blood pressure" },
+    { "name": "atorvastatin", "rxcui": "83367", "drug_class": "C10AA", "group": "Statin", "dose_text": "20 mg once daily", "usual_reason": "high cholesterol" },
+    { "name": "metformin", "rxcui": "6809", "drug_class": "A10BA", "group": "Biguanide", "dose_text": "500 mg twice daily", "usual_reason": "type 2 diabetes" },
+    { "name": "lisinopril", "rxcui": "29046", "drug_class": "C09AA", "group": "ACE inhibitor", "dose_text": "10 mg once daily", "usual_reason": "high blood pressure" }
+  ],
+  "symptoms": [
+    { "label": "Ankle swelling", "effect": "peripheral_edema" }
+  ]
+}

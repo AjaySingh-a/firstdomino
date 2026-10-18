@@ -19,6 +19,7 @@ from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from agent.llm import llm_from_env
 from agent.review_agent import run_review_agent
+from api import lab
 from api.graph_store import graph_store_from_env
 from api.models import (
     AffectedResponse,
@@ -31,6 +32,9 @@ from api.models import (
     FindingsResponse,
     HealthResponse,
     InvestigationResponse,
+    LabPalette,
+    LabRequest,
+    LabResult,
     PacketResponse,
     Patient,
     QuestionRequest,
@@ -211,6 +215,26 @@ def review_agent(fid: str, req: ReviewAgentRequest, request: Request) -> ReviewA
 @app.get("/patients/{pid}/packet")
 def packet(pid: str) -> PacketResponse:
     return store.packet(pid)
+
+
+GRAPH_REQUIRED = {
+    "error": "graph_required",
+    "detail": "the patient lab needs FalkorDB: without the graph a new patient cannot be evaluated",
+}
+
+
+@app.get("/lab/palette")
+def lab_palette() -> LabPalette:
+    return lab.palette()
+
+
+@app.post("/lab/patients", status_code=201, responses={503: {"description": "FalkorDB is not in use"}})
+def lab_patient(req: LabRequest) -> LabResult:
+    """Build a synthetic patient, load it into FalkorDB and evaluate it with engine/rules.py. There is no
+    fixture fallback: a new patient's findings exist only as a graph traversal."""
+    if getattr(store, "mode", "fixtures") != "graph":
+        return JSONResponse(status_code=503, content=GRAPH_REQUIRED)
+    return store.create_lab_patient(lab.build_story(req, lab.new_patient_id()))
 
 
 @app.post("/sandbox/reset")
