@@ -231,11 +231,11 @@ function Investigation({
         <InsufficientEvidenceState className="mb-4" missing={inv.unknowns.map((u) => u.label.toLowerCase())} />
       )}
 
-      <Part n={1} title="On record" help="Facts a document or the caregiver gives, with where each one came from.">
+      <Part n={1} title="On record" help="Facts from a document or the caregiver, each with its source.">
         {inv.documented.length ? <FactList facts={inv.documented} timeline={timeline} /> : <Empty>Nothing on record yet.</Empty>}
       </Part>
 
-      <Part n={2} title="Why worth reviewing" help="The published pattern this order of events fits, and how many days apart the events were.">
+      <Part n={2} title="Why worth reviewing" help="The cited pattern this order of events fits, and the days between.">
         <p className="text-[13.5px] leading-relaxed text-ink">{inv.pattern.title}.</p>
         {a && b && o && (
           <ol className="relative mt-3 space-y-2 border-l border-rule-strong pl-4 text-[13px] text-ink-2">
@@ -276,11 +276,11 @@ function Investigation({
         </ul>
       </Part>
 
-      <Part n={3} title="Records disagree" help="Facts where two records give different answers. Both are kept.">
+      <Part n={3} title="Records disagree" help="Two records give different answers. Both are kept.">
         {inv.conflicts.length ? <FactList facts={inv.conflicts} timeline={timeline} /> : <Empty>No records disagree.</Empty>}
       </Part>
 
-      <Part n={4} title="Not known yet" tour="unknowns" help="Facts the pattern depends on that no record gives yet. Unknown never counts as “no”.">
+      <Part n={4} title="Not known yet" tour="unknowns" help="Facts the pattern needs that no record gives yet. Unknown never means “no”.">
         {inv.unknowns.length ? (
           <>
             <FactList facts={inv.unknowns} timeline={timeline} />
@@ -293,7 +293,7 @@ function Investigation({
         )}
       </Part>
 
-      <Part n={5} title="The one missing fact" help="The question that would settle the most. Answer it here as the caregiver would.">
+      <Part n={5} title="The one missing fact" help="The question that settles the most. Answer it as the caregiver would.">
         <NextQuestion
           key={`${inv.next_question?.id}:${inv.case_version}`}
           inv={inv}

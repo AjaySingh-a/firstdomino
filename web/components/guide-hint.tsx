@@ -9,9 +9,9 @@ import { startTour, tourHref } from "@/lib/tour";
 const KEY = "fd.guide.dismissed";
 
 const STEPS = [
-  "Click the amber arc to see what is on record and what is missing.",
-  "Answer the one missing fact.",
-  "Edit a fact in the sandbox and watch only the findings that depend on it change.",
+  "Click the amber arc.",
+  "Answer the missing fact.",
+  "Edit a fact in the sandbox: only linked findings change.",
 ];
 
 /** A first-visit hint for the workspace, with the way into the guided tour. Dismissal is remembered in this browser only. */

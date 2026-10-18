@@ -62,17 +62,15 @@ function explainChange(m: TourMemory): string {
   const c = m.change?.finding_changes[0];
   if (!c) return "You arrived here directly, so there is no answer to show yet. Go back one step and pick an answer.";
   if (m.change?.pending_reevaluation_ids.includes(c.finding_id))
-    return "The answer is recorded against this finding only; nothing else was touched. The finding is waiting for the rules to re-check it.";
+    return "The answer is recorded against this finding only. It is waiting for the rules to re-check it.";
   const from = STATUS[c.before.status].label;
   const to = STATUS[c.after.status].label;
   const why: Partial<Record<FindingStatus, string>> = {
-    competing_explanation:
-      "The answer gives furosemide a reason of its own, so the clinician sees two explanations side by side, not a verdict.",
-    candidate:
-      "The answer matches the side effect, so the chain is now a possible pattern worth a clinician's review.",
+    competing_explanation: "Furosemide now has its own reason: two explanations side by side, not a verdict.",
+    candidate: "The answer fits the side effect: a possible pattern worth a clinician's review.",
     needs_evidence: "A fact the review depends on is still not known.",
   };
-  return `Only this finding was re-checked; nothing else was touched. It moved from “${from}” to “${to}”. ${
+  return `Only this finding was re-checked. It moved from “${from}” to “${to}”. ${
     why[c.after.status] ?? STATUS[c.after.status].blurb
   }`;
 }
@@ -81,10 +79,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     story: "syn-p1",
     title: "The timeline",
-    body:
-      "This is one synthetic patient's medicines over time. Each line is a medicine, starting on the day it was started. The diamonds on the Symptoms line are symptoms.",
+    body: "One synthetic patient's medicines over time. Each line starts the day that medicine started. Diamonds on the Symptoms line are symptoms.",
     todo: "Look it over, then press Next.",
-    why: "Cascades hide across visits and prescribers. Lining every medicine and symptom up on one timeline makes the order of events visible.",
+    why: "Cascades hide across visits and prescribers. One timeline makes the order of events visible.",
     target: "river",
     quietArcs: true,
   },
@@ -93,7 +90,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Story 1, in order",
     body: "Watch the story play out in order.",
     todo: "Watch, then press Next.",
-    why: "The order is the whole argument: a medicine, then a symptom, then a second medicine for that symptom.",
+    why: "The order is the whole argument: a medicine, a symptom, then a second medicine for it.",
     target: "river",
     quietArcs: true,
     beats: [
@@ -105,10 +102,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     story: "syn-p1",
     title: "A possible pattern",
-    body:
-      "This amber arc is a possible pattern from published research: amlodipine can make ankles swell, and swelling is sometimes treated with a water tablet like furosemide.",
+    body: "The amber arc is a possible pattern from published research: amlodipine can swell ankles, and swelling is sometimes treated with furosemide.",
     todo: "Click the amber arc.",
-    why: "Patterns come from a short, curated, cited list. An arc is a reason to look, never a conclusion.",
+    why: "Patterns come from a short, cited list. An arc is a reason to look, never a conclusion.",
     target: "arc",
     hotspot: "arc-hotspot",
     advanceOn: "finding-selected",
@@ -116,10 +112,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     story: "syn-p1",
     title: "The investigation",
-    body:
-      "Here is what is on record, what is not known yet, and the one missing fact: nobody wrote down why furosemide was started.",
+    body: "What is on record, what is not known yet, and the one missing fact: nobody wrote down why furosemide was started.",
     todo: "Read it over, then press Next.",
-    why: "Keeping “on record” apart from “not known yet” stops a guess from passing as a fact.",
+    why: "Keeping “on record” apart from “not known yet” stops a guess passing as a fact.",
     target: "drawer",
     hotspot: "unknowns",
     select: true,
@@ -128,10 +123,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     story: "syn-p1",
     title: "Answer the missing fact",
-    body:
-      "Why was furosemide started? Imagine you are the caregiver. “Ankle swelling” fits the pattern; “heart failure” would be another explanation.",
+    body: "Why was furosemide started? Answer as the caregiver. “Ankle swelling” fits the pattern; “heart failure” would be another explanation.",
     todo: "Pick an answer, then press Record answer.",
-    why: "One answer can settle whether this chain deserves a clinician's time. “Not available” is also an answer, and it is never read as “no”.",
+    why: "One answer can settle whether this chain needs a clinician's time. “Not available” never means “no”.",
     target: "next-question",
     hotspot: "suggestions",
     advanceOn: "evidence-recorded",
@@ -144,7 +138,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Only this finding changed",
     body: explainChange,
     todo: "Press Next.",
-    why: "The graph knows which findings depend on which facts, so an answer re-checks only those. Each re-check is kept as a new version.",
+    why: "The graph knows which findings depend on which facts, so only those are re-checked, each as a new version.",
     target: "change-card",
     select: true,
     tab: "investigation",
@@ -152,10 +146,9 @@ export const TOUR_STEPS: TourStep[] = [
   {
     story: "syn-p1",
     title: "Ask the review assistant",
-    body:
-      "The review assistant reads the evidence, finds what is missing and drafts the next conversation with the clinician. It can read and ask. It never decides and never changes a fact.",
+    body: "The review assistant reads the evidence, finds what is missing and drafts the next conversation. It can read and ask; it never decides or changes a fact.",
     todo: "Press Run review agent.",
-    why: "AI helps with the legwork, but only fixed rules create findings, and only a person can answer a question or record a decision.",
+    why: "AI does the legwork. Only fixed rules create findings; only a person answers or decides.",
     target: "agent",
     hotspot: "agent-run",
     advanceOn: "agent-done",
@@ -166,17 +159,16 @@ export const TOUR_STEPS: TourStep[] = [
       target: "agent",
       body: (m) =>
         `Done: ${m.agent?.steps ?? "a few"} steps, each one recorded. ${
-          m.agent?.asked ? "It recorded a question for a person to answer." : "Nothing was waiting to be asked, so it asked nothing."
-        } It read and drafted; it changed no fact and made no decision.`,
+          m.agent?.asked ? "It recorded a question for a person." : "Nothing was waiting, so it asked nothing."
+        } It changed no fact and made no decision.`,
     },
   },
   {
     story: "syn-p1",
     title: "How the graph found this",
-    body:
-      "Every view is built by a few named graph queries, each starting from the patient.",
+    body: "Every view is built by a few named graph queries, each starting from the patient.",
     todo: "Open “How the graph found this”.",
-    why: "Judges and clinicians can check the work: each query, what it returned, and the exact query text behind it.",
+    why: "Anyone can check the work: each query, what it returned, and its exact text.",
     target: "query-trace",
     hotspot: "query-trace-toggle",
     advanceOn: "trace-opened",
@@ -185,17 +177,15 @@ export const TOUR_STEPS: TourStep[] = [
     tab: "investigation",
     done: {
       target: "query-trace",
-      body:
-        "FalkorDB holds the medicines, symptoms, records and findings as one connected graph, so a chain is a single walk from the patient, and a changed fact points straight at the findings that depend on it.",
+      body: "FalkorDB holds medicines, symptoms, records and findings as one graph: a chain is one walk, and a changed fact points at its findings.",
     },
   },
   {
     story: "syn-p3",
     title: "When the record changes",
-    body:
-      "Story 3. A clinician already reviewed this finding. Then a GP note arrived late: the swelling started on day 14, not day 28.",
+    body: "Story 3. A clinician already reviewed this finding. Then a late GP note said the swelling started on day 14, not day 28.",
     todo: "Press Confirm correction.",
-    why: "Records arrive late. A review is only as good as the evidence it saw, so the tool must notice when that evidence changes.",
+    why: "Records arrive late. A review is only as good as the evidence it saw.",
     target: "pending",
     hotspot: "pending-confirm",
     advanceOn: "evidence-recorded",
@@ -205,17 +195,15 @@ export const TOUR_STEPS: TourStep[] = [
     done: {
       target: "kept-decision",
       tab: "history",
-      body:
-        "The finding now says “Needs a fresh look”. The clinician's decision is kept, attached to version 1, the one they actually saw.",
+      body: "The finding now says “Needs a fresh look”. The clinician's decision is kept on version 1, the one they saw.",
     },
   },
   {
     story: "syn-p3",
     title: "An unrelated medicine",
-    body:
-      "Atorvastatin (for cholesterol) is not part of this pattern. Change its start date in the sandbox and see what happens.",
+    body: "Atorvastatin (for cholesterol) is not part of this pattern. Change its start date in the sandbox and see what happens.",
     todo: "Press Apply this change.",
-    why: "A useful alert is quiet when nothing relevant changed. Re-checking only what depends on a fact keeps the noise down.",
+    why: "A useful alert stays quiet when nothing relevant changed.",
     target: "sandbox",
     hotspot: "sandbox-apply",
     advanceOn: "evidence-recorded",
@@ -228,8 +216,8 @@ export const TOUR_STEPS: TourStep[] = [
       target: "change-card",
       body: (m) =>
         m.change && m.change.finding_changes.length === 0
-          ? "Nothing depends on atorvastatin, so nothing changed: no finding was re-checked and no new version was made. That is the tour. Open the packet a clinician would read, or start again."
-          : "That edit touched a finding the pattern depends on. That is the tour. Open the packet a clinician would read, or start again.",
+          ? "Nothing depends on atorvastatin, so nothing changed: no finding re-checked, no new version. That is the tour. Open the clinician's packet, or start again."
+          : "That edit touched a finding the pattern depends on. That is the tour. Open the clinician's packet, or start again.",
     },
   },
 ];
