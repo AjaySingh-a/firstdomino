@@ -27,6 +27,7 @@ P1_FINDING = "syn-p1:fnd-ccb-edema-loop-1"
 READ_TOOLS = {
     "list_stories",
     "get_evidence_pack",
+    "explain_path",
     "next_missing_fact",
     "inspect_episode",
     "which_findings_depend_on",
@@ -94,6 +95,15 @@ def test_get_evidence_pack(api):
         "syn-p1:src-pharm-d35",
         "syn-p1:q-furosemide-indication",
     } <= evidence_ids(text)
+
+
+def test_explain_path(api):
+    text = call(build_server(api), "explain_path", finding_id=P1_FINDING)
+    assert "amlodipine -[:OF]-> amlodipine -[:IN_CLASS]-> C08CA <-[:INDEX]- " in text
+    assert "<-[:IN_CLASS]- furosemide <-[:OF]- furosemide" in text
+    assert "Symptom: " in text and "fixture mode" in text  # the test app runs on fixtures
+    ids = {P1_FINDING, "syn-p1:ep-amlodipine", "syn-p1:ep-furosemide", "syn-p1:obs-ankle-swelling"}
+    assert ids <= evidence_ids(text)
 
 
 def test_next_missing_fact_points_at_the_dependency_tool(api):

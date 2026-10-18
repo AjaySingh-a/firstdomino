@@ -19,6 +19,7 @@ pytestmark = pytest.mark.skipif(
 CALLS = [
     ("list_stories", {}),
     ("get_evidence_pack", {"finding_id": "syn-p1:fnd-ccb-edema-loop-1"}),
+    ("explain_path", {"finding_id": "syn-p1:fnd-ccb-edema-loop-1"}),
     ("next_missing_fact", {"patient_id": "syn-p1"}),
     ("inspect_episode", {"episode_id": "syn-p1:ep-furosemide"}),
     ("which_findings_depend_on", {"patient_id": "syn-p1", "fact_id": "syn-p1:ep-furosemide"}),

@@ -166,6 +166,8 @@ Named files in `engine/queries/`, loaded with `engine.cypher.load(name)`, always
 | `q8_evidence_event` | one evidence event, for idempotent replay or resuming an `applying` one | `$pid`, `$event_id` |
 | `q9_requirements` | requirements, what each is about, and the `Question` asked for it (`POST /questions`, asked questions in the drawer) | `$pid` |
 | `q10_agent_steps` | the review agent's steps, oldest first (`GET /patients/{id}/agent-steps`) | `$pid` |
+| `q11_finding_path` | the walk behind one finding as FalkorDB's own path, `nodes(path)` + `relationships(path)` in walk order, plus pattern → effect ← symptom (`GET /findings/{id}/path`) | `$pid`, `$fid` |
+| `q12_medicine_link` | `algo.SPpaths` between two of the patient's medicines over `OF \| IN_CLASS \| INDEX \| MARKER` only; no path = no connection through a cited pattern (lab `links`) | `$pid`, `$a`, `$b` |
 
 Loader and engine writes live in `engine/queries/write/` (MERGE, parameterised), admin reads in
 `engine/queries/admin/` (plus `admin/drop_patient`, which deletes one patient's subgraph for the per-story sandbox

@@ -60,8 +60,9 @@ def test_typescript_mirrors_pydantic():
 
 def test_every_query_is_named_and_starts_from_patient():
     assert cypher.names() == [
-        "q10_agent_steps", "q1_candidate_match", "q2_next_question", "q3_affected", "q4_evidence_pack",
-        "q5_history", "q6_patient_findings", "q7_timeline", "q8_evidence_event", "q9_requirements",
+        "q10_agent_steps", "q11_finding_path", "q12_medicine_link", "q1_candidate_match", "q2_next_question",
+        "q3_affected", "q4_evidence_pack", "q5_history", "q6_patient_findings", "q7_timeline",
+        "q8_evidence_event", "q9_requirements",
     ]
     for name in cypher.names():
         body = "\n".join(

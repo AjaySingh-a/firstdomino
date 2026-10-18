@@ -29,6 +29,7 @@ from api.models import (
     ConflictError,
     EvidenceRequest,
     EvidenceResult,
+    FindingPath,
     FindingsResponse,
     HealthResponse,
     InvestigationResponse,
@@ -133,6 +134,12 @@ def findings(pid: str) -> FindingsResponse:
 @app.get("/findings/{fid}/investigation")
 def investigation(fid: str) -> InvestigationResponse:
     return store.investigation(fid)
+
+
+@app.get("/findings/{fid}/path")
+def finding_path(fid: str) -> FindingPath:
+    """q11: the walk behind a finding as FalkorDB's own path (fixture mode: built from the story file)."""
+    return store.finding_path(fid)
 
 
 @app.post("/patients/{pid}/evidence", responses=CONFLICT)

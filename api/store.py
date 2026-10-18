@@ -25,13 +25,17 @@ from api.models import (
     FactRef,
     Finding,
     FindingChange,
+    FindingPath,
     FindingRevision,
     FindingsResponse,
+    GraphPath,
     InvestigationResponse,
     MedicationEpisode,
     Observation,
     PacketItem,
     PacketResponse,
+    PathEdge,
+    PathNode,
     Patient,
     Pattern,
     QueryTraceEntry,
@@ -89,6 +93,19 @@ def load_stories(data_dir: Path = DATA_DIR) -> dict[str, StoryFixture]:
 
 def patient_of(scoped_id: str) -> str:
     return scoped_id.split(":", 1)[0]
+
+
+# q11's walk: (edge type, points from node i to node i+1).
+WALK_EDGES = [
+    ("OF", True), ("IN_CLASS", True), ("INDEX", False), ("MARKER", True), ("IN_CLASS", False), ("OF", False),
+]
+
+
+def fact_node(x: MedicationEpisode | Observation) -> PathNode:
+    """A patient fact as a path node: an episode is named by its ingredient, a symptom by its label."""
+    name = x.ingredient.name if isinstance(x, MedicationEpisode) else x.label
+    label = "MedicationEpisode" if isinstance(x, MedicationEpisode) else "Observation"
+    return PathNode(label=label, id=x.id, name=name, happened_at=x.happened_at, state=x.state)
 
 
 class FixtureStore:
@@ -220,6 +237,39 @@ class FixtureStore:
                     result_ids=[r.id for r in revisions],
                 ),
             ],
+        )
+
+    def finding_path(self, fid: str) -> FindingPath:
+        """The same shape as q11 in graph mode, built from the story file: fixture mode replays the
+        hand-written story and walks nothing."""
+        c, f = self._finding(fid)
+        pid = c.patient.id
+        eps = {e.id: e for e in c.episodes}
+        a, b, pat = eps[f.index_episode_id], eps[f.marker_episode_id], self.patterns[f.pattern_id]
+        walk = GraphPath(
+            nodes=[
+                fact_node(a), PathNode(label="Ingredient", name=a.ingredient.name),
+                PathNode(label="DrugClass", name=a.ingredient.drug_class),
+                PathNode(label="Pattern", id=pat.id, name=pat.title),
+                PathNode(label="DrugClass", name=b.ingredient.drug_class),
+                PathNode(label="Ingredient", name=b.ingredient.name), fact_node(b),
+            ],
+            edges=[PathEdge(type=t, forward=fw) for t, fw in WALK_EDGES],
+        )
+        sides = [
+            GraphPath(
+                nodes=[PathNode(label="Pattern", id=pat.id, name=pat.title),
+                       PathNode(label="Effect", name=pat.via_effect), fact_node(o)],
+                edges=[PathEdge(type="VIA", forward=True), PathEdge(type="OF_EFFECT", forward=False)],
+            )
+            for o in c.observations if o.effect == pat.via_effect
+        ]
+        return FindingPath(
+            patient_id=pid, finding_id=fid, mode="fixture", walk=walk, sides=sides,
+            query_trace=[QueryTraceEntry(
+                query="q11_finding_path", params={"pid": pid, "fid": fid}, rows=1, mode="fixture",
+                result_ids=[n.id for n in walk.nodes if n.id],
+            )],
         )
 
     def packet(self, pid: str) -> PacketResponse:

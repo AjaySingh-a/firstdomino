@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { BookOpen, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 import queriesJson from "@/lib/fixtures/queries.json";
 import {
   DECISION_LABEL,
@@ -15,6 +16,7 @@ import {
 import { Tech, useTech } from "@/lib/tech";
 import type { DrawerTab } from "@/lib/tour";
 import type {
+  QueryTraceEntry,
   EvidenceResult,
   FactRef,
   FindingRevision,
@@ -313,6 +315,19 @@ function Investigation({
 function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: TimelineResponse }) {
   const tech = useTech();
   const tour = useTour();
+  // q11's own trace entry (the path the walk returned), from GET /findings/{fid}/path.
+  const [pathTrace, setPathTrace] = useState<QueryTraceEntry[]>([]);
+  useEffect(() => {
+    let live = true;
+    api.findingPath(inv.finding.id).then(
+      (p) => live && setPathTrace(p.query_trace),
+      () => live && setPathTrace([]),
+    );
+    return () => {
+      live = false;
+    };
+  }, [inv.finding.id, inv.case_version]);
+  const trace = [...inv.query_trace, ...pathTrace];
   const name = (id: string) => {
     const label = factName(id, timeline);
     return label === id ? id.slice(id.indexOf(":") + 1) : label;
@@ -334,7 +349,7 @@ function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: T
         walk through it, starting from this patient.
       </p>
       <ol className="mt-3 space-y-3.5">
-        {inv.query_trace.map((q, i) => (
+        {trace.map((q, i) => (
           <li key={`${q.query}:${i}`}>
             <p className="text-[13px] leading-snug text-ink">
               <span className="font-mono text-[11px] text-ink-3">{i + 1}.</span> {querySentence(q.query, q.result_ids)}
@@ -345,6 +360,7 @@ function QueryTrace({ inv, timeline }: { inv: InvestigationResponse; timeline: T
                 <span className="text-ink-3">
                   {" "}
                   · {q.rows} row{q.rows === 1 ? "" : "s"} · {q.mode}
+                  {q.ms !== null && q.ms !== undefined && ` · ${q.ms} ms`}
                 </span>
               </p>
             )}

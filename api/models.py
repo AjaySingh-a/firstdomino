@@ -273,6 +273,7 @@ class QueryTraceEntry(Model):
     rows: int
     mode: Literal["fixture", "live"]
     result_ids: list[str] = []  # IDs the query returned (facts, requirements, revisions)
+    ms: float | None = None  # time the query took against FalkorDB (live mode, where measured)
 
 
 class TimelineResponse(Model):
@@ -474,10 +475,60 @@ class LabStep(Model):
     ms: float
 
 
+class PathNode(Model):
+    """One node of a path as FalkorDB returned it. `id` is the scoped id for patient nodes and patterns;
+    knowledge nodes (ingredient, class, effect) are named by `name` (ingredient, ATC code, effect)."""
+
+    label: str
+    id: str | None = None
+    name: str
+    happened_at: Day | None = None
+    state: FactState | None = None
+
+
+class PathEdge(Model):
+    """The relationship between node i and node i+1 of a path. `forward`: it points from i to i+1."""
+
+    type: str
+    forward: bool
+
+
+class GraphPath(Model):
+    nodes: list[PathNode]
+    edges: list[PathEdge]  # len(nodes) - 1, in path order
+
+
+class FindingPath(Model):
+    """GET /findings/{fid}/path: the walk behind a finding, from q11's own path (live), or built from the
+    story file (fixture mode). The path explains the finding; engine/rules.py decides its status."""
+
+    patient_id: str
+    finding_id: str
+    mode: Literal["fixture", "live"]
+    walk: GraphPath
+    sides: list[GraphPath]  # pattern -> effect <- symptom, one per symptom on record
+    query_trace: list[QueryTraceEntry]
+
+
+class MedicineLink(Model):
+    """q12 for two of a patient's medicines: the shortest knowledge-layer path (algo.SPpaths), or none."""
+
+    a_id: str
+    b_id: str
+    a_name: str
+    b_name: str
+    a_class: str
+    b_class: str
+    path: GraphPath | None
+    ms: float
+
+
 class LabResult(Model):
     patient: Patient
     findings: list[Finding]
     steps: list[LabStep]
+    paths: list[FindingPath] = []  # one per finding, from q11
+    links: list[MedicineLink] = []  # one per pair of medicines, from q12
 
 
 # ---------- fixture file ----------

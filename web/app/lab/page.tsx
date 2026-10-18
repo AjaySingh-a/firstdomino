@@ -9,7 +9,6 @@ import { ArrowRight, Database, FlaskConical, Plus, RotateCcw, X } from "lucide-r
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import type { WalkFact } from "@/components/graph-walk";
 import { SiteFooter } from "@/components/site-footer";
 import { Accent } from "@/components/reveal";
 import { SiteHeader } from "@/components/site-header";
@@ -386,18 +385,13 @@ function why(f: Finding, second: string): string {
 function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; draft: Draft; meds: Record<string, PaletteMedicine>; palette: LabPalette; onAgain: () => void }) {
   const { patient, findings, steps } = result;
   const pattern = palette.patterns[0];
-  const byName = Object.fromEntries(draft.rows.map((r) => [r.name, r]));
-  const fact = (name: string): WalkFact => {
-    const r = byName[name];
-    const day = r && r.state !== "unknown" ? `day ${r.day}` : "day not known";
-    return { label: name, sub: `${day}${r?.reason ? ` · for ${r.reason}` : ""}`, state: r?.state ?? "unknown" };
-  };
-  const symptom: WalkFact = draft.symptom.on
-    ? { label: "ankle swelling", sub: draft.symptom.state === "unknown" ? "day not known" : `day ${draft.symptom.day}`, state: draft.symptom.state }
-    : { label: "ankle swelling?", sub: "not on record", state: "missing" };
-
   // The flat reading: a calcium-channel blocker and a diuretic on the same list, by their names.
   const flatPairs = draft.rows.flatMap((a) => (isCcb(meds[a.name]) ? draft.rows.filter((b) => isDiuretic(meds[b.name])).map((b) => [a.name, b.name] as const) : []));
+  const pathOf = (fid: string) => result.paths?.find((p) => p.finding_id === fid);
+  // q12 (algo.SPpaths) for a pair of medicines, in either order.
+  const linkOf = (a: string, b: string) => result.links?.find((l) => (l.a_name === a && l.b_name === b) || (l.a_name === b && l.b_name === a));
+  const noPath = (result.links ?? []).filter((l) => l.path === null && flatPairs.some(([a, b]) => linkOf(a, b) === l));
+
   const graphPair = (a: string, b: string) => findings.find((f) => nameOf(f.index_episode_id) === a && nameOf(f.marker_episode_id) === b);
   const deadEnds = draft.rows.filter((r) => ![pattern.index_class, pattern.marker_class].includes(meds[r.name]?.drug_class ?? ""));
   const total = steps.reduce((s, x) => s + x.ms, 0);
@@ -423,7 +417,7 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
         </div>
       </div>
 
-      <ol className="mt-5 grid gap-px overflow-hidden rounded-[8px] border border-ink bg-ink font-mono text-[12px] sm:grid-cols-4">
+      <ol className="mt-5 grid gap-px overflow-hidden rounded-[8px] border border-ink bg-ink font-mono text-[12px] sm:grid-cols-3">
         {steps.map((s, i) => (
           <motion.li key={s.name} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 + i * 0.18 }} className="bg-ivory p-3">
             <p className="flex items-baseline justify-between gap-2">
@@ -443,11 +437,15 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
           <div className="rounded-[10px] border border-rule-strong bg-paper p-6">
             <p className="font-serif text-[26px]">No chain in the graph.</p>
             <p className="mt-1 text-[14px] text-ink-2">No walk from these medicines reaches the cited pattern. {NO_CHAIN_NOTE}</p>
+            {noPath.map((l) => (
+              <p key={`${l.a_id}-${l.b_id}`} className="mt-3 rounded-[6px] border border-rule bg-ivory px-3 py-2 font-mono text-[12px] text-ink-2">
+                q12 · algo.SPpaths: no path from {l.a_name} ({l.a_class}) to {l.b_name} ({l.b_class}) through the pattern, in {l.ms} ms
+              </p>
+            ))}
           </div>
         )}
         {findings.map((f, i) => {
-          const a = nameOf(f.index_episode_id);
-          const b = nameOf(f.marker_episode_id);
+          const path = pathOf(f.id);
           return (
             <motion.article key={f.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.3 }} className="min-w-0 rounded-[10px] border border-ink bg-paper p-4 sm:p-6">
               <div className="flex flex-wrap items-center gap-3">
@@ -455,21 +453,20 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
                 <p className="font-serif text-[22px] leading-tight">{f.headline}</p>
               </div>
               <p className="mt-1 text-[13px] text-ink-3">{STATUS[f.status].blurb}</p>
-              <div className="mt-4 overflow-x-auto">
-                <div className="min-w-[560px]">
-                  <GraphWalk
-                    pid={patient.id}
-                    first={fact(a)}
-                    firstClass={meds[a]?.drug_class ?? pattern.index_class}
-                    symptom={symptom}
-                    effect={pattern.via_effect}
-                    second={fact(b)}
-                    secondClass={meds[b]?.drug_class ?? pattern.marker_class}
-                    status={f.status}
-                    delay={0.8 + i * 0.3}
-                  />
-                </div>
-              </div>
+              {path ? (
+                <>
+                  <div className="mt-4 overflow-x-auto">
+                    <div className="min-w-[560px]">
+                      <GraphWalk path={path} status={f.status} delay={0.8 + i * 0.3} />
+                    </div>
+                  </div>
+                  <p className="mt-2 font-mono text-[11px] text-ink-3">
+                    q11 returned this path: {path.walk.nodes.length} nodes, {path.walk.edges.length} relationships. The rules set the status.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-4 text-[13px] text-ink-3">This API version does not return the path yet.</p>
+              )}
             </motion.article>
           );
         })}
@@ -507,7 +504,9 @@ function Result({ result, draft, meds, palette, onAgain }: { result: LabResult; 
                 <div className="grid grid-cols-[1.1fr_0.7fr_1fr] items-center gap-2">
                   <span className="font-serif text-[17px]">{a} → {b}</span>
                   <span className="text-[13px] font-medium text-coral">Flag</span>
-                  <span>{f ? <StatusChip status={f.status} /> : <span className="text-[13px] text-ink-2">No chain</span>}</span>
+                  <span>
+                    {f ? <StatusChip status={f.status} /> : <span className="text-[13px] text-ink-2">{linkOf(a, b)?.path === null ? "No path in the graph" : "No chain"}</span>}
+                  </span>
                 </div>
                 <p className="mt-1 text-[12.5px] text-ink-3">
                   {f ? why(f, b) : outsider(a, b)}

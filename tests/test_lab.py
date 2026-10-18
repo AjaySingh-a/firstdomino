@@ -127,3 +127,31 @@ def test_oldest_lab_patients_are_dropped(store, monkeypatch):
     g = store.db.select_graph(family_graph(store.family_id))
     present = {r["p"].properties["id"] for r in run(g, "admin/patients_in_graph")}
     assert present == set(ids[1:])
+
+
+# ---------- q11 / q12: the path comes from the graph ----------
+
+
+def test_lookalike_has_no_path_in_the_graph(store):
+    """diltiazem (C08DB) + furosemide: algo.SPpaths over the knowledge layer finds nothing to walk."""
+    found, out = statuses(store, req(med("diltiazem", 0), med("furosemide", 40)))
+    assert found == [] and out.paths == []
+    [link] = out.links
+    assert (link.a_name, link.a_class, link.b_class, link.path) == ("diltiazem", "C08DB", "C03CA", None)
+    assert [s.name for s in out.steps][-3:-1] == ["q11_finding_path", "q12_medicine_link (algo.SPpaths)"]
+
+
+def test_wrong_order_keeps_its_path_but_the_rules_decide(store):
+    """The path explains, the rules decide: furosemide first still connects, and stays not_matched."""
+    found, out = statuses(store, req(med("amlodipine", 30), med("furosemide", 5), onset_state="documented"))
+    assert found == ["not_matched"]
+    [path] = out.paths
+    assert [n.label for n in path.walk.nodes] == [
+        "MedicationEpisode", "Ingredient", "DrugClass", "Pattern",
+        "DrugClass", "Ingredient", "MedicationEpisode",
+    ]
+    [link] = out.links
+    assert [n.name for n in link.path.nodes] == [
+        "amlodipine", "amlodipine", "C08CA", link.path.nodes[3].name, "C03CA", "furosemide", "furosemide",
+    ]
+    assert [e.type for e in link.path.edges] == ["OF", "IN_CLASS", "INDEX", "MARKER", "IN_CLASS", "OF"]
